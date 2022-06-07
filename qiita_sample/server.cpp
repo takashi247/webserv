@@ -122,9 +122,17 @@ int http1()
                 is_file_exist = output_file.fail();
                 body_length = 0;
                 std::vector<std::string> message_body;
-                while (output_file.getline(line, 256-1)) {
-                    body_length += strlen(line);
-                    message_body.push_back(std::string(line));
+                if (path == "/image.png" || path == "/favicon.ico")
+                {
+                    std::stringstream buffer;
+                    buffer << output_file.rdbuf();  //改行や空白も全て読み込む
+                    message_body.push_back(buffer.str());
+                    body_length = message_body[0].size();
+                } else {
+                    while (output_file.getline(line, 256-1)) {
+                        body_length += strlen(line);
+                        message_body.push_back(std::string(line));
+                    }
                 }
                 recv_str.append(buf);
                 std::string server_response;
