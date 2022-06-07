@@ -15,13 +15,25 @@ std::vector<std::string>& HTTP1_Header::make_response404() {
 std::vector<std::string>& HTTP1_Header::make_response200(int body_length) {
     std::ostringstream oss;
     oss << "Content-Length: " << body_length << "\r\n";
-    static std::vector<std::string> header = {
-        "HTTP/1.1 200 OK\r\n",
-        "Content-Type: text/html; charset=UTF-8\r\n",
-        oss.str(),
-        "Connection: Keep-Alive\r\n",
-        "\r\n"
-    };
+    static std::vector<std::string> header;
+    if (body_length < 10000)
+    {// for text
+        header = {
+            "HTTP/1.1 200 OK\r\n",
+            "Content-Type: text/html; charset=UTF-8\r\n",
+            oss.str(),
+            "Connection: Keep-Alive\r\n",
+            "\r\n"
+        };
+    } else {// for image
+        header = {
+            "HTTP/1.1 200 OK\r\n",
+            "Content-Type: image/png\r\n",
+            oss.str(),
+            "Connection: Keep-Alive\r\n",
+            "\r\n"
+        };
+    }
     return header;
 }
 
