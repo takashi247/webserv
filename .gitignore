@@ -39,3 +39,6 @@ webserv
 
 # Setting
 *.vscode
+
+# nginx-docker related
+webserv-docker.conf
