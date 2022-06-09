@@ -3,7 +3,7 @@ class ConfigParser {
   file_path: std::string
 
   ConfigParser(const char*)
-  ParseConfigFile(std::string): std::map<int, std::vector<ServerConfig> >
+  ParseConfigFile(): std::map<int, std::vector<ServerConfig> >
   CreateServerConfig(std::vector<std::string>): ServerConfig
 }
 
@@ -17,7 +17,7 @@ class ServerConfig {
   vec_location_config: std::vector<LocationConfig>
 
   ServerConfig(std::vector<std::string>)
-  ParseServerDirective(std::vector<std::string>): int
+  ParseServerDirective(): int
   CreateLocationConfig(std::vector<std::string>): LocationConfig
 }
 
@@ -33,78 +33,74 @@ class LocationConfig {
   upload_state_store: std::string
 
   LocationConfig(std::vector<std::string>)
-  ParseLocationDirective(std::vector<std::string>): int
+  ParseLocationDirective(): int
 }
 
 class HttpServer {
   map_server_config: std::map<int, std::vector<ServerConfig> >
+  nfds: int
 
   HttpServer(std::map<int, std::vector<ServerConfig> >)
   RunServer(): int
   InitSockets(): std::vector<Socket>
   HandleRequests(std::vector<Socket>): int
+  InitFds(std::vector<Socket>, fd_set*, fd_set*, fd_set*): void
   ShutDownServer(): int
 }
 
 class Socket {
   port: int
   vec_server_config: std::vector<ServerConfig>
+  socket_fd: int
   accepted_fd: int
 
   Socket(int, std::vector<ServerConfig>)
   InitSocket(): int
   AcceptConnection(): int
   ReceiveRequest(): std::vector<std::string>
-  InitHttpRequestParser(std::vector<std::string>): HttpRequestParser
-  CreateHttpRequest(HttpRequestParser): HttpRequest
-  HandleCgiRequest(HttpRequest): HttpResponse
-  HandleNonCgiRequest(HttpRequest): HttpResponse
   SendResponse(HttpResponse): int
+  EndConnection(): int
 }
 
 class HttpRequestParser {
-  received_request: std::vector<std::string>
+  received_message: std::vector<std::string>
+  vec_server_config: std::vector<ServerConfig>
 
-  HttpRequestParser(std::vector<std::string>)
-  ParseRequest(): HttpRequest
-}
-
-class HttpMessage {
-  version: std::string
-  header: std::vector<std::string>
-  body: std::vector<std::string>
+  HttpRequestParser(std::vector<std::string>, std::vector<ServerConfig>)
+  CreateHttpRequest(): HttpRequest
 }
 
 class HttpRequest {
+  received_message: std::vector<std::string>
+  config: ServerConfig
+  version: std::string
+  header: std::vector<std::string>
+  body: std::vector<std::string>
   method: std::string
   uri: std::string
-  config: ServerConfig
+
+  HttpRequest(std::vector<std::string>, ServerConfig)
+  ProcessHttpRequest(): HttpResponse
+  ProcessCgiRequest(): HttpResponse
+  ProcessNonCgiRequest(): HttpResponse
 }
 
 class HttpResponse {
+  version: std::string
+  header: std::vector<std::string>
+  body: std::vector<std::string>
   status_code: int
   status_desc: std::string
 }
 
-class CgiHandler {
-  http_request: HttpRequest
-  ProcessRequest(HttpRequest): std::vector<std::string>
-  ParseCgiResult(std::vector<std::string>): HttpResponse
-}
-
-ServerConfig "1" <--x "0,n" LocationConfig
-ConfigParser "1" <--x "1..*" ServerConfig
-HttpServer "1" <--x "1..*" ServerConfig
-Socket "1" <--x "1..*" ServerConfig
-HttpServer "1" <--x "1..*" Socket
-HttpMessage <|-- HttpRequest
-HttpMessage <|-- HttpResponse
-Socket "1" <--x "1..*" HttpRequest
-Socket "1" <--x "1..*" HttpResponse
-HttpRequest "1" <--x "0,n" CgiHandler
-CgiHandler "1" <--x "1" HttpResponse
-Socket "1" <--x "1..*" HttpRequestParser
-HttpRequestParser "1" <--x "1" HttpRequest
-HttpRequest "1" <--x "1" ServerConfig
+ServerConfig "1" *-- "0,n" LocationConfig
+ConfigParser "1" *-- "1..*" ServerConfig
+HttpServer "1" o-- "1..*" ServerConfig
+Socket "1" o-- "1..*" ServerConfig
+HttpServer "1" *-- "1..*" Socket
+HttpRequest "1" o-- "1" ServerConfig
+HttpRequest "1" *-- "1" HttpResponse
+HttpRequestParser "1" *-- "1" HttpRequest
+HttpServer "1" *-- "1.." HttpRequestParser
 
 @enduml
