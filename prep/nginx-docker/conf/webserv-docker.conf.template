@@ -1,0 +1,10 @@
+server {
+	listen PORT;
+
+	root /var/www/html;
+
+	server_name hoge;
+
+	index index.html index.htm index.nginx-debian.html index.php;
+
+}
