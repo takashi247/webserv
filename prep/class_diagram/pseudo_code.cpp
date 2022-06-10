@@ -43,9 +43,9 @@ int HttpServer::HandleRequests(std::vector<Socket> vec_socket) {
       if (res == 1) {
         ++i;
         std::vector<std::string> received_message = socket_it->ReceivedRequest();
-        HttpRequestParser http_request_parser = HttpRequestParser(received_message, socket_it->vec_server_config);
-        HttpRequest http_request = http_request_parser.CreateHttpRequest();
-        HttpResponse http_response = http_request.ProcessHttpRequest();
+        HttpRequest http_request = HttpRequestParser::ParseRequest(received_message);
+        ServerConfig server_config = SelectServerConfig(http_request, socket_it->vec_server_config);
+        HttpResponse http_response = HttpResponse(http_request, server_config);
         socket_it->SendResponse(http_response);
         socket_it->EndConnection();
       }
