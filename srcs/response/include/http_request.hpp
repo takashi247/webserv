@@ -4,10 +4,12 @@
 #include <string>
 #include <vector>
 
-struct HttpRequest {
+class HttpRequest {
+ public:
   std::string method_;
   std::string uri_;
   std::string version_;
+  std::string type_;
   std::vector<std::string> header;
   std::vector<std::string> body_;
 };

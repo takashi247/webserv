@@ -6,7 +6,8 @@
 #include <string>
 #include <vector>
 
-struct ServerConfig {
+class ServerConfig {
+ public:
   unsigned int port_; // The highest TCP port number is 65535
   std::string host_;
   std::string server_name_;

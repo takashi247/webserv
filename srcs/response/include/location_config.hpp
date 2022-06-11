@@ -4,7 +4,8 @@
 #include <string>
 #include <vector>
 
-struct LocationConfig {
+class LocationConfig {
+ public:
   std::string location_path_;
   std::vector<std::string> vec_accepted_method_;
   std::string proxy_path_; // @fyuta: proxy_pathについては複数個設定可能かもしれないので、その場合はstd::vector<std::string>に変更か
