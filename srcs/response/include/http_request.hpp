@@ -9,7 +9,7 @@ class HttpRequest {
   std::string method_;
   std::string uri_;
   std::string version_;
-  std::string type_;
+  std::string content_type_;
   std::vector<std::string> header;
   std::vector<std::string> body_;
 };

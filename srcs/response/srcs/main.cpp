@@ -16,13 +16,13 @@ int main(int ac, char **av) {
   http_request.method_ = "GET";
   http_request.uri_ = uri;
   if (file_type == "png") {
-    http_request.type_ = "image/png";
+    http_request.content_type_ = "image/png";
   } else if (file_type == "jpg") {
-    http_request.type_ = "image/jpeg";
+    http_request.content_type_ = "image/jpeg";
   } else if (file_type == "ico") {
-    http_request.type_ = "image/x-icon";
+    http_request.content_type_ = "image/x-icon";
   } else {
-    http_request.type_ = "text/html";
+    http_request.content_type_ = "text/html";
   }
   HttpResponse http_response(http_request, server_config);
   http_response.MakeResponse();

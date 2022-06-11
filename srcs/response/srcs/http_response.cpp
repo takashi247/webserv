@@ -41,7 +41,7 @@ void HttpResponse::MakeHeader200() {
   std::ostringstream oss_content_length, oss_content_type, oss_date, oss_last_modified;
   SetCurrentTime();
   oss_content_length << "Content-Length: " << body_len_ << "\r\n";
-  oss_content_type << "Content-Type: " << http_request_.type_ << "\r\n";
+  oss_content_type << "Content-Type: " << http_request_.content_type_ << "\r\n";
   oss_date << "Date: " << current_time_ << "\r\n";
   oss_last_modified << "Last-Modified: " << last_modified_ << "\r\n";
   header_.push_back("HTTP/1.1 200 OK\r\n");
