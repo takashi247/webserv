@@ -1,8 +1,9 @@
-#ifndef LOCATIONCONFIG_HPP
-#define LOCATIONCONFIG_HPP
+#ifndef LOCATIONCONFIG_HPP_
+#define LOCATIONCONFIG_HPP_
 
 #include <string>
 #include <vector>
+#include <set>
 
 class LocationConfig {
  public:
@@ -20,9 +21,15 @@ class LocationConfig {
   std::vector<std::string> vec_cgi_file_extension_;
   bool is_uploadable_;
   std::string upload_dir_;
+  void PrintVal();
+
+  int ParseLocation(std::stringstream &ss);
 
  private:
   void init();
+  int ParseDirective(std::string directive);
+
 };
+
 
 #endif
