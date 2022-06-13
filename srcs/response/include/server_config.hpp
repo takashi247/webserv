@@ -8,6 +8,16 @@
 
 class ServerConfig {
  public:
+  // @fyuta: uriを渡すとroot/location configをベースにproxyとかをたどって本当に開くべきファイルパスを返してくれる関数を実装してもらえませんでしょうか
+  std::string UpdateUri(std::string uri);
+
+  /*
+  ** @fyuta: 下記の関数を実装して頂けませんでしょうか。
+  ** 引数：uri
+  ** 戻り値：みつかったlocation configのポインタ、見つからなければNULL
+  */
+  LocationConfig* SelectLocationConfig(const std::string& uri);
+
   int port_; // The highest TCP port number is 65535
   std::string host_;
   std::vector<std::string> server_names_;

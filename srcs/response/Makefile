@@ -9,7 +9,8 @@ SRCSDIR		:= srcs/
 OBJSDIR		:= objs/
 
 SRCS		:= main.cpp \
-					http_response.cpp
+					http_response.cpp \
+					server_config.cpp
 
 OBJS		:= $(addprefix $(OBJSDIR), $(SRCS:.cpp=.o))
 
