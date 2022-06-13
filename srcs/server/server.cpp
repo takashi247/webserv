@@ -129,7 +129,7 @@ void Server::run()
 				std::cout << "***** receive message finished *****\n";
 
 				HttpRequest *request = HttpRequestParser::getHttpRequest(recv_str);
-
+				(void)request;
 #if 1	//Dummy Response
 				std::vector<std::string> header;
 				header.push_back("HTTP/1.1 200 OK\r\n");
