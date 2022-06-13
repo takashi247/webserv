@@ -1,7 +1,8 @@
-#include <iostream>		//cout
 #include <arpa/inet.h>	//htonlとか
+#include <iostream>		//cout
 #include <string.h>		//memset
 #include <unistd.h>		//close
+
 #include "socket.hpp"
 
 void Socket::set_listenfd() {

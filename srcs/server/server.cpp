@@ -1,13 +1,13 @@
-#include <iostream>
 #include <sys/select.h>	//select
 #include <unistd.h>		//close
+#include <iostream>
 #include <fstream>		//ifstream
 #include <sstream>		//stringstream
 #include <vector>
 #include <string>
 
-#include "server.hpp"
 #include "httpRequestParser.hpp"
+#include "server.hpp"
 
 Server::Server()
 {
@@ -128,7 +128,7 @@ void Server::run()
 				std::cout << recv_str << std::endl;
 				std::cout << "***** receive message finished *****\n";
 
-				HttpRequest *request = HttpRequestParser::getHttpRequest(recv_str);
+				HttpRequest *request = HttpRequestParser::createHttpRequest(recv_str);
 				(void)request;
 #if 1	//Dummy Response
 				std::vector<std::string> header;
@@ -148,6 +148,7 @@ void Server::run()
 					std::cout << "write() failed." << std::endl;
 				}
 #endif
+				HttpRequestParser::destroyHttpRequest(request);
 				close(accfd[i]);
 				accfd[i] = -1;
 			}
