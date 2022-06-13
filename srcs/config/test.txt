@@ -1,0 +1,5 @@
+{listen hello:0;
+server_name google yahoo;
+error_page 404.html;
+client_max_body_size 1256;
+

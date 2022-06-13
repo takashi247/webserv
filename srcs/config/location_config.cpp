@@ -1,5 +1,6 @@
 #include "location_config.hpp"
-
+#include <sstream>
+#include "config.hpp"
 void LocationConfig::init()
 {
   vec_accepted_method_.push_back("GET");
@@ -8,6 +9,7 @@ void LocationConfig::init()
   autoindex_ = false;
   vec_index_.push_back("index.html");
   is_uploadable_ = false;
+
 }
 
 LocationConfig::LocationConfig() {
@@ -32,3 +34,38 @@ LocationConfig &LocationConfig::operator=(const LocationConfig &rhs) {
   }
   return *this;
 }
+
+int LocationConfig::ParseLocation(std::stringstream &ss) {
+  std::string directive;
+  
+  while (std::getline(ss, directive, ';')) {
+    ParseDirective(directive);
+    
+  }
+
+  PrintVal();
+  return (0);
+}
+
+int LocationConfig::ParseDirective(std::string directive) {
+  std::string item;
+  std::stringstream ss(directive);
+
+  if (!std::getline(ss, item, ' ')) {
+    return (1);
+  }
+  if (item == "http_method") {
+    vec_accepted_method_ = ParseVector(ss);
+  } else if (item == "proxy_path") {
+    proxy_pass_ = ParseString(ss);
+  } else if (item == "root") {
+
+  }
+}
+
+
+void LocationConfig::PrintVal() {
+
+  return ;
+}
+

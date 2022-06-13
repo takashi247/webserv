@@ -10,7 +10,8 @@ OBJSDIR		:= objs/
 
 SRCS		:= main.cpp \
 			   location_config.cpp \
-			   server_config.cpp
+			   server_config.cpp \
+			   config.cpp
 
 OBJS		:= $(addprefix $(OBJSDIR), $(SRCS:.cpp=.o))
 
@@ -40,7 +41,7 @@ $(OBJSDIR)%.o: %.cpp
 clean:
 	$(RM) $(OBJSDIR)
 	$(RM) *.dSYM
-	$(RM) *.txt
+	# $(RM) *.txt
 
 fclean:		clean
 	$(RM) $(NAME)
