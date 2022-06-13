@@ -1,0 +1,68 @@
+@startuml
+
+circle          main
+
+class Server
+
+enum	e_request
+{
+	REQUEST_GET
+	REQUEST_POST
+	REQUEST_DELETE
+}
+
+class Server
+{
+	- Config config_;
+	- std::map<int, Socket*> sockets_;
+	+ Server(const char *filepath);
+}
+class Socket
+{
+
+}
+class Config
+{
+	- std::vector<std::pair<int, ServerConfig> > vec_server_config_;
+	+ Config(const char *filepath);
+	+ ServerConfig *getServerConfig(int port);
+	+ std::vector<int> getServerPorts();
+
+}
+class ServerConfig
+{
+	std::vector<LocationConfig> vec_location_config_;
+}
+class LocationConfig
+{
+
+}
+class	HttpRequest
+{
+	e_request type_;
+	std::string uri_;
+}
+class	HttpRequestParser
+{
+	+ HttpRequest *getHttpRequest(std::string recv_msg);
+	- e_request getMethodType();
+	- std::string getURI();
+}
+
+class	HttpResponse
+{
+	+ HttpResponse(HttpRequest& request, ServerConfig *config);
+	+ std::string getResponse();
+}
+
+
+main --> Server : configファイル名
+Server o-- Config : configのこと\n何でも聞ける存在
+Server o-- Socket
+Server --> HttpRequestParser : リクエストメッセージを渡すと\nHttpRequestを返してくれる
+Config o-- ServerConfig
+ServerConfig o-- LocationConfig
+Server --> HttpResponse : HttpRequestを渡すと\nレスポンス文字列を返してくれる
+
+
+@enduml
