@@ -39,6 +39,7 @@ webserv
 
 # Setting
 *.vscode
+*.clang-format
 
 # nginx-docker related
 webserv-docker.conf
