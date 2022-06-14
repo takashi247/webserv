@@ -6,7 +6,7 @@
 #include <vector>
 #include <string>
 
-#include "httpRequestParser.hpp"
+#include "http_request_parser.hpp"
 #include "server.hpp"
 
 Server::Server()
