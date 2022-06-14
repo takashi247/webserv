@@ -1,21 +1,18 @@
-#ifndef HTTPREQUESTPARSER_HPP
-# define HTTPREQUESTPARSER_HPP
+#ifndef HTTP_REQUEST_PARSER_HPP
+# define HTTP_REQUEST_PARSER_HPP
 
 # include "httpRequest.hpp"
 
 class HttpRequestParser
 {
 private:
-	static method_type convertMethod(std::string& method);
-	static method_type getMethod(std::string& recv_msg);
-	static std::string getUri(std::string& recv_msg);
-	static uri_type convertUriType(std::string& uri);
-	static std::string getProtocolVersion(std::string& recv_msg);
-
-	static std::string getFieldValue(const char* field_name, std::string& recv_msg);
+	static std::string GetMethod(std::string& recv_msg);
+	static std::string GetUri(std::string& recv_msg);
+	static std::string GetProtocolVersion(std::string& recv_msg);
+	static std::string GetFieldValue(const char* field_name, std::string& recv_msg);
 public:
-	static HttpRequest* createHttpRequest(std::string& recv_msg);
-	static void destroyHttpRequest(HttpRequest *req);
+	static HttpRequest* CreateHttpRequest(std::string& recv_msg);
+	static void DestroyHttpRequest(HttpRequest *req);
 };
 
 #endif

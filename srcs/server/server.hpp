@@ -18,7 +18,7 @@ public:
 	Server(const char *conf);
 	~Server() {};
 
-	void run();
+	void Run();
 };
 
 #endif

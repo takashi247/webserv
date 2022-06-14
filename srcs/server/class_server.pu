@@ -3,17 +3,8 @@
 circle          main
 
 class Server
-
-enum	e_request
 {
-	REQUEST_GET
-	REQUEST_POST
-	REQUEST_DELETE
-}
-
-class Server
-{
-	- Config config_;
+	- ConfigManager config_;
 	- std::map<int, Socket*> sockets_;
 	+ Server(const char *filepath);
 }
@@ -21,7 +12,7 @@ class Socket
 {
 
 }
-class Config
+class ConfigManager
 {
 	- std::vector<std::pair<int, ServerConfig> > vec_server_config_;
 	+ Config(const char *filepath);
@@ -39,8 +30,10 @@ class LocationConfig
 }
 class	HttpRequest
 {
-	e_request type_;
+	std::string method_;
 	std::string uri_;
+	std::string version_;
+	bool is_bad_request_;
 }
 class	HttpRequestParser
 {
@@ -57,10 +50,10 @@ class	HttpResponse
 
 
 main --> Server : configファイル名
-Server o-- Config : configのこと\n何でも聞ける存在
+Server o-- ConfigManager : configのこと\n何でも聞ける存在
 Server o-- Socket
 Server --> HttpRequestParser : リクエストメッセージを渡すと\nHttpRequestを返してくれる
-Config o-- ServerConfig
+ConfigManager o-- ServerConfig
 ServerConfig o-- LocationConfig
 Server --> HttpResponse : HttpRequestを渡すと\nレスポンス文字列を返してくれる
 

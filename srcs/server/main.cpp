@@ -10,6 +10,6 @@ int main(int argc, char **argv)
 	}
 	(void)argv;
 	Server server;
-	server.run();
+	server.Run();
 	return (0);
 }

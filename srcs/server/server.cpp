@@ -35,7 +35,7 @@ const int BUF_SIZE = 3000;//1024;
 const std::string HTML_FILE = "www";
 const int MAX_SESSION = 10;
 
-void Server::run()
+void Server::Run()
 {
 
 	std::vector<std::pair<int, ServerConfig*> >::iterator it = configs_.begin();
@@ -128,7 +128,7 @@ void Server::run()
 				std::cout << recv_str << std::endl;
 				std::cout << "***** receive message finished *****\n";
 
-				HttpRequest *request = HttpRequestParser::createHttpRequest(recv_str);
+				HttpRequest *request = HttpRequestParser::CreateHttpRequest(recv_str);
 				(void)request;
 #if 1	//Dummy Response
 				std::vector<std::string> header;
@@ -148,7 +148,7 @@ void Server::run()
 					std::cout << "write() failed." << std::endl;
 				}
 #endif
-				HttpRequestParser::destroyHttpRequest(request);
+				HttpRequestParser::DestroyHttpRequest(request);
 				close(accfd[i]);
 				accfd[i] = -1;
 			}
