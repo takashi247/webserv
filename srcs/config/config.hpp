@@ -13,7 +13,7 @@ struct Config {
 };
 
 void MakeUnexpected(const std::string& msg, const int& pos);
-void ParseInt(const std::vector<std::pair<int, std::string> >& list, int& i);
+void ParseInt(const std::vector<std::pair<int, std::string> >& list, size_t& i);
 void ParseBool(const std::vector<std::pair<int, std::string> >& list, bool& b);
 void ParseString(const std::vector<std::pair<int, std::string> >& list,
                  std::string& str);

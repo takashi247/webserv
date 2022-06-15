@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "config.hpp"
+
 void LocationConfig::init() {
   vec_accepted_method_.push_back("GET");
   vec_accepted_method_.push_back("POST");

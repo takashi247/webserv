@@ -12,7 +12,8 @@ void MakeUnexpected(const std::string &msg, const int &pos) {
 }
 
 // need max ??
-void ParseInt(const std::vector<std::pair<int, std::string> > &list, int &i) {
+// [TODO] overflow, minus
+void ParseInt(const std::vector<std::pair<int, std::string> > &list, size_t &i) {
   if (list.size() != 2) {
     MakeUnexpected("invalid number of args in server_name directive",
                    list[0].first);

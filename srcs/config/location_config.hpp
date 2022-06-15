@@ -23,11 +23,8 @@ class LocationConfig {
   std::string upload_dir_;
   void PrintVal();
 
-  int ParseLocation(std::stringstream &ss);
-
  private:
   void init();
-  int ParseDirective(std::string directive);
 };
 
 #endif

@@ -15,11 +15,11 @@ class ServerConfig {
   ServerConfig(const ServerConfig &rhs);
   ServerConfig &operator=(const ServerConfig &rhs);
 
-  int port_;
+  size_t port_;
   std::string host_;
   std::vector<std::string> vec_server_names_;
   std::string error_page_path_;
-  int client_max_body_size_;
+  size_t client_max_body_size_;
   std::vector<LocationConfig> vec_location_config_;
 
   LocationConfig CreateLocationConfig(std::stringstream &ss);
