@@ -28,6 +28,5 @@ int main(int ac, char **av) {
   http_request.version_ = av[3];
   // http_request.is_bad_request_ = true; // to test 400 response
   HttpResponse http_response(http_request, server_config);
-  http_response.MakeResponse();
   std::cout << http_response.GetResponse() << std::endl;
 }
