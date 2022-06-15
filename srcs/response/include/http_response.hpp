@@ -73,6 +73,7 @@ class HttpResponse {
   std::string status_desc_;
   bool is_bad_request_;
   bool is_supported_version_;
+  std::string content_type_;
   LocationConfig* location_config_;
   std::string requested_file_path_;
   std::ifstream requested_file_;
@@ -87,7 +88,6 @@ class HttpResponse {
   std::string response_;
   std::string current_time_;
   std::string last_modified_;
-  std::string content_type_;
 };
 
 #endif // HTTP_RESPONSE_HPP_
