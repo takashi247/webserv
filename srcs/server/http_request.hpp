@@ -10,7 +10,7 @@ class HttpRequest {
   std::string uri_;
   std::string http_version_;
   std::string content_type_;
-  int content_length_;
+  size_t content_length_;
   std::string body_;
   bool is_bad_request_;
 };

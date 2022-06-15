@@ -39,8 +39,8 @@ std::string HttpRequestParser::GetFieldValue(const char* field_name,
                     recv_msg.begin() + value_end_pos);
   return value;
 }
-int HttpRequestParser::GetFieldValueInt(const char* field_name,
-                                        const std::string& recv_msg) {
+size_t HttpRequestParser::GetFieldValueSize(const char* field_name,
+                                            const std::string& recv_msg) {
   std::string value = GetFieldValue(field_name, recv_msg);
   int num = atoi(value.c_str());
   return num;
@@ -67,7 +67,7 @@ HttpRequest* HttpRequestParser::CreateHttpRequest(const std::string& recv_msg) {
         version.erase(0, kProtocolVersionPos);  //先頭の"HTTP/"を削除
   }
   req->content_type_ = GetFieldValue("Content-Type", recv_msg);
-  req->content_length_ = GetFieldValueInt("Content-Length", recv_msg);
+  req->content_length_ = GetFieldValueSize("Content-Length", recv_msg);
   GetMessageBody(recv_msg, req->body_);
 
   if (0) {
