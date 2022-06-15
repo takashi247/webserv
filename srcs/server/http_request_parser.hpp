@@ -13,8 +13,8 @@ class HttpRequestParser {
   static bool IsValidHttpVersion(const std::string& recv_msg);
   static std::string GetFieldValue(const char* field_name,
                                    const std::string& recv_msg);
-  static int GetFieldValueInt(const char* field_name,
-                              const std::string& recv_msg);
+  static size_t GetFieldValueSize(const char* field_name,
+                                  const std::string& recv_msg);
   static void GetMessageBody(const std::string& recv_msg, std::string& body);
 
  public:
