@@ -5,14 +5,20 @@
 
 class HttpRequestParser {
  private:
-  static std::string GetMethod(std::string& recv_msg);
-  static std::string GetUri(std::string& recv_msg);
-  static std::string GetProtocolVersion(std::string& recv_msg);
+  static const int kProtocolVersionPos = 5;
+
+  static std::string GetMethod(const std::string& recv_msg);
+  static std::string GetUri(const std::string& recv_msg);
+  static std::string GetProtocolVersion(const std::string& recv_msg);
+  static bool IsValidHttpVersion(const std::string& recv_msg);
   static std::string GetFieldValue(const char* field_name,
-                                   std::string& recv_msg);
+                                   const std::string& recv_msg);
+  static int GetFieldValueInt(const char* field_name,
+                              const std::string& recv_msg);
+  static void GetMessageBody(const std::string& recv_msg, std::string& body);
 
  public:
-  static HttpRequest* CreateHttpRequest(std::string& recv_msg);
+  static HttpRequest* CreateHttpRequest(const std::string& recv_msg);
   static void DestroyHttpRequest(HttpRequest* req);
 };
 

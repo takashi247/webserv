@@ -1,18 +1,18 @@
 #ifndef HTTP_REQUEST_HPP
-# define HTTP_REQUEST_HPP
+#define HTTP_REQUEST_HPP
 
-# include <string>
-# include <vector>
+#include <string>
+#include <vector>
 
 class HttpRequest {
  public:
   std::string method_;
   std::string uri_;
-  std::string version_; // @skohraku: パースする際に、HTTP1.1で対応なものはHTTP/1.1に読み替えてもらえるとありがたいです。
+  std::string http_version_;
   std::string content_type_;
-  std::vector<std::string> header;
-  std::vector<std::string> body_;
-  bool is_bad_request_; // @skohraku: パースする際に、400になるものについてはフラグを立てて頂けるとありがたいです。
+  int content_length_;
+  std::string body_;
+  bool is_bad_request_;
 };
 
 #endif

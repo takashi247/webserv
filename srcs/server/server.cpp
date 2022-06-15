@@ -24,7 +24,9 @@ Server::Server() {
 }
 
 Server::Server(const char *conf) {
-  if (conf) std::cout << "conf=" << conf << std::endl;
+  if (conf) {
+    std::cout << "conf=" << conf << std::endl;
+  }
   //この時点でconfigs_が出来上がってる
   // TODO: configで内容にエラーがあればどう返す？try catchとか？
   return;
@@ -139,7 +141,7 @@ void Server::Run() {
           server_response.append(header[i].c_str());
         }
         //				std::cout << server_response <<
-        //std::endl;
+        // std::endl;
         if (send(accfd[i], server_response.c_str(), server_response.length(),
                  0) == -1) {
           std::cout << "write() failed." << std::endl;
