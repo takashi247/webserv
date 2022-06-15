@@ -28,12 +28,14 @@ class HttpResponse {
   // Static constants
   static const int kStatusCodeOK = 200;
   static const int kStatusCodeBadRequest = 400;
+  static const int kStatusCodeForbidden = 403;
   static const int kStatusCodeNotFound = 404;
   static const int kStatusCodeMethodNotAllowed = 405;
   static const int kStatusCodeVersionNotSupported = 505;
   static const std::string kServerVersion;
   static const std::string kStatusDescOK;
   static const std::string kStatusDescBadRequest;
+  static const std::string kStatusDescForbidden;
   static const std::string kStatusDescNotFound;
   static const std::string kStatusDescMethodNotAllowed;
   static const std::string kStatusDescVersionNotSupported;
@@ -73,7 +75,8 @@ class HttpResponse {
   LocationConfig* location_config_;
   std::string requested_file_path_;
   std::ifstream requested_file_;
-  bool is_file_fail_;
+  bool is_file_exists_;
+  bool is_file_forbidden_;
   std::string server_header_;
   std::string date_header_;
   std::string etag_header_;

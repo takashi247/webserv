@@ -3,6 +3,7 @@
 const std::string HttpResponse::kServerVersion = "webserv/1.0.0";
 const std::string HttpResponse::kStatusDescOK = "200 OK";
 const std::string HttpResponse::kStatusDescBadRequest = "400 Bad Request";
+const std::string HttpResponse::kStatusDescForbidden = "403 Forbidden";
 const std::string HttpResponse::kStatusDescNotFound = "404 Not Found";
 const std::string HttpResponse::kStatusDescMethodNotAllowed = "405 Not Allowed";
 const std::string HttpResponse::kStatusDescVersionNotSupported = "505 HTTP Version Not Supported";
@@ -22,7 +23,12 @@ HttpResponse::~HttpResponse() {
 
 void HttpResponse::InitFileStream() {
   requested_file_path_ = server_config_.UpdateUri(http_request_.uri_);
-  requested_file_.open(requested_file_path_.c_str());
+  struct stat buffer;
+  is_file_exists_ = stat(requested_file_path_.c_str(), &buffer) == 0;
+  if (is_file_exists_) {
+    requested_file_.open(requested_file_path_.c_str());
+    is_file_forbidden_ = requested_file_.fail();
+  }
 }
 
 void HttpResponse::InitParameters() {
@@ -33,7 +39,6 @@ void HttpResponse::InitParameters() {
   oss_server << "Server: " << kServerVersion << "\r\n";
   server_header_ = oss_server.str();
   InitFileStream();
-  is_file_fail_ = requested_file_.fail();
   location_config_ = server_config_.SelectLocationConfig(requested_file_path_);
 }
 
@@ -214,9 +219,12 @@ void HttpResponse::SetStatusCode() {
   } else if (!IsValidMethod()) {
     status_code_ = kStatusCodeMethodNotAllowed;
     status_desc_ = kStatusDescMethodNotAllowed;
-  } else if (is_file_fail_) {
+  } else if (!is_file_exists_) {
     status_code_ = kStatusCodeNotFound;
     status_desc_ = kStatusDescNotFound;
+  } else if (is_file_forbidden_) {
+    status_code_ = kStatusCodeForbidden;
+    status_desc_ = kStatusDescForbidden;
   }
 }
 
