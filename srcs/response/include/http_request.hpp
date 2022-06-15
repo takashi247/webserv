@@ -8,7 +8,7 @@ class HttpRequest {
  public:
   std::string method_;
   std::string uri_;
-  std::string version_; // @skohraku: パースする際に、HTTP1.1で対応なものはHTTP/1.1に読み替えてもらえるとありがたいです。
+  std::string version_; // @skohraku: 0以外の数字から始まる文字列が来ることを想定しています
   std::string content_type_;
   std::vector<std::string> header;
   std::vector<std::string> body_;
