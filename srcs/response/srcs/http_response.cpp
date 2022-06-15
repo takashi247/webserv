@@ -12,13 +12,24 @@ HttpResponse::HttpResponse(const HttpRequest &http_request, const ServerConfig &
   : http_request_(http_request), server_config_(server_config),
     status_code_(kStatusCodeOK), status_desc_(kStatusDescOK),
     is_bad_request_(http_request_.is_bad_request_),
-    is_supported_version_(true) {
+    is_supported_version_(true), content_type_("text/html") {
   InitParameters();
   MakeResponse();
 }
 
 HttpResponse::~HttpResponse() {
   requested_file_.close();
+}
+
+void HttpResponse::SetContentType() {
+  std::string file_type = requested_file_path_.substr(requested_file_path_.find_last_of(".") + 1);
+  if (file_type == "png") {
+    content_type_ = "image/png";
+  } else if (file_type == "jpg" || file_type == "jpeg") {
+    content_type_ = "image/jpeg";
+  } else if (file_type == "ico") {
+    content_type_ = "image/x-icon";
+  }
 }
 
 void HttpResponse::InitFileStream() {
@@ -39,6 +50,7 @@ void HttpResponse::InitParameters() {
   oss_server << "Server: " << kServerVersion << "\r\n";
   server_header_ = oss_server.str();
   InitFileStream();
+  SetContentType();
   location_config_ = server_config_.SelectLocationConfig(requested_file_path_);
 }
 
@@ -61,14 +73,15 @@ void HttpResponse::SetLastModifiedTime() {
 }
 
 void HttpResponse::MakeErrorHeader() {
-  std::ostringstream oss_content_length;
+  std::ostringstream oss_content_length, oss_content_type;
+  oss_content_type << "Content-Type: " << content_type_ << "\r\n";
   oss_content_length << "Content-Length: " << body_len_ << "\r\n";
   header_.push_back("HTTP/1.1 ");
   header_.push_back(status_desc_);
   header_.push_back("\r\n");
   header_.push_back(server_header_);
   header_.push_back(date_header_);
-  header_.push_back("Content-Type: text/html\r\n");
+  header_.push_back(oss_content_type.str());
   header_.push_back(oss_content_length.str());
   if (status_code_ == kStatusCodeBadRequest || status_code_  == kStatusCodeVersionNotSupported) {
     header_.push_back("Connection: close\r\n");
@@ -80,7 +93,7 @@ void HttpResponse::MakeErrorHeader() {
 
 void HttpResponse::MakeHeader200() {
   std::ostringstream oss_content_length, oss_content_type, oss_last_modified;
-  oss_content_type << "Content-Type: " << http_request_.content_type_ << "\r\n";
+  oss_content_type << "Content-Type: " << content_type_ << "\r\n";
   oss_content_length << "Content-Length: " << body_len_ << "\r\n";
   oss_last_modified << "Last-Modified: " << last_modified_ << "\r\n";
   header_.push_back("HTTP/1.1 ");

@@ -64,6 +64,7 @@ class HttpResponse {
   void ValidateVersion();
   void SetEtag();
   bool IsDigitSafe(char ch);
+  void SetContentType();
 
   // Data members
   HttpRequest http_request_;
@@ -86,6 +87,7 @@ class HttpResponse {
   std::string response_;
   std::string current_time_;
   std::string last_modified_;
+  std::string content_type_;
 };
 
 #endif // HTTP_RESPONSE_HPP_
