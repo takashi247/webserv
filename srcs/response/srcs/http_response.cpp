@@ -3,14 +3,18 @@
 const std::string HttpResponse::kServerVersion = "webserv/1.0.0";
 const std::string HttpResponse::kStatusDescOK = "200 OK";
 const std::string HttpResponse::kStatusDescBadRequest = "400 Bad Request";
+const std::string HttpResponse::kStatusDescForbidden = "403 Forbidden";
 const std::string HttpResponse::kStatusDescNotFound = "404 Not Found";
 const std::string HttpResponse::kStatusDescMethodNotAllowed = "405 Not Allowed";
 const std::string HttpResponse::kStatusDescVersionNotSupported = "505 HTTP Version Not Supported";
 
 HttpResponse::HttpResponse(const HttpRequest &http_request, const ServerConfig &server_config)
   : http_request_(http_request), server_config_(server_config),
-    status_code_(kStatusCodeOK), status_desc_(kStatusDescOK) {
-  InitResponse();
+    status_code_(kStatusCodeOK), status_desc_(kStatusDescOK),
+    is_bad_request_(http_request_.is_bad_request_),
+    is_supported_version_(true) {
+  InitParameters();
+  MakeResponse();
 }
 
 HttpResponse::~HttpResponse() {
@@ -19,10 +23,15 @@ HttpResponse::~HttpResponse() {
 
 void HttpResponse::InitFileStream() {
   requested_file_path_ = server_config_.UpdateUri(http_request_.uri_);
-  requested_file_.open(requested_file_path_.c_str());
+  struct stat buffer;
+  is_file_exists_ = stat(requested_file_path_.c_str(), &buffer) == 0;
+  if (is_file_exists_) {
+    requested_file_.open(requested_file_path_.c_str());
+    is_file_forbidden_ = requested_file_.fail();
+  }
 }
 
-void HttpResponse::InitResponse() {
+void HttpResponse::InitParameters() {
   std::ostringstream oss_date, oss_server;
   SetCurrentTime();
   oss_date << "Date: " << current_time_ << "\r\n";
@@ -30,7 +39,6 @@ void HttpResponse::InitResponse() {
   oss_server << "Server: " << kServerVersion << "\r\n";
   server_header_ = oss_server.str();
   InitFileStream();
-  is_file_fail_ = requested_file_.fail();
   location_config_ = server_config_.SelectLocationConfig(requested_file_path_);
 }
 
@@ -84,6 +92,7 @@ void HttpResponse::MakeHeader200() {
   header_.push_back(oss_content_length.str());
   header_.push_back(oss_last_modified.str());
   header_.push_back("Connection: keep-alive\r\n");
+  header_.push_back(etag_header_);
   header_.push_back("Accept-Ranges: bytes\r\n");
   header_.push_back("\r\n");
 }
@@ -118,16 +127,35 @@ void HttpResponse::MakeErrorBody() {
   }
 }
 
+// Temporary hash function to create ETag from last modified time
+// TODO: need to understand the logic
+
+void HttpResponse::SetEtag() {
+  unsigned int result;
+  for (std::string::iterator it = last_modified_.begin(), end = last_modified_.end();
+       it != end; ++it) {
+    unsigned int ch = static_cast<unsigned int>(*it);
+    result = ch + (result << 4) + (result << 10) - result;
+  }
+  std::ostringstream oss_etag;
+  oss_etag << "ETag: \"" << result << "\"" << "\r\n";
+  etag_header_ = oss_etag.str();
+}
+
 void HttpResponse::MakeBody200() {
   std::stringstream buffer;
   buffer << requested_file_.rdbuf();
   body_ = buffer.str();
   SetLastModifiedTime();
   body_len_ = body_.size();
+  SetEtag();
 }
 
 bool HttpResponse::IsAllowedMethod() const {
   std::vector<std::string>::iterator it, first, last;
+  if (!location_config_) {
+    return false;
+  }
   first = location_config_->vec_accepted_method_.begin();
   last = location_config_->vec_accepted_method_.end();
   it = std::find(first, last, http_request_.method_);
@@ -143,31 +171,64 @@ bool HttpResponse::IsValidMethod() const {
   }
 }
 
-bool HttpResponse::IsValidVersion() const {
-  if (http_request_.version_ == "HTTP/1.1") {
-    return true;
-  } else {
-    return false;
+bool HttpResponse::IsDigitSafe(char ch) {
+  return std::isdigit(static_cast<unsigned char>(ch));
+}
+
+void HttpResponse::ValidateVersion() {
+  std::string::iterator it = http_request_.version_.begin();
+  std::string::iterator end = http_request_.version_.end();
+  if (*it != '1') {
+    is_supported_version_ = false;
+    return ;
+  }
+  ++it;
+  if (IsDigitSafe(*it)) {
+    is_supported_version_ = false;
+    return ;
+  } else if (*it != '.') {
+    is_bad_request_ = true;
+    return ;
+  }
+  ++it;
+  while (it != end && *it == '0') {
+    ++it;
+  }
+  int count = 0;
+  while (it != end) {
+    if (!IsDigitSafe(*it) || count == 3) {
+      is_bad_request_ = true;
+      break;
+    } else {
+      ++it;
+      ++count;
+    }
   }
 }
 
 void HttpResponse::SetStatusCode() {
-  if (http_request_.is_bad_request_) {
+  if (!is_bad_request_) {
+    ValidateVersion();
+  }
+  if (is_bad_request_) {
     status_code_ = kStatusCodeBadRequest;
     status_desc_ = kStatusDescBadRequest;
-  } else if (!IsValidVersion()) {
+  } else if (!is_supported_version_) {
     status_code_ = kStatusCodeVersionNotSupported;
     status_desc_ = kStatusDescVersionNotSupported;
   } else if (!IsValidMethod()) {
     status_code_ = kStatusCodeMethodNotAllowed;
     status_desc_ = kStatusDescMethodNotAllowed;
-  } else if (is_file_fail_) {
+  } else if (!is_file_exists_) {
     status_code_ = kStatusCodeNotFound;
     status_desc_ = kStatusDescNotFound;
+  } else if (is_file_forbidden_) {
+    status_code_ = kStatusCodeForbidden;
+    status_desc_ = kStatusDescForbidden;
   }
 }
 
-int HttpResponse::MakeResponse() {
+void HttpResponse::MakeResponse() {
   SetStatusCode();
   switch (status_code_) {
   case kStatusCodeOK:
@@ -182,16 +243,10 @@ int HttpResponse::MakeResponse() {
     response_.append(*it);
   }
   response_.append(body_);
-  // std::cout << "Length of response: " << GetResponseLen() << "\n" << std::endl; // for debug
-  return EXIT_SUCCESS;
 }
 
-const char* HttpResponse::GetResponse() const {
-  return response_.c_str();
-}
-
-size_t HttpResponse::GetResponseLen() const {
-  return response_.size();
+std::string HttpResponse::GetResponse() const {
+  return response_;
 }
 
 void HttpResponse::PrintErrorMessage(const std::string &msg) const {

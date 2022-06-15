@@ -1,0 +1,83 @@
+#include "http_request_parser.hpp"
+
+#include <iostream>
+
+std::string HttpRequestParser::GetMethod(const std::string& recv_msg) {
+  int pos = recv_msg.find(' ');
+  std::string method(recv_msg.begin(), recv_msg.begin() + pos);
+  return method;
+}
+std::string HttpRequestParser::GetUri(const std::string& recv_msg) {
+  int start_pos = recv_msg.find(' ');
+  int end_pos = recv_msg.find(' ', start_pos + 1);
+  std::string uri(recv_msg.begin() + start_pos + 1, recv_msg.begin() + end_pos);
+  return uri;
+}
+std::string HttpRequestParser::GetProtocolVersion(const std::string& recv_msg) {
+  int start_pos = recv_msg.find(' ');
+  start_pos = recv_msg.find(' ', start_pos + 1);
+  int end_pos = recv_msg.find('\n', start_pos + 1);
+  std::string version(recv_msg.begin() + start_pos + 1,
+                      recv_msg.begin() + end_pos);
+  return version;
+}
+bool HttpRequestParser::IsValidHttpVersion(
+    const std::string& protocol_version) {
+  int pos = protocol_version.find("HTTP/");
+  char version_head_num = protocol_version[kProtocolVersionPos];
+  if (pos == 0 && ('0' < version_head_num && version_head_num <= '9'))
+    return true;
+  return false;
+}
+std::string HttpRequestParser::GetFieldValue(const char* field_name,
+                                             const std::string& recv_msg) {
+  int name_start_pos = recv_msg.find(field_name, 0, strlen(field_name));
+  if (-1 == name_start_pos) return "";
+  int value_start_pos = recv_msg.find(": ", name_start_pos + 1) + 2;
+  int value_end_pos = recv_msg.find('\n', value_start_pos + 1);
+  std::string value(recv_msg.begin() + value_start_pos,
+                    recv_msg.begin() + value_end_pos);
+  return value;
+}
+int HttpRequestParser::GetFieldValueInt(const char* field_name,
+                                        const std::string& recv_msg) {
+  std::string value = GetFieldValue(field_name, recv_msg);
+  int num = atoi(value.c_str());
+  return num;
+}
+void HttpRequestParser::GetMessageBody(const std::string& recv_msg,
+                                       std::string& body) {
+  int pos = recv_msg.find("\r\n\r\n");
+  body.assign(recv_msg.begin() + pos + 4, recv_msg.end());
+}
+
+HttpRequest* HttpRequestParser::CreateHttpRequest(const std::string& recv_msg) {
+  HttpRequest* req = new HttpRequest();
+
+  req->method_ = GetMethod(recv_msg);
+  req->uri_ = GetUri(recv_msg);
+  {  // Http version check
+    std::string version = GetProtocolVersion(recv_msg);
+    bool is_valid_version = IsValidHttpVersion(version);
+    if (!is_valid_version) {
+      req->is_bad_request_ = true;
+      return (req);
+    }
+    req->http_version_ =
+        version.erase(0, kProtocolVersionPos);  //先頭の"HTTP/"を削除
+  }
+  req->content_type_ = GetFieldValue("Content-Type", recv_msg);
+  req->content_length_ = GetFieldValueInt("Content-Length", recv_msg);
+  GetMessageBody(recv_msg, req->body_);
+
+  if (0) {
+    std::cout << req->method_ << std::endl;
+    std::cout << req->uri_ << std::endl;
+    std::cout << req->http_version_ << std::endl;
+    std::cout << req->content_type_ << std::endl;
+    std::cout << req->content_length_ << std::endl;
+    std::cout << req->body_ << std::endl;
+  }
+  return req;
+}
+void HttpRequestParser::DestroyHttpRequest(HttpRequest* req) { delete (req); }

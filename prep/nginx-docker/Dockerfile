@@ -6,7 +6,7 @@ RUN set -ex; \
 	apt-get update; \
 	apt-get -y install \
 	# to run nginx
-		nginx; \
+	nginx; \
 	# Remove apt-get caches
 	rm -rf /var/lib/apt/lists;
 
@@ -21,7 +21,10 @@ RUN ln -s /etc/nginx/sites-available/webserv-docker.conf /etc/nginx/sites-enable
 RUN echo "daemon off;" >> /etc/nginx/nginx.conf
 
 # Change owner of all files in the www directory
-RUN chown -R www-data:www-data /var/www
+RUN chown -R www-data:www-data /var/www; \
+	chmod 400 /var/www/html/readable.html; \
+	chmod 200 /var/www/html/writable.html; \
+	chmod 100 /var/www/html/executable.html;
 
 # Keep running the container
 ENTRYPOINT [ "nginx" ]

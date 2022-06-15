@@ -10,6 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <ctime>
+#include <cctype> // for isdigit
 #include <sys/stat.h>
 
 class HttpResponse {
@@ -21,20 +22,20 @@ class HttpResponse {
   virtual ~HttpResponse();
 
   // Other functions
-  int MakeResponse();
-  const char* GetResponse() const;
-  size_t GetResponseLen() const;
+  std::string GetResponse() const;
 
  private:
   // Static constants
   static const int kStatusCodeOK = 200;
   static const int kStatusCodeBadRequest = 400;
+  static const int kStatusCodeForbidden = 403;
   static const int kStatusCodeNotFound = 404;
   static const int kStatusCodeMethodNotAllowed = 405;
   static const int kStatusCodeVersionNotSupported = 505;
   static const std::string kServerVersion;
   static const std::string kStatusDescOK;
   static const std::string kStatusDescBadRequest;
+  static const std::string kStatusDescForbidden;
   static const std::string kStatusDescNotFound;
   static const std::string kStatusDescMethodNotAllowed;
   static const std::string kStatusDescVersionNotSupported;
@@ -45,7 +46,8 @@ class HttpResponse {
   HttpResponse &operator=(const HttpResponse &other);
 
   // Other functions
-  void InitResponse();
+  void InitParameters();
+  void MakeResponse();
   void InitFileStream();
   void MakeHeader200();
   void MakeErrorHeader();
@@ -59,19 +61,25 @@ class HttpResponse {
   void SetStatusCode();
   bool IsValidMethod() const;
   bool IsAllowedMethod() const;
-  bool IsValidVersion() const;
+  void ValidateVersion();
+  void SetEtag();
+  bool IsDigitSafe(char ch);
 
   // Data members
   HttpRequest http_request_;
   ServerConfig server_config_;
+  int status_code_;
+  std::string status_desc_;
+  bool is_bad_request_;
+  bool is_supported_version_;
   LocationConfig* location_config_;
   std::string requested_file_path_;
   std::ifstream requested_file_;
-  bool is_file_fail_;
-  int status_code_;
-  std::string status_desc_;
+  bool is_file_exists_;
+  bool is_file_forbidden_;
   std::string server_header_;
   std::string date_header_;
+  std::string etag_header_;
   std::vector<std::string> header_;
   std::string body_;
   size_t body_len_;

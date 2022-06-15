@@ -1,7 +1,7 @@
 SRCS	= main.cpp \
 		server.cpp \
 		socket.cpp \
-		httpRequestParser.cpp
+		http_request_parser.cpp
 
 CXX		= c++
 CXXFLAGS	= -Wall -Wextra -Werror -std=c++98
