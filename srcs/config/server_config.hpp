@@ -1,15 +1,16 @@
 #ifndef CONFIGPARSER_HPP_
 #define CONFIGPARSER_HPP_
 
+#include <set>
 #include <string>
 #include <vector>
-#include <set>
+
 #include "location_config.hpp"
 
 class ServerConfig {
  public:
   ServerConfig();
-  ServerConfig(LocationConfig const &lc); // for debug
+  ServerConfig(LocationConfig const &lc);  // for debug
   ~ServerConfig();
   ServerConfig(const ServerConfig &rhs);
   ServerConfig &operator=(const ServerConfig &rhs);
@@ -22,18 +23,12 @@ class ServerConfig {
   std::vector<LocationConfig> vec_location_config_;
 
   LocationConfig CreateLocationConfig(std::stringstream &ss);
-  int ParseServer(std::string context);
+
   void PrintVal();
+  void ParseListen(const std::vector<std::pair<int, std::string> > &list);
+
  private:
-  int line;
-
-  void init();
-  int ParseDirective(std::string directive);
-  int ParseListen(std::stringstream& ss);
-  int ParseServerName(std::stringstream& ss);
-  int ParseErrorPage(std::stringstream& ss);
-  int ParseClientMaxBodySize(std::stringstream& ss);
-
+  void Init();
 };
 
 #endif

@@ -1,21 +1,23 @@
 #ifndef CONFIG_HPP_
 #define CONFIG_HPP_
 
-#include <string>
 #include <sstream>
+#include <string>
 #include <vector>
-// class ConfigError
-// {
-//  public:
-// 	int line;
-// 	virtual void MakeUnexpected(std::string error_msg);
 
-// };
+#include "server_config.hpp"
 
-void MakeUnexpected(std::string msg);
-int ParseInt(std::stringstream &ss, int max);
-bool ParseBool(std::stringstream &ss);
-std::string ParseString(std::stringstream &ss);
-std::vector<std::string> ParseVector(std::stringstream &ss);
+struct Config {
+  std::vector<ServerConfig> vec_server_config_;
+  std::string config_file_;
+};
+
+void MakeUnexpected(const std::string& msg, const int& pos);
+void ParseInt(const std::vector<std::pair<int, std::string> >& list, int& i);
+void ParseBool(const std::vector<std::pair<int, std::string> >& list, bool& b);
+void ParseString(const std::vector<std::pair<int, std::string> >& list,
+                 std::string& str);
+void ParseVector(const std::vector<std::pair<int, std::string> >& list,
+                 std::vector<std::string>& str);
 
 #endif

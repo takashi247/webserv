@@ -6,18 +6,16 @@
 
 #include "config.hpp"
 
-void ServerConfig::init() {
+void ServerConfig::Init() {
   port_ = 0;
   client_max_body_size_ = 1024;
-
-  line = 0;
 }
 
-ServerConfig::ServerConfig() { init(); }
+ServerConfig::ServerConfig() { Init(); }
 
 ServerConfig::ServerConfig(LocationConfig const &lc)
     : vec_location_config_(1, lc) {
-  init();
+  Init();
 }
 
 ServerConfig::~ServerConfig() {}
@@ -36,117 +34,24 @@ ServerConfig &ServerConfig::operator=(ServerConfig const &rhs) {
   return *this;
 }
 
-LocationConfig ServerConfig::CreateLocationConfig(std::stringstream &ss) {
-  LocationConfig lc;
-  std::string item;
+void ServerConfig::ParseListen(const std::vector<std::pair<int, std::string> > &list) {
+  std::string::size_type delim_pos;
 
-  if (!getline(ss, item, ' ')) {
-    std::cout << "Localconfig error" << std::endl;
-    std::exit(1);
+  if (list.size() != 2) {
+    MakeUnexpected("invalid number of args in listen directive", list[0].first);
   }
-  lc.location_path_ = item;
-  if (!getline(ss, item, ' ') || item != "{") {
-    std::cout << "Localconfig error" << std::endl;
-    std::exit(1);
+  std::string set_value = list[1].second;
+  delim_pos = set_value.find(':');
+  if (delim_pos == std::string::npos) {
+    port_ = std::atoi(set_value.c_str());
+  } else {
+    host_ = set_value.substr(0, delim_pos);
+    port_ = std::atoi(set_value.substr(delim_pos + 1).c_str());
   }
-  lc.ParseLocation(ss);
-  return (lc);
-}
-
-int ServerConfig::ParseServer(std::string context) {
-  std::stringstream ss(context);
-  std::string directive;
-
-  while (std::getline(ss, directive, ';')) {
-    ParseDirective(directive);
-  }
-  PrintVal();
-  return (0);
-}
-
-int ServerConfig::ParseDirective(std::string directive) {
-  std::replace(directive.begin(), directive.end(), '\n', ' ');
-  std::replace(directive.begin(), directive.end(), '\r', ' ');
-  std::replace(directive.begin(), directive.end(), '\t', ' ');
-
-  size_t pos_start = directive.find_first_not_of(' ');
-  if (pos_start == std::string::npos) {
-    return (1);
-  }
-  std::stringstream ss(directive.substr(pos_start));
-  std::string item;
-
-  if (!getline(ss, item, ' ')) {
-    return (1);
-  }
-  if (item == "listen") {
-    ParseListen(ss);
-  } else if (item == "server_name") {
-    vec_server_names_ = ParseVector(ss);
-  } else if (item == "error_page") {
-    error_page_path_ = ParseString(ss);
-  } else if (item == "client_max_body_size") {
-    client_max_body_size_ = ParseInt(ss, 65536);
-  } else if (item == "location") {
-    vec_location_config_.push_back(CreateLocationConfig(ss));
-  }
-  return (0);
-}
-
-int ServerConfig::ParseListen(std::stringstream &ss) {
-  std::string set_value;
-
-  if (!getline(ss, set_value, ':')) {
-    return (1);
-  }
-  host_ = set_value;
-  if (!getline(ss, set_value)) {
-    return (1);
-  }
-  port_ = atoi(set_value.c_str());
-  if (port_ > 65535 || !ss.eof()) {
-    return (1);
-  }
-  return (0);
-}
-
-int ServerConfig::ParseServerName(std::stringstream &ss) {
-  for (std::string set_value; getline(ss, set_value, ' ');) {
-    vec_server_names_.push_back(set_value);
-  }
-  if (vec_server_names_.size() == 0) {
-    return (1);
-  }
-  return (0);
-}
-
-int ServerConfig::ParseErrorPage(std::stringstream &ss) {
-  std::string set_value;
-
-  if (!getline(ss, set_value, ' ')) {
-    return (1);
-  }
-  error_page_path_ = set_value;
-  if (!ss.eof()) {
-    return (1);
-  }
-  return (0);
-}
-
-int ServerConfig::ParseClientMaxBodySize(std::stringstream &ss) {
-  std::string set_value;
-
-  if (!getline(ss, set_value, ' ')) {
-    return (1);
-  }
-  client_max_body_size_ = atoi(set_value.c_str());
-  if (!ss.eof()) {
-    return (1);
-  }
-  return (0);
 }
 
 void ServerConfig::PrintVal() {
+  std::cout << "=====" << std::endl;
   std::cout << "listen " << host_ << ":" << port_ << std::endl;
 
   std::cout << "server_name ";
@@ -160,9 +65,10 @@ void ServerConfig::PrintVal() {
 
   std::cout << "client_max_body_size " << client_max_body_size_ << std::endl;
 
-  std::cout << "location ";
+  std::cout << "[location]" << std::endl;
   for (std::vector<LocationConfig>::iterator it = vec_location_config_.begin();
        it != vec_location_config_.end(); ++it) {
     it->PrintVal();
   }
+  std::cout << "=====" << std::endl;
 }

@@ -1,20 +1,19 @@
 #include "location_config.hpp"
+
+#include <iostream>
 #include <sstream>
+
 #include "config.hpp"
-void LocationConfig::init()
-{
+void LocationConfig::init() {
   vec_accepted_method_.push_back("GET");
   vec_accepted_method_.push_back("POST");
   vec_accepted_method_.push_back("DELETE");
   autoindex_ = false;
   vec_index_.push_back("index.html");
   is_uploadable_ = false;
-
 }
 
-LocationConfig::LocationConfig() {
-  init();
-}
+LocationConfig::LocationConfig() { init(); }
 
 LocationConfig::~LocationConfig() {}
 
@@ -35,37 +34,37 @@ LocationConfig &LocationConfig::operator=(const LocationConfig &rhs) {
   return *this;
 }
 
-int LocationConfig::ParseLocation(std::stringstream &ss) {
-  std::string directive;
-  
-  while (std::getline(ss, directive, ';')) {
-    ParseDirective(directive);
-    
-  }
-
-  PrintVal();
-  return (0);
-}
-
-int LocationConfig::ParseDirective(std::string directive) {
-  std::string item;
-  std::stringstream ss(directive);
-
-  if (!std::getline(ss, item, ' ')) {
-    return (1);
-  }
-  if (item == "http_method") {
-    vec_accepted_method_ = ParseVector(ss);
-  } else if (item == "proxy_path") {
-    proxy_pass_ = ParseString(ss);
-  } else if (item == "root") {
-
-  }
-}
-
-
 void LocationConfig::PrintVal() {
+  std::cout << "location " << location_path_ << std::endl;
 
-  return ;
+  std::cout << "http_method ";
+  for (std::vector<std::string>::iterator it = vec_accepted_method_.begin();
+       it != vec_accepted_method_.end(); ++it) {
+    std::cout << *it << " ";
+  }
+  std::cout << std::endl;
+
+  std::cout << "proxy_pass " << proxy_pass_ << std::endl;
+
+  std::cout << "root " << root_ << std::endl;
+
+  std::cout << "autoindex " << autoindex_ << std::endl;
+
+  std::cout << "index ";
+  for (std::vector<std::string>::iterator it = vec_index_.begin();
+       it != vec_index_.end(); ++it) {
+    std::cout << *it << " ";
+  }
+  std::cout << std::endl;
+
+  std::cout << "add_cgi_handler ";
+  for (std::vector<std::string>::iterator it = vec_cgi_file_extension_.begin();
+       it != vec_cgi_file_extension_.end(); ++it) {
+    std::cout << *it << " ";
+  }
+  std::cout << std::endl;
+
+  std::cout << "is_uploadable " << is_uploadable_ << std::endl;
+
+  std::cout << "upload_store  " << upload_dir_ << std::endl;
 }
-

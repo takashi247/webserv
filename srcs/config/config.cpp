@@ -1,65 +1,60 @@
 #include "config.hpp"
-#include <iostream>
+
 #include <cstdlib>
-// void ConfigError::MakeUnexpected(std::string error_msg) {
-//   std::cerr << error_msg << std::endl;
-//   std::exit(EXIT_FAILURE);
-// }
+#include <iostream>
 
-void MakeUnexpected(std::string msg) {
+void MakeUnexpected(const std::string &msg, const int &pos) {
+  if (pos > 0) {
+    std::cerr << "line " << pos << ": ";
+  }
   std::cerr << msg << std::endl;
-  std::exit(EXIT_FAILURE);
+  std::exit(1);
 }
 
-int ParseInt(std::stringstream &ss, int max) {
-  std::string set_value;
-  int set_value_int;
-
-  if (!std::getline(ss, set_value, ' ')) {
-    return (1);
+// need max ??
+void ParseInt(const std::vector<std::pair<int, std::string> > &list, int &i) {
+  if (list.size() != 2) {
+    MakeUnexpected("invalid number of args in server_name directive",
+                   list[0].first);
   }
-  set_value_int = atoi(set_value.c_str());
-  if (set_value_int > max || !ss.eof()) {
-    return (1);
-  }
-  return (set_value_int);
+  i = atoi(list[1].second.c_str());
 }
 
-bool ParseBool(std::stringstream &ss) {
-  std::string set_value = ParseString(ss);
-
-  if (set_value == "on") {
-    return (true);
+void ParseBool(const std::vector<std::pair<int, std::string> > &list, bool &b) {
+  if (list.size() != 2) {
+    MakeUnexpected("invalid number of args in " + list[0].second + " directive",
+                   list[0].first);
   }
-  if (set_value == "off") {
-    return (false);
+  std::string item = list[1].second;
+  if (item == "on") {
+    b = true;
+  } else if (item == "off") {
+    b = false;
+  } else {
+    MakeUnexpected("unexpexted arg in " + list[0].second +
+                       " directive, please set with on/off",
+                   0);
   }
-  MakeUnexpected("");
-  return (true);
 }
 
-std::string ParseString(std::stringstream &ss) {
-  std::string set_value;
-
-  if (!std::getline(ss, set_value, ' ')) {
-    MakeUnexpected("hello");
+void ParseString(const std::vector<std::pair<int, std::string> > &list,
+                 std::string &str) {
+  if (list.size() != 2) {
+    MakeUnexpected("invalid number of args in " + list[0].second + " directive",
+                   list[0].first);
   }
-  if (!ss.eof()) {
-    MakeUnexpected("hello");
-  }
-  return (set_value);
+  str = list[1].second;
 }
 
-std::vector<std::string> ParseVector(std::stringstream &ss) {
-  std::string set_value;
-  std::vector<std::string> vec_set_value;
-
-  std::cout << "called!!" << std::endl;
-  for (std::string set_value; getline(ss, set_value, ' ');) {
-    vec_set_value.push_back(set_value);
+void ParseVector(const std::vector<std::pair<int, std::string> > &list,
+                 std::vector<std::string> &vec) {
+  if (list.size() == 1) {
+    MakeUnexpected("invalid number of args in " + list[0].second + " directive",
+                   list[0].first);
   }
-  if (vec_set_value.size() == 0) {
-    MakeUnexpected("");
+  // delete default value
+  vec.clear();
+  for (size_t i = 1; i < list.size(); ++i) {
+    vec.push_back(list[i].second);
   }
-  return (vec_set_value);
 }

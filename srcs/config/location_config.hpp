@@ -1,9 +1,9 @@
 #ifndef LOCATIONCONFIG_HPP_
 #define LOCATIONCONFIG_HPP_
 
+#include <set>
 #include <string>
 #include <vector>
-#include <set>
 
 class LocationConfig {
  public:
@@ -28,8 +28,6 @@ class LocationConfig {
  private:
   void init();
   int ParseDirective(std::string directive);
-
 };
-
 
 #endif

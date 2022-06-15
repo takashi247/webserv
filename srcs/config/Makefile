@@ -1,6 +1,6 @@
 NAME		:= a.out
 
-CXX			:= c++
+CXX			:= g++
 
 CXXFLAGS	:= -Wall -Wextra -Werror -MMD -MP -std=c++98 -pedantic
 
@@ -11,7 +11,8 @@ OBJSDIR		:= objs/
 SRCS		:= main.cpp \
 			   location_config.cpp \
 			   server_config.cpp \
-			   config.cpp
+			   config.cpp \
+			   config_parser.cpp
 
 OBJS		:= $(addprefix $(OBJSDIR), $(SRCS:.cpp=.o))
 
