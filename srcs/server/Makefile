@@ -4,12 +4,12 @@ SRCS	= main.cpp \
 		http_request_parser.cpp
 
 CXX		= c++
-CXXFLAGS	= -Wall -Wextra -Werror -std=c++98
+CXXFLAGS	= -Wall -Wextra -Werror -std=c++98 -D DUMMY_RESPONSE
 NAME	= webserv
 
 OBJS	= $(SRCS:.cpp=.o)
 DEPS	= $(SRCS:.cpp=.d)
-INCS	= -I../ -I./
+INCS	= -I../ -I./ -Istub/
 RM		= rm -f
 
 .cpp.o:

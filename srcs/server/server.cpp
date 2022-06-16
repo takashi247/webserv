@@ -3,23 +3,28 @@
 #include <sys/select.h>  //select
 #include <unistd.h>      //close
 
-#include <fstream>  //ifstream
 #include <iostream>
-#include <sstream>  //stringstream
 #include <string>
 #include <vector>
 
 #include "http_request_parser.hpp"
+#ifdef DUMMY_RESPONSE
+#include "http_request.hpp"
+#else
+#include "../response/include/http_request.hpp"
+#include "../response/include/http_response.hpp"
+#endif
 
 Server::Server() {
-  configs_.clear();
+  config_.vec_server_config_.clear();
   {
     ServerConfig *sc = new ServerConfig();
     LocationConfig *lc = new LocationConfig();
     lc->vec_index_.push_back("index.html");
     lc->root_ = "../www/";
     sc->vec_location_config_.push_back(lc);
-    configs_.push_back(std::make_pair(5000, sc));
+    config_.vec_server_config_.push_back(std::make_pair(5000, sc));
+    config_.vec_server_config_.push_back(std::make_pair(4242, sc));
   }
 }
 
@@ -32,17 +37,56 @@ Server::Server(const char *conf) {
   return;
 }
 
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#define BUF_LEN 256 /* バッファのサイズ */
+typedef struct CLIENT_INFO {
+  char hostname[BUF_LEN]; /* ホスト名 */
+  char ipaddr[BUF_LEN];   /* IP アドレス */
+  int port;               /* ポート番号 */
+  time_t last_access;     /* 最終アクセス時刻 */
+} CLIENT_INFO;
+CLIENT_INFO client_info[FD_SETSIZE];
+void debug_print_accept_info(int new_socket) {
+  socklen_t len;
+  struct hostent *peer_host;
+  struct sockaddr_in peer_sin;
+
+  len = sizeof(peer_sin);
+  getpeername(new_socket, (struct sockaddr *)&peer_sin, &len);
+
+  peer_host = gethostbyaddr((char *)&peer_sin.sin_addr.s_addr,
+                            sizeof(peer_sin.sin_addr), AF_INET);
+
+  /* ホスト名 */
+  strncpy(client_info[new_socket].hostname, peer_host->h_name,
+          sizeof client_info[new_socket].hostname);
+  /* IP アドレス */
+  strncpy(client_info[new_socket].ipaddr, inet_ntoa(peer_sin.sin_addr),
+          sizeof client_info[new_socket].ipaddr);
+  /* ポート番号 */
+  client_info[new_socket].port = ntohs(peer_sin.sin_port);
+  /* 現在時刻を最終アクセス時刻として記録しておく */
+  time(&client_info[new_socket].last_access);
+
+  printf("接続: %s (%s) ポート %d  ディスクリプタ %d 番\n",
+         client_info[new_socket].hostname, client_info[new_socket].ipaddr,
+         client_info[new_socket].port, new_socket);
+}
+
 const int BUF_SIZE = 3000;  // 1024;
 const std::string HTML_FILE = "www";
 const int MAX_SESSION = 10;
 
 void Server::Run() {
-  std::vector<std::pair<int, ServerConfig *> >::iterator it = configs_.begin();
-  for (; it != configs_.end(); ++it) {
+  std::vector<std::pair<int, ServerConfig *> >::iterator it =
+      config_.vec_server_config_.begin();
+  for (; it != config_.vec_server_config_.end(); ++it) {
     Socket *s = new Socket(it->first);  //リスニングポートを作成
-    s->set_socket();
-    sockets_.insert(
-        std::make_pair(it->first, s));  //ポートとソケットをペアで入れる。
+    s->SetSocket();
+    sockets_.push_back(s);
+    std::cout << "ポート " << it->first << " を監視します。\n";
   }
 
   std::string executive_file = HTML_FILE;
@@ -52,14 +96,20 @@ void Server::Run() {
   for (int i = 0; i < MAX_SESSION; i++) {
     accfd[i] = -1;
   }
+  //   int server_num = configs_.size();
+  //   int i = 0;
+  //   while (i < server_num) {
   fd_set fds;
-  Socket *sock = sockets_[5000];
+  Socket *sock = sockets_[0];
 
   while (1) {
+    // 1つのリスニングソケットを設定する。widthは参照するfdの幅・個数
     FD_ZERO(&fds);
-    FD_SET(sock->get_listenfd(), &fds);
-    int width = sock->get_listenfd() + 1;
-
+    FD_SET(sock->GetListenFd(), &fds);
+    int width = sock->GetListenFd() + 1;
+    // 2周目以降は、accfd[]に監視するfdが入っている。
+    // セットしつつ、fdの最大幅を更新する。
+    // indexは接続順。できるだけ手前に入るはず。
     for (int i = 0; i < MAX_SESSION; i++) {
       if (accfd[i] != -1) {
         FD_SET(accfd[i], &fds);
@@ -68,14 +118,21 @@ void Server::Run() {
         }
       }
     }
-    if (select(width, &fds, NULL, NULL, NULL) == -1) {
+    //この時点で、fdsは、1つのリスニングポートと複数の接続済みポートのフラグが立つ。
+    struct timeval waitval; /* select に待ち時間を指定するための構造体 */
+    waitval.tv_sec = 2; /* 待ち時間に 2.500 秒を指定 */
+    waitval.tv_usec = 500;
+    if (select(width, &fds, NULL, NULL, &waitval) == -1) {
       std::cout << "select() failed." << std::endl;
       break;
     }
 
-    //新規接続が見つかった場合
-    if (FD_ISSET(sock->get_listenfd(), &fds)) {
-      int connfd = accept(sock->get_listenfd(), (struct sockaddr *)NULL, NULL);
+    // 1つのリスニングポートに、新規接続が見つかった場合
+    if (FD_ISSET(sock->GetListenFd(), &fds)) {
+      int connfd = accept(sock->GetListenFd(), (struct sockaddr *)NULL, NULL);
+
+      debug_print_accept_info(connfd);
+
       bool limit_over = true;
       for (int i = 0; i < MAX_SESSION; i++) {
         if (accfd[i] == -1) {
@@ -126,34 +183,39 @@ void Server::Run() {
         std::cout << "***** receive message finished *****\n";
 
         HttpRequest *request = HttpRequestParser::CreateHttpRequest(recv_str);
+        std::string server_response;
+#ifdef DUMMY_RESPONSE
         (void)request;
-#if 1  // Dummy Response
         std::vector<std::string> header;
         header.push_back("HTTP/1.1 200 OK\r\n");
         header.push_back("Content-Type: text/html; charset=UTF-8\r\n");
         header.push_back("Content-Length: 39\r\n");
         header.push_back("Connection: Keep-Alive\r\n");
         header.push_back("\r\n");
-        header.push_back("<html><body>Hello,world!</body></html>");
-        std::string server_response;
+        header.push_back("<html><body>Hello,world!</body></html>\r\n");
         int header_size = header.size();
         for (int i = 0; i < header_size; i++) {
           server_response.append(header[i].c_str());
         }
-        //				std::cout << server_response <<
-        // std::endl;
+#else
+        HttpResponse response(*request, config_.vec_server_config_.front());
+        server_response = response.GetResponse();
+#endif
+        //	std::cout << server_response << std::endl;
         if (send(accfd[i], server_response.c_str(), server_response.length(),
                  0) == -1) {
           std::cout << "write() failed." << std::endl;
         }
-#endif
         HttpRequestParser::DestroyHttpRequest(request);
         close(accfd[i]);
         accfd[i] = -1;
       }
     }
   }
-  close(sock->get_listenfd());
+  close(sock->GetListenFd());
+
+  //     if (++i == server_num) i = 0;
+  //   }
 
   return;
 }

@@ -11,11 +11,14 @@ class Socket {
  public:
   explicit Socket(int port_) : port(port_) {}
   ~Socket() {}
-  void set_listenfd();
-  void set_sockaddr_in();
-  int set_socket();
 
-  int get_listenfd() const { return this->listenfd; }
+ private:
+  void SetListenfd();
+  void SetSockaddrIn();
+
+ public:
+  int SetSocket();
+  int GetListenFd() const { return this->listenfd; }
 };
 
 #endif

@@ -4,13 +4,18 @@
 #include <map>
 #include <vector>
 
+#define DUMMY_RESPONSE
+#ifdef DUMMY_RESPONSE
 #include "config.hpp"
+#else
+#include "../config/config.hpp"
+#endif
 #include "socket.hpp"
 
 class Server {
  private:
-  std::vector<std::pair<int, ServerConfig *> > configs_;
-  std::map<int, Socket *> sockets_;
+  Config config_;
+  std::vector<Socket *> sockets_;
 
  public:
   Server();  //削除予定
