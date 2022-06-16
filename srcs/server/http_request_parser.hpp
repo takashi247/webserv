@@ -1,11 +1,7 @@
 #ifndef HTTP_REQUEST_PARSER_HPP
 #define HTTP_REQUEST_PARSER_HPP
 
-#ifdef DUMMY_RESPONSE
 #include "http_request.hpp"
-#else
-#include "../response/include/http_request.hpp"
-#endif
 
 class HttpRequestParser {
  private:

@@ -4,12 +4,7 @@
 #include <map>
 #include <vector>
 
-#define DUMMY_RESPONSE
-#ifdef DUMMY_RESPONSE
 #include "config.hpp"
-#else
-#include "../config/config.hpp"
-#endif
 #include "socket.hpp"
 
 class Server {

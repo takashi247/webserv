@@ -7,13 +7,9 @@
 #include <string>
 #include <vector>
 
-#include "http_request_parser.hpp"
-#ifdef DUMMY_RESPONSE
 #include "http_request.hpp"
-#else
-#include "../response/include/http_request.hpp"
-#include "../response/include/http_response.hpp"
-#endif
+#include "http_request_parser.hpp"
+#include "http_response.hpp"
 
 Server::Server() {
   config_.vec_server_config_.clear();
@@ -183,24 +179,8 @@ void Server::Run() {
         std::cout << "***** receive message finished *****\n";
 
         HttpRequest *request = HttpRequestParser::CreateHttpRequest(recv_str);
-        std::string server_response;
-#ifdef DUMMY_RESPONSE
-        (void)request;
-        std::vector<std::string> header;
-        header.push_back("HTTP/1.1 200 OK\r\n");
-        header.push_back("Content-Type: text/html; charset=UTF-8\r\n");
-        header.push_back("Content-Length: 39\r\n");
-        header.push_back("Connection: Keep-Alive\r\n");
-        header.push_back("\r\n");
-        header.push_back("<html><body>Hello,world!</body></html>\r\n");
-        int header_size = header.size();
-        for (int i = 0; i < header_size; i++) {
-          server_response.append(header[i].c_str());
-        }
-#else
-        HttpResponse response(*request, config_.vec_server_config_.front());
-        server_response = response.GetResponse();
-#endif
+        HttpResponse response(request, config_.vec_server_config_[0].second);
+        std::string server_response = response.GetResponse();
         //	std::cout << server_response << std::endl;
         if (send(accfd[i], server_response.c_str(), server_response.length(),
                  0) == -1) {
