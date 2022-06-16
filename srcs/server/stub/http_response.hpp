@@ -9,12 +9,12 @@
 class HttpResponse {
  private:
   HttpResponse();
+  const HttpRequest *request_;
+  const ServerConfig *sc_;
 
  public:
-  HttpResponse(const HttpRequest* request, const ServerConfig* config) {
-    (void)request;
-    (void)config;
-  }
+  HttpResponse(const HttpRequest *request, const ServerConfig *config)
+      : request_(request), sc_(config) {}
   ~HttpResponse() {}
   std::string GetResponse() {
     std::string server_response;

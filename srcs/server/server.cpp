@@ -14,13 +14,19 @@
 Server::Server() : config_("filename") {
   config_.vec_server_config_.clear();
   {
-    ServerConfig *sc = new ServerConfig();
     LocationConfig *lc = new LocationConfig();
     lc->vec_index_.push_back("index.html");
     lc->root_ = "../www/";
+
+    ServerConfig *sc = new ServerConfig();
     sc->vec_location_config_.push_back(lc);
-    config_.vec_server_config_.push_back(std::make_pair(5000, sc));
-    config_.vec_server_config_.push_back(std::make_pair(4242, sc));
+    sc->port_ = 5000;
+    ServerConfig *sc2 = new ServerConfig();
+    sc->vec_location_config_.push_back(lc);
+    sc2->port_ = 4242;
+
+    config_.vec_server_config_.push_back(std::make_pair(sc->port_, sc));
+    config_.vec_server_config_.push_back(std::make_pair(sc2->port_, sc2));
   }
 }
 
@@ -71,9 +77,6 @@ void debug_print_accept_info(int new_socket) {
          client_info[new_socket].port, new_socket);
 }
 
-const int BUF_SIZE = 3000;  // 1024;
-const int MAX_SESSION = 10;
-
 int Server::AcceptNewClient(const fd_set *fds, int *accfd) {
   std::vector<Socket *>::iterator it = sockets_.begin();
   for (; it != sockets_.end(); ++it) {
@@ -82,7 +85,7 @@ int Server::AcceptNewClient(const fd_set *fds, int *accfd) {
       debug_print_accept_info(connfd);
 
       bool limit_over = true;
-      for (int i = 0; i < MAX_SESSION; i++) {
+      for (int i = 0; i < kMaxSessionNum; i++) {
         if (accfd[i] == -1) {
           accfd[i] = connfd;
           limit_over = false;
@@ -100,7 +103,7 @@ int Server::AcceptNewClient(const fd_set *fds, int *accfd) {
 
 std::string Server::ReadMessage(int *p_fd) {
   std::string recv_str = "";
-  char buf[BUF_SIZE];
+  char buf[kReadBufferSize];
   memset(buf, 0, sizeof(buf));
   ssize_t read_size = 0;
 
@@ -115,6 +118,7 @@ std::string Server::ReadMessage(int *p_fd) {
     }
     if (read_size > 0) {
       recv_str.append(buf);
+      memset(buf, 0, sizeof(buf));
     }
     //読み込んだ最後が\r\n\r\nなら終了。
     if ((recv_str[recv_str.length() - 4] == 0x0d) &&
@@ -141,8 +145,8 @@ void Server::Run() {
       std::cout << "ポート " << it->first << " を監視します。\n";
     }
   }
-  int accfd[MAX_SESSION];
-  for (int i = 0; i < MAX_SESSION; i++) {
+  int accfd[kMaxSessionNum];
+  for (int i = 0; i < kMaxSessionNum; i++) {
     accfd[i] = -1;
   }
 
@@ -164,7 +168,7 @@ void Server::Run() {
 
     // 2周目以降は、accfd[]に接続済みのfdが入っている。
     // iは接続順で、できるだけ手前に入る。
-    for (int i = 0; i < MAX_SESSION; i++) {
+    for (int i = 0; i < kMaxSessionNum; i++) {
       if (accfd[i] != -1) {
         FD_SET(accfd[i], &fds);
         if (width < (accfd[i] + 1)) {
@@ -194,7 +198,7 @@ void Server::Run() {
     /***
      *	受信処理（接続済みソケット宛にメッセージ受信）
      */
-    for (int i = 0; i < MAX_SESSION; i++) {
+    for (int i = 0; i < kMaxSessionNum; i++) {
       if (accfd[i] == -1) {
         continue;
       }
