@@ -1,19 +1,32 @@
-#ifndef CONFIGPARSER_HPP_
-#define CONFIGPARSER_HPP_
+#ifndef SERVER_CONFIG_HPP_
+# define SERVER_CONFIG_HPP_
 
 #include <set>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <iostream>
+#include <sstream>
+#include <sys/stat.h>
 
 #include "location_config.hpp"
+#include "parser_utils.hpp"
 
 class ServerConfig {
  public:
   ServerConfig();
-  ServerConfig(LocationConfig const &lc);  // for debug
+  ServerConfig(const LocationConfig &lc);  // for debug
   ~ServerConfig();
   ServerConfig(const ServerConfig &rhs);
   ServerConfig &operator=(const ServerConfig &rhs);
+
+  // URIとlocation_path_の前方一致で一番長いものを返す、ない場合はNULL
+  LocationConfig* SelectLocationConfig(const std::string& uri);
+  // テスト参照、返したパスにファイルが存在するかどうかは別で確認の必要があり。
+  std::string UpdateUri(std::string uri);
+  void PrintVal();
+  // other configs are parsed by config utils
+  void ParseListen(const std::vector<std::pair<int, std::string> > &list);
 
   size_t port_;
   std::string host_;
@@ -21,11 +34,6 @@ class ServerConfig {
   std::string error_page_path_;
   size_t client_max_body_size_;
   std::vector<LocationConfig> vec_location_config_;
-
-  LocationConfig CreateLocationConfig(std::stringstream &ss);
-
-  void PrintVal();
-  void ParseListen(const std::vector<std::pair<int, std::string> > &list);
 
  private:
   void Init();

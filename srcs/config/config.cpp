@@ -1,61 +1,31 @@
 #include "config.hpp"
 
-#include <cstdlib>
-#include <iostream>
+Config::Config(std::string config_file) : config_file_(config_file) {}
 
-void MakeUnexpected(const std::string &msg, const int &pos) {
-  if (pos > 0) {
-    std::cerr << "line " << pos << ": ";
+Config::~Config() {}
+
+Config::Config(Config const &rhs) { *this = rhs; }
+
+Config &Config::operator=(Config const &rhs) {
+  if (this != &rhs) {
+    vec_server_config_ = rhs.vec_server_config_;
+    config_file_ = rhs.config_file_;
   }
-  std::cerr << msg << std::endl;
-  std::exit(1);
+  return *this;
 }
 
-// need max ??
-// [TODO] overflow, minus
-void ParseInt(const std::vector<std::pair<int, std::string> > &list, size_t &i) {
-  if (list.size() != 2) {
-    MakeUnexpected("invalid number of args in server_name directive",
-                   list[0].first);
+// return serverConfig which matches host, port and server_name
+ServerConfig *Config::SelectServerConfig(const std::string &host,
+                                         const size_t &port,
+                                         const std::string &server_name) {
+  for (std::vector<ServerConfig>::iterator it = vec_server_config_.begin();
+       it < vec_server_config_.end(); ++it) {
+    if ((it->host_ == "" || host == it->host_) && port == it->port_) {
+      if (std::find(it->vec_server_names_.begin(), it->vec_server_names_.end(),
+                    server_name) != it->vec_server_names_.end()) {
+        return (it.base());
+      }
+    }
   }
-  i = atoi(list[1].second.c_str());
-}
-
-void ParseBool(const std::vector<std::pair<int, std::string> > &list, bool &b) {
-  if (list.size() != 2) {
-    MakeUnexpected("invalid number of args in " + list[0].second + " directive",
-                   list[0].first);
-  }
-  std::string item = list[1].second;
-  if (item == "on") {
-    b = true;
-  } else if (item == "off") {
-    b = false;
-  } else {
-    MakeUnexpected("unexpexted arg in " + list[0].second +
-                       " directive, please set with on/off",
-                   0);
-  }
-}
-
-void ParseString(const std::vector<std::pair<int, std::string> > &list,
-                 std::string &str) {
-  if (list.size() != 2) {
-    MakeUnexpected("invalid number of args in " + list[0].second + " directive",
-                   list[0].first);
-  }
-  str = list[1].second;
-}
-
-void ParseVector(const std::vector<std::pair<int, std::string> > &list,
-                 std::vector<std::string> &vec) {
-  if (list.size() == 1) {
-    MakeUnexpected("invalid number of args in " + list[0].second + " directive",
-                   list[0].first);
-  }
-  // delete default value
-  vec.clear();
-  for (size_t i = 1; i < list.size(); ++i) {
-    vec.push_back(list[i].second);
-  }
+  return (&vec_server_config_[0]);
 }

@@ -14,6 +14,16 @@ server {
 		is_uploadable on;
 		upload_store /img;
 	}
+	location /img {
+		http_method GET POST DELETE;
+		proxy_path http://127.0.0.1:8000;
+		root /etc/www/html;
+		autoindex on;
+		index index.html;
+		add_cgi_handler .cgi;
+		is_uploadable on;
+		upload_store /img;
+	}
 }
 
 server {

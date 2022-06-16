@@ -1,9 +1,5 @@
 #include "config_parser.hpp"
 
-#include <algorithm>
-#include <fstream>
-#include <iostream>
-
 ConfigParser::ConfigParser() : index_(0) {}
 
 ConfigParser::~ConfigParser() {}
@@ -28,7 +24,7 @@ void ConfigParser::Tokenize(const char *file_name) {
   std::ifstream ifs(file_name);
 
   if (ifs.fail()) {
-    MakeUnexpected("failed to open config file", 0);
+    ParserUtils::MakeUnexpected("failed to open config file", 0);
   }
 
   int line_count = 0;
@@ -76,16 +72,16 @@ void ConfigParser::BalanceBraces() {
     }
 
     if (depth < 0) {
-      MakeUnexpected("unexpected \"}\"", tokens_[i].first);
+      ParserUtils::MakeUnexpected("unexpected \"}\"", tokens_[i].first);
     }
     // original rule
     if (depth > 3) {
-      MakeUnexpected("unexpected \"{\", too much nesting", tokens_[i].first);
+      ParserUtils::MakeUnexpected("unexpected \"{\", too much nesting", tokens_[i].first);
     }
   }
 
   if (depth > 0) {
-    MakeUnexpected("unexpected end of file, expecting \"}\"", tokens_[i].first);
+    ParserUtils::MakeUnexpected("unexpected end of file, expecting \"}\"", tokens_[i].first);
   }
 }
 
@@ -96,7 +92,7 @@ void ConfigParser::Parse(Config &config) {
       index_ += 2;
       config.vec_server_config_.push_back(CreateServerConfig());
     } else {
-      MakeUnexpected("unexpected block, expecting server",
+      ParserUtils::MakeUnexpected("unexpected block, expecting server",
                      tokens_[index_].first);
     }
   }
@@ -108,7 +104,7 @@ void ConfigParser::SplitIntoList(
   std::string item = tokens_[index_].second;
   for (; item != ";"; ++index_, item = tokens_[index_].second) {
     if (item == "{" || item == "}") {
-      MakeUnexpected("unexpected end of file, expecting \";\"",
+      ParserUtils::MakeUnexpected("unexpected end of file, expecting \";\"",
                      tokens_[index_].first);
     }
     list.push_back(tokens_[index_]);
@@ -122,7 +118,6 @@ ServerConfig ConfigParser::CreateServerConfig() {
 
   for (; tokens_[index_].second != "}";
        ++index_, item = tokens_[index_].second) {
-    // item = tokens_[index_].second;
     if (item == "location") {
       index_++;
       sc.vec_location_config_.push_back(CreateLocationConfig());
@@ -131,19 +126,20 @@ ServerConfig ConfigParser::CreateServerConfig() {
       if (item == "listen") {
         sc.ParseListen(list);
       } else if (item == "server_name") {
-        ParseVector(list, sc.vec_server_names_);
+        ParserUtils::ParseVector(list, sc.vec_server_names_);
       } else if (item == "error_page") {
-        ParseString(list, sc.error_page_path_);
+        ParserUtils::ParseString(list, sc.error_page_path_);
       } else if (item == "client_max_body_size") {
-        ParseInt(list, sc.client_max_body_size_);
+        ParserUtils::ParseInt(list, sc.client_max_body_size_);
       } else {
-        MakeUnexpected("unknown directive" + tokens_[index_].second,
+        ParserUtils::MakeUnexpected("unknown directive" + tokens_[index_].second,
                        tokens_[index_].first);
       }
     }
     list.clear();
   }
-  sc.PrintVal();
+  // for debug, delete comment out
+  // sc.PrintVal();
   return (sc);
 }
 
@@ -152,7 +148,7 @@ LocationConfig ConfigParser::CreateLocationConfig() {
   std::string item = tokens_[index_].second;
 
   if (item == "{" || item == "}" || item == ";") {
-    MakeUnexpected("unexpected " + item + ", expecting string",
+    ParserUtils::MakeUnexpected("unexpected " + item + ", expecting string",
                    tokens_[index_].first);
   }
   lc.location_path_ = item;
@@ -160,7 +156,7 @@ LocationConfig ConfigParser::CreateLocationConfig() {
   ++index_;
   item = tokens_[index_].second;
   if (item != "{") {
-    MakeUnexpected("unexpected " + item + ", expecting string",
+    ParserUtils::MakeUnexpected("unexpected " + item + ", expecting string",
                    tokens_[index_].first);
   }
   ++index_;
@@ -170,23 +166,23 @@ LocationConfig ConfigParser::CreateLocationConfig() {
   for (; item != "}"; ++index_, item = tokens_[index_].second) {
     SplitIntoList(list);
     if (item == "http_method") {
-      ParseVector(list, lc.vec_accepted_method_);
+      ParserUtils::ParseVector(list, lc.vec_accepted_method_);
     } else if (item == "proxy_path") {
-      ParseString(list, lc.proxy_pass_);
+      ParserUtils::ParseString(list, lc.proxy_pass_);
     } else if (item == "root") {
-      ParseString(list, lc.root_);
+      ParserUtils::ParseString(list, lc.root_);
     } else if (item == "autoindex") {
-      ParseBool(list, lc.autoindex_);
+      ParserUtils::ParseBool(list, lc.autoindex_);
     } else if (item == "index") {
-      ParseVector(list, lc.vec_index_);
+      ParserUtils::ParseVector(list, lc.vec_index_);
     } else if (item == "add_cgi_handler") {
-      ParseVector(list, lc.vec_cgi_file_extension_);
+      ParserUtils::ParseVector(list, lc.vec_cgi_file_extension_);
     } else if (item == "is_uploadable") {
-      ParseBool(list, lc.is_uploadable_);
+      ParserUtils::ParseBool(list, lc.is_uploadable_);
     } else if (item == "upload_store") {
-      ParseString(list, lc.upload_dir_);
+      ParserUtils::ParseString(list, lc.upload_dir_);
     } else {
-      MakeUnexpected(
+      ParserUtils::MakeUnexpected(
           "unknown directive " + tokens_[index_ - list.size()].second,
           tokens_[index_ - list.size()].first);
     }

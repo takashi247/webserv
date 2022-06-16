@@ -4,6 +4,8 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <iostream>
+#include <sstream>
 
 class LocationConfig {
  public:
@@ -11,6 +13,8 @@ class LocationConfig {
   ~LocationConfig();
   LocationConfig(const LocationConfig &rhs);
   LocationConfig &operator=(const LocationConfig &rhs);
+
+  void PrintVal();
 
   std::string location_path_;
   std::vector<std::string> vec_accepted_method_;
@@ -21,10 +25,9 @@ class LocationConfig {
   std::vector<std::string> vec_cgi_file_extension_;
   bool is_uploadable_;
   std::string upload_dir_;
-  void PrintVal();
 
  private:
-  void init();
+  void Init();
 };
 
 #endif

@@ -1,11 +1,6 @@
 #include "location_config.hpp"
 
-#include <iostream>
-#include <sstream>
-
-#include "config.hpp"
-
-void LocationConfig::init() {
+void LocationConfig::Init() {
   vec_accepted_method_.push_back("GET");
   vec_accepted_method_.push_back("POST");
   vec_accepted_method_.push_back("DELETE");
@@ -14,7 +9,7 @@ void LocationConfig::init() {
   is_uploadable_ = false;
 }
 
-LocationConfig::LocationConfig() { init(); }
+LocationConfig::LocationConfig() { Init(); }
 
 LocationConfig::~LocationConfig() {}
 

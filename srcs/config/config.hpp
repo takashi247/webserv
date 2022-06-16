@@ -1,23 +1,28 @@
 #ifndef CONFIG_HPP_
 #define CONFIG_HPP_
 
+#include <algorithm>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include "location_config.hpp"
 #include "server_config.hpp"
 
-struct Config {
-  std::vector<ServerConfig> vec_server_config_;
-  std::string config_file_;
-};
+class Config {
+ public:
+  Config(std::string config_file = "");
+  ~Config();
+  Config(Config const& rhs);
+  Config& operator=(Config const& rhs);
 
-void MakeUnexpected(const std::string& msg, const int& pos);
-void ParseInt(const std::vector<std::pair<int, std::string> >& list, size_t& i);
-void ParseBool(const std::vector<std::pair<int, std::string> >& list, bool& b);
-void ParseString(const std::vector<std::pair<int, std::string> >& list,
-                 std::string& str);
-void ParseVector(const std::vector<std::pair<int, std::string> >& list,
-                 std::vector<std::string>& str);
+  // host_(listen), port_(listen), server_namesと照合する。ない場合は一番最初のものを返す
+  ServerConfig* SelectServerConfig(const std::string& host, const size_t& port,
+                                   const std::string& server_name);
+
+  std::string config_file_;
+  std::vector<ServerConfig> vec_server_config_;
+};
 
 #endif
