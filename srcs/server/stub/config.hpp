@@ -16,7 +16,8 @@ struct LocationConfig {
   std::string upload_dir_;
 };
 
-struct ServerConfig {
+class ServerConfig {
+ public:
   size_t port_;
   std::string host_;
   std::vector<std::string> server_names_;
@@ -25,7 +26,9 @@ struct ServerConfig {
   std::vector<LocationConfig *> vec_location_config_;
 };
 
-struct Config {
+class Config {
+ public:
+  Config(const char *config) { (void)config; }
   std::vector<std::pair<int, ServerConfig *> > vec_server_config_;
   std::string config_file_;
 };

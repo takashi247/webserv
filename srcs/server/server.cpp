@@ -11,7 +11,7 @@
 #include "http_request_parser.hpp"
 #include "http_response.hpp"
 
-Server::Server() {
+Server::Server() : config_("filename") {
   config_.vec_server_config_.clear();
   {
     ServerConfig *sc = new ServerConfig();
@@ -24,7 +24,7 @@ Server::Server() {
   }
 }
 
-Server::Server(const char *conf) {
+Server::Server(const char *conf) : config_(conf) {
   if (conf) {
     std::cout << "conf=" << conf << std::endl;
   }
