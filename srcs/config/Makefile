@@ -13,7 +13,6 @@ SRCS		:= main.cpp \
 			   location_config.cpp \
 			   server_config.cpp \
 			   config.cpp \
-			   config_parser.cpp \
 			   
 
 OBJS		:= $(addprefix $(OBJSDIR), $(SRCS:.cpp=.o))
