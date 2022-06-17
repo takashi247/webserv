@@ -12,6 +12,8 @@
 #include <ctime>
 #include <cctype> // for isdigit
 #include <sys/stat.h>
+#include <algorithm>
+#include <unistd.h>
 
 class HttpResponse {
  public:
@@ -65,6 +67,9 @@ class HttpResponse {
   void SetEtag();
   bool IsDigitSafe(char ch);
   void SetContentType();
+  bool IsCgiFileExtension(const std::string &file_type) const;
+  void MakeCgiBody();
+  void MakeCgiHeader();
 
   // Data members
   HttpRequest http_request_;
@@ -88,6 +93,7 @@ class HttpResponse {
   std::string response_;
   std::string current_time_;
   std::string last_modified_;
+  std::string file_type_;
 };
 
 #endif // HTTP_RESPONSE_HPP_

@@ -21,22 +21,39 @@ HttpResponse::~HttpResponse() {
   requested_file_.close();
 }
 
+bool HttpResponse::IsCgiFileExtension(const std::string &file_type) const {
+  if (!location_config_) {
+    return false;
+  }
+  std::vector<std::string>::iterator first = location_config_->vec_cgi_file_extension_.begin();
+  std::vector<std::string>::iterator last = location_config_->vec_cgi_file_extension_.end();
+  if (std::find(first, last, file_type) == last) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
 void HttpResponse::SetContentType() {
-  std::string file_type = requested_file_path_.substr(requested_file_path_.find_last_of(".") + 1);
-  if (file_type == "png") {
+  file_type_ = requested_file_path_.substr(requested_file_path_.find_last_of(".") + 1);
+  if (file_type_ == "png") {
     content_type_ = "image/png";
-  } else if (file_type == "jpg" || file_type == "jpeg") {
+  } else if (file_type_ == "jpg" || file_type_ == "jpeg") {
     content_type_ = "image/jpeg";
-  } else if (file_type == "ico") {
+  } else if (file_type_ == "ico") {
     content_type_ = "image/x-icon";
+  } else if (IsCgiFileExtension(file_type_)) {
+    // TODO: Need to check Apache and NGINX behavior
+    content_type_ = file_type_;
   }
 }
 
 void HttpResponse::InitFileStream() {
   requested_file_path_ = server_config_.UpdateUri(http_request_.uri_);
+  SetContentType();
   struct stat buffer;
   is_file_exists_ = stat(requested_file_path_.c_str(), &buffer) == 0;
-  if (is_file_exists_) {
+  if (is_file_exists_ && content_type_ != file_type_) {
     requested_file_.open(requested_file_path_.c_str());
     is_file_forbidden_ = requested_file_.fail();
   }
@@ -49,9 +66,9 @@ void HttpResponse::InitParameters() {
   date_header_ = oss_date.str();
   oss_server << "Server: " << kServerVersion << "\r\n";
   server_header_ = oss_server.str();
+  // location_config_ = server_config_.SelectLocationConfig(requested_file_path_);
+  location_config_ = &(server_config_.vec_location_config_[0]);
   InitFileStream();
-  SetContentType();
-  location_config_ = server_config_.SelectLocationConfig(requested_file_path_);
 }
 
 void HttpResponse::SetCurrentTime() {
@@ -241,11 +258,48 @@ void HttpResponse::SetStatusCode() {
   }
 }
 
+void HttpResponse::MakeCgiBody() {
+  pid_t pid;
+  char cgi[] = "perl";
+  char *argv[3] = {cgi, const_cast<char*>(requested_file_path_.c_str()), NULL};
+  int fds[2];
+  char buf[1000];
+
+  pipe(fds);
+  pid = fork();
+  if (pid < 0) {
+    PrintErrorMessage("fork(2) failed\n");
+    return ;
+  }
+  if (pid == 0) {
+    close(fds[0]);
+    close(STDOUT_FILENO);
+    dup2(fds[1], STDOUT_FILENO);
+    if (execve("/usr/bin/perl", argv, NULL) == -1) {
+      PrintErrorMessage("execve failed\n");
+      return ;
+    }
+  } else {
+    int status;
+    close(fds[1]);
+    wait(&status);
+    read(fds[0], buf, 1000);
+    body_ = std::string(buf);
+    SetLastModifiedTime();
+    body_len_ = body_.size();
+    SetEtag();
+  }
+}
+
 void HttpResponse::MakeResponse() {
   SetStatusCode();
   switch (status_code_) {
   case kStatusCodeOK:
-    MakeBody200();
+    if (content_type_ != file_type_) {
+      MakeBody200();
+    } else {
+      MakeCgiBody();
+    }
     MakeHeader200();
     break;
   default:
