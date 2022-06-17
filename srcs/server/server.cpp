@@ -14,19 +14,19 @@
 Server::Server() : config_("filename") {
   config_.vec_server_config_.clear();
   {
-    LocationConfig *lc = new LocationConfig();
-    lc->vec_index_.push_back("index.html");
-    lc->root_ = "../www/";
+    LocationConfig lc;
+    lc.vec_index_.push_back("index.html");
+    lc.root_ = "../www/";
 
-    ServerConfig *sc = new ServerConfig();
-    sc->vec_location_config_.push_back(lc);
-    sc->port_ = 5000;
-    ServerConfig *sc2 = new ServerConfig();
-    sc->vec_location_config_.push_back(lc);
-    sc2->port_ = 4242;
+    ServerConfig sc;
+    sc.vec_location_config_.push_back(lc);
+    sc.port_ = 5000;
+    ServerConfig sc2;
+    sc.vec_location_config_.push_back(lc);
+    sc2.port_ = 4242;
 
-    config_.vec_server_config_.push_back(std::make_pair(sc->port_, sc));
-    config_.vec_server_config_.push_back(std::make_pair(sc2->port_, sc2));
+    config_.vec_server_config_.push_back(sc);
+    config_.vec_server_config_.push_back(sc2);
   }
 }
 
@@ -78,7 +78,7 @@ void debug_print_accept_info(int new_socket) {
 }
 
 int Server::AcceptNewClient(const fd_set *fds, int *accfd) {
-  std::vector<Socket *>::iterator it = sockets_.begin();
+  std::vector< Socket * >::iterator it = sockets_.begin();
   for (; it != sockets_.end(); ++it) {
     if (FD_ISSET((*it)->GetListenFd(), fds)) {
       int connfd = accept((*it)->GetListenFd(), (struct sockaddr *)NULL, NULL);
@@ -133,16 +133,16 @@ std::string Server::ReadMessage(int *p_fd) {
 
 void Server::Run() {
   /***
-   * 全ソケットを準備
+   * 全ソケットを生成
    */
   {
-    std::vector<std::pair<int, ServerConfig *> >::iterator it =
+    std::vector< ServerConfig >::iterator it =
         config_.vec_server_config_.begin();
     for (; it != config_.vec_server_config_.end(); ++it) {
-      Socket *s = new Socket(it->first);
+      Socket *s = new Socket(it->port_);
       s->SetSocket();
       sockets_.push_back(s);
-      std::cout << "ポート " << it->first << " を監視します。\n";
+      std::cout << "ポート " << it->port_ << " を監視します。\n";
     }
   }
   int accfd[kMaxSessionNum];
@@ -151,7 +151,7 @@ void Server::Run() {
   }
 
   fd_set fds;
-  std::vector<Socket *>::iterator it;
+  std::vector< Socket * >::iterator it;
 
   while (1) {
     /***
@@ -211,17 +211,17 @@ void Server::Run() {
         /***
          * リクエストをパース
          */
-        HttpRequest *request = HttpRequestParser::CreateHttpRequest(recv_str);
+        HttpRequest request;
+        HttpRequestParser::Parse(recv_str, &request);
         /***
          * レスポンスメッセージを作成
          */
-        HttpResponse response(request, config_.vec_server_config_[0].second);
+        HttpResponse response(request, config_.vec_server_config_[0]);
         std::string server_response = response.GetResponse();
         if (send(accfd[i], server_response.c_str(), server_response.length(),
                  0) == -1) {
           std::cout << "write() failed." << std::endl;
         }
-        HttpRequestParser::DestroyHttpRequest(request);
         /***
          * fdを切断
          */

@@ -51,9 +51,7 @@ void HttpRequestParser::GetMessageBody(const std::string& recv_msg,
   body.assign(recv_msg.begin() + pos + 4, recv_msg.end());
 }
 
-HttpRequest* HttpRequestParser::CreateHttpRequest(const std::string& recv_msg) {
-  HttpRequest* req = new HttpRequest();
-
+int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
   req->method_ = GetMethod(recv_msg);
   req->uri_ = GetUri(recv_msg);
   {  // Http version check
@@ -61,7 +59,7 @@ HttpRequest* HttpRequestParser::CreateHttpRequest(const std::string& recv_msg) {
     bool is_valid_version = IsValidHttpVersion(version);
     if (!is_valid_version) {
       req->is_bad_request_ = true;
-      return (req);
+      return (1);
     }
     req->http_version_ =
         version.erase(0, kProtocolVersionPos);  //先頭の"HTTP/"を削除
@@ -78,6 +76,5 @@ HttpRequest* HttpRequestParser::CreateHttpRequest(const std::string& recv_msg) {
     std::cout << req->content_length_ << std::endl;
     std::cout << req->body_ << std::endl;
   }
-  return req;
+  return 0;
 }
-void HttpRequestParser::DestroyHttpRequest(HttpRequest* req) { delete (req); }

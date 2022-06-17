@@ -9,16 +9,17 @@
 class HttpResponse {
  private:
   HttpResponse();
-  const HttpRequest *request_;
-  const ServerConfig *sc_;
+  const HttpRequest &request_;
+  const ServerConfig &sc_;
 
  public:
-  HttpResponse(const HttpRequest *request, const ServerConfig *config)
-      : request_(request), sc_(config) {}
+  HttpResponse(const HttpRequest &http_request,
+               const ServerConfig &server_config)
+      : request_(http_request), sc_(server_config) {}
   ~HttpResponse() {}
   std::string GetResponse() {
     std::string server_response;
-    std::vector<std::string> header;
+    std::vector< std::string > header;
     header.push_back("HTTP/1.1 200 OK\r\n");
     header.push_back("Content-Type: text/html; charset=UTF-8\r\n");
     header.push_back("Content-Length: 39\r\n");

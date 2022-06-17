@@ -18,8 +18,7 @@ class HttpRequestParser {
   static void GetMessageBody(const std::string& recv_msg, std::string& body);
 
  public:
-  static HttpRequest* CreateHttpRequest(const std::string& recv_msg);
-  static void DestroyHttpRequest(HttpRequest* req);
+  static int Parse(const std::string& recv_msg, HttpRequest* request);
 };
 
 #endif
