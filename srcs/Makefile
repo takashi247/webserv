@@ -3,8 +3,7 @@ SRCS	= main.cpp \
 		server/socket.cpp \
 		server/http_request_parser.cpp \
 		response/http_response.cpp \
-		response/server_config.cpp \
-		config/config_perser.cpp \
+		config/config_parser.cpp \
 		config/config.cpp \
 		config/location_config.cpp \
 		config/parser_utils.cpp \
