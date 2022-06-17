@@ -263,7 +263,7 @@ void HttpResponse::MakeCgiBody() {
   char cgi[] = "perl";
   char *argv[3] = {cgi, const_cast<char*>(requested_file_path_.c_str()), NULL};
   int fds[2];
-  char buf[1000];
+  char buf[1000]; // TODO: Need to update
 
   pipe(fds);
   pid = fork();
@@ -283,7 +283,7 @@ void HttpResponse::MakeCgiBody() {
     int status;
     close(fds[1]);
     wait(&status);
-    read(fds[0], buf, 1000);
+    read(fds[0], buf, 1000); // TODO: Need to update
     body_ = std::string(buf);
     SetLastModifiedTime();
     body_len_ = body_.size();

@@ -4,7 +4,7 @@ CXX			:= c++
 
 CXXFLAGS	:= -Wall -Wextra -Werror -MMD -MP -std=c++98 -pedantic
 
-SRCSDIR		:= srcs/
+SRCSDIR		:= ./
 
 OBJSDIR		:= objs/
 
@@ -20,7 +20,7 @@ SRCS		:= $(addprefix $(SRCSDIR), $(SRCS))
 
 VPATH		:= $(SRCSDIR)
 
-INCLUDE		:= -I./include
+INCLUDE		:= -I./
 
 RM			:= rm -rf
 
