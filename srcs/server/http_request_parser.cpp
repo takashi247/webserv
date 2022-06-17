@@ -61,7 +61,7 @@ int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
       req->is_bad_request_ = true;
       return (1);
     }
-    req->http_version_ =
+    req->version_ =
         version.erase(0, kProtocolVersionPos);  //先頭の"HTTP/"を削除
   }
   req->content_type_ = GetFieldValue("Content-Type", recv_msg);
@@ -71,7 +71,7 @@ int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
   if (0) {
     std::cout << req->method_ << std::endl;
     std::cout << req->uri_ << std::endl;
-    std::cout << req->http_version_ << std::endl;
+    std::cout << req->version_ << std::endl;
     std::cout << req->content_type_ << std::endl;
     std::cout << req->content_length_ << std::endl;
     std::cout << req->body_ << std::endl;

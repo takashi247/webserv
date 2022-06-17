@@ -30,14 +30,7 @@ Server::Server() : config_("filename") {
   }
 }
 
-Server::Server(const char *conf) : config_(conf) {
-  if (conf) {
-    std::cout << "conf=" << conf << std::endl;
-  }
-  //この時点でconfigs_が出来上がってる
-  // TODO: configで内容にエラーがあればどう返す？try catchとか？
-  return;
-}
+Server::Server(const char *conf) : config_(conf) {}
 
 #include <arpa/inet.h>
 #include <netdb.h>
