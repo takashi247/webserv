@@ -9,7 +9,7 @@
 #include <fstream>
 
 #include "location_config.hpp"
-#include "server_config.hpp"
+#include "config_parser.hpp"
 
 class Config {
  public:
@@ -24,27 +24,6 @@ class Config {
 
   std::string config_file_;
   std::vector<ServerConfig> vec_server_config_;
-};
-
-class ConfigParser {
- public:
-  ConfigParser();
-  ConfigParser(ConfigParser const &rhs);
-  ~ConfigParser();
-  ConfigParser &operator=(ConfigParser const &rhs);
-
-  void ParseConfigFile(Config &config);
-
- private:
-  void Tokenize(const char *file_name);
-  void Parse(Config &config);
-  void BalanceBraces();
-  void SplitIntoList(std::vector<std::pair<int, std::string> > &list);
-  void ParseServerConfig(std::vector<ServerConfig> &vec_server_config);
-  void ParseLocationConfig(std::vector<LocationConfig> &vec_location_config);
-
-  std::vector<std::pair<int, std::string> > tokens_;
-  size_t index_;
 };
 
 #endif
