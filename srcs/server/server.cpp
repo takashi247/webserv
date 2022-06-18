@@ -32,6 +32,28 @@ Server::Server() : config_("filename") {
 
 Server::Server(const char *conf) : config_(conf) {}
 
+int Server::SetStartFds(fd_set *p_fds, const int *accfd) {
+  int width = 0;
+  std::vector< Socket * >::iterator it;
+  it = sockets_.begin();
+  for (; it != sockets_.end(); ++it) {
+    FD_SET((*it)->GetListenFd(), p_fds);
+    if (width < (*it)->GetListenFd()) width = (*it)->GetListenFd();
+  }
+
+  // 2周目以降は、accfd[]に接続済みのfdが入っている。
+  // iは接続順で、できるだけ手前に入る。
+  for (int i = 0; i < kMaxSessionNum; i++) {
+    if (accfd[i] != -1) {
+      FD_SET(accfd[i], p_fds);
+      if (width < accfd[i]) {
+        width = accfd[i];
+      }
+    }
+  }
+  return width;
+}
+
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
@@ -94,6 +116,22 @@ int Server::AcceptNewClient(const fd_set *fds, int *accfd) {
   return 0;
 }
 
+ServerConfig *Server::FindServerConfig(int fd) {
+  ServerConfig *sc;
+
+  (void)fd;
+  sc = config_.SelectServerConfig("127.0.0.1", 8080, "localhost");
+  // if (sc) {
+  //   std::cout << "host_ is " << sc->host_ << std::endl;
+  //   std::cout << "port_ is " << sc->port_ << std::endl;
+  //   if (!sc->vec_server_names_.empty())
+  //     std::cout << "servernames is " << sc->vec_server_names_[0] <<
+  //     std::endl;
+  // } else
+  //   std::cout << "sc is null!" << std::endl;
+  return sc;
+}
+
 std::string Server::ReadMessage(int *p_fd) {
   std::string recv_str = "";
   char buf[kReadBufferSize];
@@ -153,10 +191,13 @@ void Server::Run() {
      */
     FD_ZERO(&fds);
     int width = 0;
+#if 1
+    width = SetStartFds(&fds, accfd);  // fdsへセット、widthを返す
+#else
     it = sockets_.begin();
     for (; it != sockets_.end(); ++it) {
       FD_SET((*it)->GetListenFd(), &fds);
-      if (width < ((*it)->GetListenFd() + 1)) width = (*it)->GetListenFd() + 1;
+      if (width < (*it)->GetListenFd()) width = (*it)->GetListenFd();
     }
 
     // 2周目以降は、accfd[]に接続済みのfdが入っている。
@@ -164,12 +205,12 @@ void Server::Run() {
     for (int i = 0; i < kMaxSessionNum; i++) {
       if (accfd[i] != -1) {
         FD_SET(accfd[i], &fds);
-        if (width < (accfd[i] + 1)) {
-          width = accfd[i] + 1;
+        if (width < accfd[i]) {
+          width = accfd[i];
         }
       }
     }
-
+#endif
     /***
      * 受信設定
      */
@@ -177,7 +218,7 @@ void Server::Run() {
     struct timeval waitval;
     waitval.tv_sec = 2; /* 待ち時間に 2.500 秒を指定 */
     waitval.tv_usec = 500;
-    if (select(width, &fds, NULL, NULL, &waitval) == -1) {
+    if (select(width + 1, &fds, NULL, NULL, &waitval) == -1) {
       std::cout << "select() failed." << std::endl;
       break;
     }
@@ -209,7 +250,8 @@ void Server::Run() {
         /***
          * レスポンスメッセージを作成
          */
-        HttpResponse response(request, config_.vec_server_config_[0]);
+        ServerConfig *sc = FindServerConfig(accfd[i]);
+        HttpResponse response(request, *sc);
         std::string server_response = response.GetResponse();
         if (send(accfd[i], server_response.c_str(), server_response.length(),
                  0) == -1) {
@@ -230,6 +272,5 @@ void Server::Run() {
   for (; it != sockets_.end(); ++it) {
     close((*it)->GetListenFd());
   }
-
   return;
 }

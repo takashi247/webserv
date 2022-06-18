@@ -28,8 +28,15 @@ class ServerConfig {
 
 class Config {
  public:
-  Config(const char *config) { (void)config; }
+  Config(const char* config) { (void)config; }
   std::vector< ServerConfig > vec_server_config_;
   std::string config_file_;
+  ServerConfig* SelectServerConfig(const std::string& host, const size_t& port,
+                                   const std::string& server_name) {
+    (void)host;
+    (void)port;
+    (void)server_name;
+    return &vec_server_config_[0];
+  }
 };
 #endif

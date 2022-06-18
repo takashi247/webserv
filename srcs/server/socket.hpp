@@ -4,12 +4,12 @@
 #include <netinet/in.h>
 
 class Socket {
-  int listenfd;
-  int port;
-  struct sockaddr_in serv_addr;
+  int listenfd_;
+  int port_;
+  struct sockaddr_in serv_addr_;
 
  public:
-  explicit Socket(int port_) : port(port_) {}
+  explicit Socket(int port) : port_(port) {}
   ~Socket() {}
 
  private:
@@ -18,7 +18,11 @@ class Socket {
 
  public:
   int SetSocket();
-  int GetListenFd() const { return this->listenfd; }
+  int GetListenFd() const { return this->listenfd_; }
 };
 
+struct ClientSocket {
+  int listenfd_;
+  int fd_;
+};
 #endif

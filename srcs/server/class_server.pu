@@ -4,7 +4,7 @@ circle          main
 
 class Server
 {
-	- ConfigManager config_;
+	- Config config_;
 	- std::map<int, Socket*> sockets_;
 	+ Server(const char *filepath);
 }
@@ -12,9 +12,13 @@ class Socket
 {
 
 }
-class ConfigManager
+class ConfigParser
 {
-	- std::vector<std::pair<int, ServerConfig> > vec_server_config_;
+	+ void ParseConfigFile(Config &config);
+}
+class Config
+{
+	- std::vector<ServerConfig> vec_server_config_;
 	+ Config(const char *filepath);
 	+ ServerConfig *getServerConfig(int port);
 	+ std::vector<int> getServerPorts();
@@ -33,13 +37,13 @@ class	HttpRequest
 	std::string method_;
 	std::string uri_;
 	std::string version_;
+	std::string content_type_;
+	size_t content_length_;
 	bool is_bad_request_;
 }
 class	HttpRequestParser
 {
-	+ HttpRequest *getHttpRequest(std::string recv_msg);
-	- e_request getMethodType();
-	- std::string getURI();
+	+ int Parse(const std::string recv_msg, HttpRequest &request);
 }
 
 class	HttpResponse
@@ -50,10 +54,11 @@ class	HttpResponse
 
 
 main --> Server : configファイル名
-Server o-- ConfigManager : configのこと\n何でも聞ける存在
+Server o-- Config : configのこと\n何でも聞ける存在
 Server o-- Socket
 Server --> HttpRequestParser : リクエストメッセージを渡すと\nHttpRequestを返してくれる
-ConfigManager o-- ServerConfig
+Config o-- ServerConfig
+Config --> ConfigParser
 ServerConfig o-- LocationConfig
 Server --> HttpResponse : HttpRequestを渡すと\nレスポンス文字列を返してくれる
 
