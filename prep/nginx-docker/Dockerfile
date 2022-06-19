@@ -12,7 +12,7 @@ RUN set -ex; \
 
 # Copy files in conf directory to docker container
 COPY conf/webserv-docker.conf /etc/nginx/sites-available/webserv-docker.conf
-COPY www/* /var/www/html/
+COPY www/ /var/www/html/
 
 # Create simlink in sites-enabled directory
 RUN ln -s /etc/nginx/sites-available/webserv-docker.conf /etc/nginx/sites-enabled/webserv-docker.conf
