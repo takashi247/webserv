@@ -15,4 +15,8 @@ server {
 		autoindex on;
 	}
 
+	location /dir_forbidden/ {
+		autoindex on;
+	}
+
 }
