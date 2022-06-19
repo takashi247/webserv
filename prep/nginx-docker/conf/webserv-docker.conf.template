@@ -7,4 +7,16 @@ server {
 
 	index index.html index.htm index.nginx-debian.html index.php;
 
+	location /dir_on/ {
+		autoindex on;
+	}
+
+	location /dir_empty/ {
+		autoindex on;
+	}
+
+	location /dir_forbidden/ {
+		autoindex on;
+	}
+
 }

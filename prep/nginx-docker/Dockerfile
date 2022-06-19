@@ -12,7 +12,7 @@ RUN set -ex; \
 
 # Copy files in conf directory to docker container
 COPY conf/webserv-docker.conf /etc/nginx/sites-available/webserv-docker.conf
-COPY www/* /var/www/html/
+COPY www/ /var/www/html/
 
 # Create simlink in sites-enabled directory
 RUN ln -s /etc/nginx/sites-available/webserv-docker.conf /etc/nginx/sites-enabled/webserv-docker.conf
@@ -24,7 +24,8 @@ RUN echo "daemon off;" >> /etc/nginx/nginx.conf
 RUN chown -R www-data:www-data /var/www; \
 	chmod 400 /var/www/html/readable.html; \
 	chmod 200 /var/www/html/writable.html; \
-	chmod 100 /var/www/html/executable.html;
+	chmod 100 /var/www/html/executable.html; \
+	chmod 000 /var/www/html/dir_forbidden;
 
 # Keep running the container
 ENTRYPOINT [ "nginx" ]
