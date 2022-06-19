@@ -1,7 +1,7 @@
 #include "server_config.hpp"
 
 void ServerConfig::Init() {
-  port_ = 0;
+  port_ = 80;
   client_max_body_size_ = 1024;
 }
 
@@ -47,7 +47,7 @@ void ServerConfig::ParseListen(
 
 // return locationConfig whose location_path_'s length is longest.
 LocationConfig *ServerConfig::SelectLocationConfig(const std::string &uri) {
-  LocationConfig *selected = NULL;
+  LocationConfig *selected = &default_location_config_;
 
   for (std::vector<LocationConfig>::iterator it = vec_location_config_.begin();
        it != vec_location_config_.end(); ++it) {
