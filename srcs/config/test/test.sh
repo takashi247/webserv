@@ -1,13 +1,13 @@
 #!/bin/bash
 
 PROGRAM=a.out 
+FILE="./confs/*"
 
 ## STORE 
-make store
+make
 
-./$PROGRAM store.conf
-
-## ERROR
-make error
-
-./$PROGRAM
+for filepath in $FILE; do
+  echo $filepath
+  ./$PROGRAM $filepath
+  echo ""
+done

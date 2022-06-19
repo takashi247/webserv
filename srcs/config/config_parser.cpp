@@ -75,13 +75,13 @@ void ConfigParser::BalanceBraces() {
       ParserUtils::MakeUnexpected("unexpected \"}\"", tokens_[i].first);
     }
     // original rule
-    if (depth > 3) {
+    if (depth > 2) {
       ParserUtils::MakeUnexpected("unexpected \"{\", too much nesting", tokens_[i].first);
     }
   }
 
   if (depth > 0) {
-    ParserUtils::MakeUnexpected("unexpected end of file, expecting \"}\"", tokens_[i].first);
+    ParserUtils::MakeUnexpected("unexpected end of file, expecting \"}\"", tokens_[i - 1].first);
   }
 }
 
@@ -102,9 +102,13 @@ void ConfigParser::Parse(std::vector<ServerConfig> &vec_server_config) {
 void ConfigParser::SplitIntoList(
     std::vector<std::pair<int, std::string> > &list) {
   std::string item = tokens_[index_].second;
+  if (item == ";" || item == "{" || item == "}") {
+      ParserUtils::MakeUnexpected("unexpected \"" + item + "\", expecting directive",
+                     tokens_[index_].first);
+  }
   for (; item != ";"; ++index_, item = tokens_[index_].second) {
     if (item == "{" || item == "}") {
-      ParserUtils::MakeUnexpected("unexpected end of file, expecting \";\"",
+      ParserUtils::MakeUnexpected("unexpected " + item + ", expecting \";\"",
                      tokens_[index_].first);
     }
     list.push_back(tokens_[index_]);
@@ -148,7 +152,7 @@ void ConfigParser::ParseLocationConfig(std::vector<LocationConfig> &vec_location
   std::string item = tokens_[index_].second;
 
   if (item == "{" || item == "}" || item == ";") {
-    ParserUtils::MakeUnexpected("unexpected " + item + ", expecting string",
+    ParserUtils::MakeUnexpected("unexpected \"" + item + "\", expecting path",
                    tokens_[index_].first);
   }
   lc.location_path_ = item;
@@ -156,7 +160,7 @@ void ConfigParser::ParseLocationConfig(std::vector<LocationConfig> &vec_location
   ++index_;
   item = tokens_[index_].second;
   if (item != "{") {
-    ParserUtils::MakeUnexpected("unexpected " + item + ", expecting string",
+    ParserUtils::MakeUnexpected("unexpected " + item + ", expecting \"{\"",
                    tokens_[index_].first);
   }
   ++index_;
