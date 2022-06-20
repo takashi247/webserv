@@ -12,6 +12,7 @@
 #include "http_response.hpp"
 
 Server::Server() : config_("filename") {
+  std::cout << "Server Construct!!!" << std::endl;
   config_.vec_server_config_.clear();
   {
     LocationConfig lc;
@@ -21,34 +22,43 @@ Server::Server() : config_("filename") {
     ServerConfig sc;
     sc.vec_location_config_.push_back(lc);
     sc.port_ = 5000;
+    sc.vec_server_names_.push_back("example.com");
     ServerConfig sc2;
-    sc.vec_location_config_.push_back(lc);
+    sc2.vec_location_config_.push_back(lc);
     sc2.port_ = 4242;
+    sc2.vec_server_names_.push_back("fugafuga.com");
+    ServerConfig sc3;
+    sc3.vec_location_config_.push_back(lc);
+    sc3.port_ = 8080;
+    sc3.vec_server_names_.push_back("test.com");
 
     config_.vec_server_config_.push_back(sc);
     config_.vec_server_config_.push_back(sc2);
+    config_.vec_server_config_.push_back(sc3);
   }
 }
 
-Server::Server(const char *conf) : config_(conf) {}
+Server::Server(const char *conf) : config_(conf) {
+  sockets_.clear();
+  clients_.clear();
+}
 
-int Server::SetStartFds(fd_set *p_fds, const int *accfd) {
+int Server::SetStartFds(fd_set *p_fds) {
   int width = 0;
-  std::vector< Socket * >::iterator it;
-  it = sockets_.begin();
-  for (; it != sockets_.end(); ++it) {
-    FD_SET((*it)->GetListenFd(), p_fds);
-    if (width < (*it)->GetListenFd()) width = (*it)->GetListenFd();
+  std::vector< Socket >::iterator it;
+  FD_ZERO(p_fds);
+  for (it = sockets_.begin(); it != sockets_.end(); ++it) {
+    FD_SET(it->GetListenFd(), p_fds);
+    if (width < it->GetListenFd()) width = it->GetListenFd();
   }
 
   // 2周目以降は、accfd[]に接続済みのfdが入っている。
   // iは接続順で、できるだけ手前に入る。
-  for (int i = 0; i < kMaxSessionNum; i++) {
-    if (accfd[i] != -1) {
-      FD_SET(accfd[i], p_fds);
-      if (width < accfd[i]) {
-        width = accfd[i];
-      }
+  std::vector< ClientSocket >::iterator cit = clients_.begin();
+  for (; cit < clients_.end(); ++cit) {
+    FD_SET(cit->fd_, p_fds);
+    if (width < cit->fd_) {
+      width = cit->fd_;
     }
   }
   return width;
@@ -92,22 +102,17 @@ void debug_print_accept_info(int new_socket) {
          client_info[new_socket].port, new_socket);
 }
 
-int Server::AcceptNewClient(const fd_set *fds, int *accfd) {
-  std::vector< Socket * >::iterator it = sockets_.begin();
+int Server::AcceptNewClient(const fd_set *fds) {
+  std::vector< Socket >::iterator it = sockets_.begin();
   for (; it != sockets_.end(); ++it) {
-    if (FD_ISSET((*it)->GetListenFd(), fds)) {
-      int connfd = accept((*it)->GetListenFd(), (struct sockaddr *)NULL, NULL);
+    if (FD_ISSET(it->GetListenFd(), fds)) {
+      int connfd = accept(it->GetListenFd(), (struct sockaddr *)NULL, NULL);
+
       debug_print_accept_info(connfd);
 
-      bool limit_over = true;
-      for (int i = 0; i < kMaxSessionNum; i++) {
-        if (accfd[i] == -1) {
-          accfd[i] = connfd;
-          limit_over = false;
-          break;
-        }
-      }
-      if (limit_over) {
+      if (clients_.size() < kMaxSessionNum) {
+        clients_.push_back(ClientSocket(connfd, it->p_sc_));
+      } else {
         close(connfd);
         std::cout << "over max connection." << std::endl;
       }
@@ -167,50 +172,25 @@ void Server::Run() {
    * 全ソケットを生成
    */
   {
-    std::vector< ServerConfig >::iterator it =
+    std::vector< const ServerConfig >::iterator it =
         config_.vec_server_config_.begin();
     for (; it != config_.vec_server_config_.end(); ++it) {
-      Socket *s = new Socket(it->port_);
-      s->SetSocket();
-      sockets_.push_back(s);
+      sockets_.push_back(Socket(it->port_, &(*it)));
       std::cout << "ポート " << it->port_ << " を監視します。\n";
     }
   }
-  int accfd[kMaxSessionNum];
-  for (int i = 0; i < kMaxSessionNum; i++) {
-    accfd[i] = -1;
-  }
 
   fd_set fds;
-  std::vector< Socket * >::iterator it;
+  std::vector< Socket >::iterator it;
 
   while (1) {
     /***
      * 複数のリスニングソケットをfdsに設定。
      * widthは参照するfdsの幅
      */
-    FD_ZERO(&fds);
     int width = 0;
-#if 1
-    width = SetStartFds(&fds, accfd);  // fdsへセット、widthを返す
-#else
-    it = sockets_.begin();
-    for (; it != sockets_.end(); ++it) {
-      FD_SET((*it)->GetListenFd(), &fds);
-      if (width < (*it)->GetListenFd()) width = (*it)->GetListenFd();
-    }
+    width = SetStartFds(&fds);  // fdsへセット、widthを返す
 
-    // 2周目以降は、accfd[]に接続済みのfdが入っている。
-    // iは接続順で、できるだけ手前に入る。
-    for (int i = 0; i < kMaxSessionNum; i++) {
-      if (accfd[i] != -1) {
-        FD_SET(accfd[i], &fds);
-        if (width < accfd[i]) {
-          width = accfd[i];
-        }
-      }
-    }
-#endif
     /***
      * 受信設定
      */
@@ -225,20 +205,23 @@ void Server::Run() {
 
     /***
      * 受信処理（リスニングソケット宛に新規接続）
-     * 新規接続をaccfdに登録
+     * 新規接続のClientSocketを生成
      */
-    AcceptNewClient(&fds, accfd);
+    AcceptNewClient(&fds);
 
     /***
      *	受信処理（接続済みソケット宛にメッセージ受信）
      */
-    for (int i = 0; i < kMaxSessionNum; i++) {
-      if (accfd[i] == -1) {
+
+    std::vector< ClientSocket >::iterator it = clients_.begin();
+    for (; it != clients_.end(); ++it) {
+      if (it->fd_ == -1) {
         continue;
       }
+
       //すでに接続したsocketからの受信を検知
-      if (FD_ISSET(accfd[i], &fds)) {
-        std::string recv_str = ReadMessage(&accfd[i]);
+      if (FD_ISSET(it->fd_, &fds)) {
+        std::string recv_str = ReadMessage(&it->fd_);
         std::cout << "***** receive message *****\n";
         std::cout << recv_str << std::endl;
         std::cout << "***** receive message finished *****\n";
@@ -250,18 +233,18 @@ void Server::Run() {
         /***
          * レスポンスメッセージを作成
          */
-        ServerConfig *sc = FindServerConfig(accfd[i]);
-        HttpResponse response(request, *sc);
+        HttpResponse response(request, *(it->p_sc_));
         std::string server_response = response.GetResponse();
-        if (send(accfd[i], server_response.c_str(), server_response.length(),
+        if (send(it->fd_, server_response.c_str(), server_response.length(),
                  0) == -1) {
           std::cout << "write() failed." << std::endl;
         }
         /***
          * fdを切断
          */
-        close(accfd[i]);
-        accfd[i] = -1;
+        close(it->fd_);
+        it->fd_ = -1;
+        break;
       }
     }
   }
@@ -270,7 +253,7 @@ void Server::Run() {
    */
   it = sockets_.begin();
   for (; it != sockets_.end(); ++it) {
-    close((*it)->GetListenFd());
+    close(it->GetListenFd());
   }
   return;
 }

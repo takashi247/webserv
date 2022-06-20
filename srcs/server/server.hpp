@@ -13,11 +13,11 @@ class Server {
   static const int kMaxSessionNum = 10;
 
   Config config_;
-  std::vector< Socket * > sockets_;
+  std::vector< Socket > sockets_;
   std::vector< ClientSocket > clients_;
 
-  int SetStartFds(fd_set *p_fds, const int *accfd);
-  int AcceptNewClient(const fd_set *fds, int *accfd);
+  int SetStartFds(fd_set *p_fds);
+  int AcceptNewClient(const fd_set *fds);
   ServerConfig *FindServerConfig(int fd);
   std::string ReadMessage(int *p_fd);
 

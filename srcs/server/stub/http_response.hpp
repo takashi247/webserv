@@ -17,6 +17,7 @@ class HttpResponse {
                const ServerConfig &server_config)
       : request_(http_request), sc_(server_config) {}
   ~HttpResponse() {}
+
   std::string GetResponse() {
     std::string server_response;
     std::vector< std::string > header;
