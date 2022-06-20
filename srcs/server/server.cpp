@@ -172,7 +172,7 @@ void Server::Run() {
    * 全ソケットを生成
    */
   {
-    std::vector< const ServerConfig >::iterator it =
+    std::vector< ServerConfig >::iterator it =
         config_.vec_server_config_.begin();
     for (; it != config_.vec_server_config_.end(); ++it) {
       sockets_.push_back(Socket(it->port_, &(*it)));
