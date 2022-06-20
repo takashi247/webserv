@@ -19,4 +19,22 @@ server {
 		autoindex on;
 	}
 
+	location /dir_on/sub_dir_on/ {
+		autoindex on;
+	}
+
+	location /dir_on/sub_dir_off/ {
+		autoindex off;
+	}
+
+	location /dir_on/sub_dir_forbidden/ {
+		autoindex on;
+	}
+
+	location /dir_on/sub_dir_no_autoindex_directive/ {
+	}
+
+	# location /dir_on/sub_dir_no_loc_config/ {
+	# }
+
 }
