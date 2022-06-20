@@ -5,8 +5,8 @@
 #include <sys/stat.h>  // for stat
 #include <unistd.h>
 
-#include <algorithm>
-#include <cctype>  // for isdigit
+#include <algorithm>  // for sort
+#include <cctype>     // for isdigit
 #include <ctime>
 #include <fstream>
 #include <iostream>

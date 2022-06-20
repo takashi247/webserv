@@ -62,6 +62,7 @@ void HttpResponse::ValidatePath() {
     vec_dirs.push_back(dir);
   }
   std::string path;
+  if (vec_dirs.empty()) return;
   for (std::vector< std::string >::iterator it = vec_dirs.begin();
        it != vec_dirs.end() - 1; ++it) {
     path = it == vec_dirs.begin() ? *it : path + "/" + *it;
@@ -162,6 +163,18 @@ void HttpResponse::MakeHeader200() {
   header_.push_back("Connection: keep-alive\r\n");
   header_.push_back(etag_header_);
   header_.push_back("Accept-Ranges: bytes\r\n");
+  header_.push_back("\r\n");
+}
+
+void HttpResponse::MakeCgiHeader() {
+  std::ostringstream oss_content_length;
+  oss_content_length << "Content-Length: " << body_len_ << "\r\n";
+  header_.push_back("HTTP/1.1 ");
+  header_.push_back(status_desc_);
+  header_.push_back("\r\n");
+  header_.push_back(server_header_);
+  header_.push_back(date_header_);
+  header_.push_back(oss_content_length.str());
   header_.push_back("\r\n");
 }
 
@@ -443,10 +456,11 @@ void HttpResponse::MakeResponse() {
     case kStatusCodeOK:
       if (content_type_ != file_type_) {
         MakeBody200();
+        MakeHeader200();
       } else {
         MakeCgiBody();
+        MakeCgiHeader();
       }
-      MakeHeader200();
       break;
     default:
       MakeErrorBody();
