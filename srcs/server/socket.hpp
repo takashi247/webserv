@@ -2,6 +2,8 @@
 #define SOCKET_HPP
 
 #include <netinet/in.h>
+#include <cerrno>
+#include <cstdlib>
 
 #include "config.hpp"
 

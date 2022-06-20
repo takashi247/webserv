@@ -3,6 +3,7 @@
 
 #include <map>
 #include <vector>
+#include <cstring>
 
 #include "config.hpp"
 #include "socket.hpp"
