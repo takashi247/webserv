@@ -11,7 +11,9 @@ COPY ./cgi-bin/* /usr/local/apache2/cgi-bin/
 
 # run some shell commands to change permissions etc.
 RUN sed -i '1c#!/usr/bin/perl' /usr/local/apache2/cgi-bin/printenv; \
+  sed -i '1c#!/bin/sh' /usr/local/apache2/cgi-bin/test-cgi; \
   chmod +x /usr/local/apache2/cgi-bin/printenv; \
+  chmod +x /usr/local/apache2/cgi-bin/test-cgi; \
   mkdir -p /usr/local/apache2/htdocs/upload; \
   chown -R www-data:www-data /usr/local/apache2/;
 
