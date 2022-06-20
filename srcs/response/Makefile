@@ -24,7 +24,7 @@ INCLUDE		:= -I./
 
 RM			:= rm -rf
 
-DEBUG		:= -g -fsanitize=address
+DEBUG		:= -g
 
 LEAKS   := -D LEAKS=1
 
