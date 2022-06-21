@@ -90,13 +90,8 @@ std::string ServerConfig::UpdateUri(std::string uri) {
         return (path + *it);
       }
     }
-    if (lc->autoindex_) {
-      return (path);
-    }
-  } else {
-    return (path);  
   }
-  return "";
+  return (path);
 }
 
 
