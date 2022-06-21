@@ -1,14 +1,13 @@
 #ifndef SERVER_CONFIG_HPP_
-#define SERVER_CONFIG_HPP_
+# define SERVER_CONFIG_HPP_
 
-#include <sys/stat.h>
-
-#include <algorithm>
-#include <iostream>
 #include <set>
-#include <sstream>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <iostream>
+#include <sstream>
+#include <sys/stat.h>
 
 #include "location_config.hpp"
 #include "parser_utils.hpp"
@@ -22,7 +21,7 @@ class ServerConfig {
   ServerConfig &operator=(const ServerConfig &rhs);
 
   // URIとlocation_path_の前方一致で一番長いものを返す、見つからない場合はNULLは返さず、defaultの値が使われることにする。
-  LocationConfig *SelectLocationConfig(const std::string &uri);
+  LocationConfig* SelectLocationConfig(const std::string& uri);
   // テスト参照、返したパスにファイルが存在するかどうかは別で確認の必要があり。
   std::string UpdateUri(std::string uri);
   void PrintVal();
