@@ -18,17 +18,22 @@ Config &Config::operator=(Config const &rhs) {
   return *this;
 }
 
-// return serverConfig which matches host, port and server_name
 ServerConfig *Config::SelectServerConfig(const std::string &host,
-                                         const size_t &port,
-                                         const std::string &server_name) {
+                                         const size_t &port) {
+  // check if port and host match the config
   for (std::vector<ServerConfig>::iterator it = vec_server_config_.begin();
        it < vec_server_config_.end(); ++it) {
-    if ((it->host_ == "" || host == it->host_) && port == it->port_) {
-      if (std::find(it->vec_server_names_.begin(), it->vec_server_names_.end(),
-                    server_name) != it->vec_server_names_.end()) {
-        return (it.base());
-      }
+    if (port == it->port_ &&
+        std::find(it->vec_server_names_.begin(), it->vec_server_names_.end(),
+                  host) != it->vec_server_names_.end()) {
+      return (it.base());
+    }
+  }
+  // check if port matches the config and server_name is empty
+  for (std::vector<ServerConfig>::iterator it = vec_server_config_.begin();
+       it < vec_server_config_.end(); ++it) {
+    if (port == it->port_ && it->vec_server_names_.empty()) {
+      return (it.base());
     }
   }
   return (&vec_server_config_[0]);

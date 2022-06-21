@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PROGRAM=a.out 
+PROGRAM=parse
 FILE="./confs/*"
 
 ## STORE 

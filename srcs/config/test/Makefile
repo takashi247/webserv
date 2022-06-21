@@ -1,9 +1,19 @@
-SRCS :=	../config.cpp	\
+PARSE_SRCS :=	../config.cpp	\
 				../config_parser.cpp	\
 				../location_config.cpp	\
 				../parser_utils.cpp		\
 				../server_config.cpp	\
 				store.cpp 
 
-a.out: $(SRCS)
-	c++ -o a.out $^
+SELECT_SRCS :=	../config.cpp	\
+				../config_parser.cpp	\
+				../location_config.cpp	\
+				../parser_utils.cpp		\
+				../server_config.cpp	\
+				select_server_config_test.cpp 
+
+parse: $(PARSE_SRCS)
+	c++ -o parse $^
+
+select: $(SELECT_SRCS)
+	c++ -o select $^

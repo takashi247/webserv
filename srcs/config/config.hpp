@@ -18,9 +18,8 @@ class Config {
   Config(Config const& rhs);
   Config& operator=(Config const& rhs);
 
-  // host_(listen), port_(listen), server_namesと照合する。ない場合は一番最初のものを返す
-  ServerConfig* SelectServerConfig(const std::string& host, const size_t& port,
-                                   const std::string& server_name);
+  // hostとvec_server_names_, portとport_を照合する。
+  ServerConfig* SelectServerConfig(const std::string& host, const size_t& port);
 
   std::string config_file_;
   std::vector<ServerConfig> vec_server_config_;
