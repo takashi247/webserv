@@ -8,7 +8,7 @@
 class Socket {
  public:
   int listenfd_;
-  int port_;
+  size_t port_;
   struct sockaddr_in serv_addr_;
 
  public:

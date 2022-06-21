@@ -42,6 +42,25 @@ Server::Server(const char *conf) : config_(conf) {
   clients_.clear();
 }
 
+void Server::CreateServerSockets() {
+  std::vector< const ServerConfig >::iterator it =
+      config_.vec_server_config_.begin();
+  for (; it != config_.vec_server_config_.end(); ++it) {
+    //重複するポートがないかチェック
+    std::vector< Socket >::iterator sit = sockets_.begin();
+    bool multiple_flag = false;
+    for (; sit != sockets_.end(); ++sit) {
+      if (it->port_ == sit->port_) {
+        multiple_flag = true;
+        break;
+      }
+    }
+    if (multiple_flag) continue;
+    sockets_.push_back(Socket(it->port_));
+    std::cout << "ポート " << it->port_ << " を監視します。\n";
+  }
+}
+
 int Server::SetStartFds(fd_set *p_fds) {
   int width = 0;
   std::vector< Socket >::iterator it;
@@ -154,14 +173,7 @@ void Server::Run() {
   /***
    * 全ソケットを生成
    */
-  {
-    std::vector< const ServerConfig >::iterator it =
-        config_.vec_server_config_.begin();
-    for (; it != config_.vec_server_config_.end(); ++it) {
-      sockets_.push_back(Socket(it->port_));
-      std::cout << "ポート " << it->port_ << " を監視します。\n";
-    }
-  }
+  CreateServerSockets();
 
   fd_set fds;
 

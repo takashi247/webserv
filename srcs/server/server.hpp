@@ -16,6 +16,7 @@ class Server {
   std::vector< Socket > sockets_;
   std::vector< ClientSocket > clients_;
 
+  void CreateServerSockets();
   int SetStartFds(fd_set *p_fds);
   int AcceptNewClient(const fd_set *fds);
   ServerConfig *FindServerConfig(int fd);
