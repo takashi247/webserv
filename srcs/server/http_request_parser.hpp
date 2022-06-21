@@ -2,6 +2,8 @@
 #define HTTP_REQUEST_PARSER_HPP
 
 #include "http_request.hpp"
+#include <cstring>
+#include <cstdlib>
 
 class HttpRequestParser {
  private:

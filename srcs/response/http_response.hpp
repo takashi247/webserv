@@ -13,6 +13,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <sys/wait.h>
+#include <iomanip>
 
 #include "http_request.hpp"
 #include "server_config.hpp"
