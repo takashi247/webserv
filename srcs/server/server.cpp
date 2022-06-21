@@ -12,7 +12,7 @@
 #include "http_response.hpp"
 
 Server::Server() : config_("filename") {
-  std::cout << "Server Construct!!!" << std::endl;
+  std::cout << "[Debug] Server Construct!" << std::endl;
   config_.vec_server_config_.clear();
   {
     LocationConfig lc;
@@ -31,7 +31,6 @@ Server::Server() : config_("filename") {
     sc3.vec_location_config_.push_back(lc);
     sc3.port_ = 8080;
     sc3.vec_server_names_.push_back("test.com");
-
     config_.vec_server_config_.push_back(sc);
     config_.vec_server_config_.push_back(sc2);
     config_.vec_server_config_.push_back(sc3);
@@ -41,6 +40,25 @@ Server::Server() : config_("filename") {
 Server::Server(const char *conf) : config_(conf) {
   sockets_.clear();
   clients_.clear();
+}
+
+void Server::CreateServerSockets() {
+  std::vector< const ServerConfig >::iterator it =
+      config_.vec_server_config_.begin();
+  for (; it != config_.vec_server_config_.end(); ++it) {
+    //重複するポートがないかチェック
+    std::vector< Socket >::iterator sit = sockets_.begin();
+    bool multiple_flag = false;
+    for (; sit != sockets_.end(); ++sit) {
+      if (it->port_ == sit->port_) {
+        multiple_flag = true;
+        break;
+      }
+    }
+    if (multiple_flag) continue;
+    sockets_.push_back(Socket(it->port_));
+    std::cout << "ポート " << it->port_ << " を監視します。\n";
+  }
 }
 
 int Server::SetStartFds(fd_set *p_fds) {
@@ -111,7 +129,7 @@ int Server::AcceptNewClient(const fd_set *fds) {
       debug_print_accept_info(connfd);
 
       if (clients_.size() < kMaxSessionNum) {
-        clients_.push_back(ClientSocket(connfd, it->p_sc_));
+        clients_.push_back(ClientSocket(connfd));
       } else {
         close(connfd);
         std::cout << "over max connection." << std::endl;
@@ -119,22 +137,6 @@ int Server::AcceptNewClient(const fd_set *fds) {
     }
   }
   return 0;
-}
-
-ServerConfig *Server::FindServerConfig(int fd) {
-  ServerConfig *sc;
-
-  (void)fd;
-  sc = config_.SelectServerConfig("127.0.0.1", 8080, "localhost");
-  // if (sc) {
-  //   std::cout << "host_ is " << sc->host_ << std::endl;
-  //   std::cout << "port_ is " << sc->port_ << std::endl;
-  //   if (!sc->vec_server_names_.empty())
-  //     std::cout << "servernames is " << sc->vec_server_names_[0] <<
-  //     std::endl;
-  // } else
-  //   std::cout << "sc is null!" << std::endl;
-  return sc;
 }
 
 std::string Server::ReadMessage(int *p_fd) {
@@ -171,17 +173,9 @@ void Server::Run() {
   /***
    * 全ソケットを生成
    */
-  {
-    std::vector< ServerConfig >::iterator it =
-        config_.vec_server_config_.begin();
-    for (; it != config_.vec_server_config_.end(); ++it) {
-      sockets_.push_back(Socket(it->port_, &(*it)));
-      std::cout << "ポート " << it->port_ << " を監視します。\n";
-    }
-  }
+  CreateServerSockets();
 
   fd_set fds;
-  std::vector< Socket >::iterator it;
 
   while (1) {
     /***
@@ -214,12 +208,8 @@ void Server::Run() {
      */
 
     std::vector< ClientSocket >::iterator it = clients_.begin();
-    for (; it != clients_.end(); ++it) {
-      if (it->fd_ == -1) {
-        continue;
-      }
-
-      //すでに接続したsocketからの受信を検知
+    while (it != clients_.end()) {
+      //すでに接続したClientSocketからの受信を検知
       if (FD_ISSET(it->fd_, &fds)) {
         std::string recv_str = ReadMessage(&it->fd_);
         std::cout << "***** receive message *****\n";
@@ -233,7 +223,9 @@ void Server::Run() {
         /***
          * レスポンスメッセージを作成
          */
-        HttpResponse response(request, *(it->p_sc_));
+        ServerConfig *sc = config_.SelectServerConfig(
+            request.host_name_, request.host_port_, request.host_name_);
+        HttpResponse response(request, *sc);
         std::string server_response = response.GetResponse();
         if (send(it->fd_, server_response.c_str(), server_response.length(),
                  0) == -1) {
@@ -243,14 +235,15 @@ void Server::Run() {
          * fdを切断
          */
         close(it->fd_);
-        it->fd_ = -1;
-        break;
-      }
+        it = clients_.erase(it);
+      } else
+        ++it;
     }
   }
   /***
    * 全ソケットを閉じる
    */
+  std::vector< Socket >::iterator it;
   it = sockets_.begin();
   for (; it != sockets_.end(); ++it) {
     close(it->GetListenFd());

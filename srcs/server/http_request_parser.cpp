@@ -64,6 +64,16 @@ int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
     req->version_ =
         version.erase(0, kProtocolVersionPos);  //先頭の"HTTP/"を削除
   }
+  std::string host = GetFieldValue("Host", recv_msg);
+  {  // separate host -> name:port
+    size_t pos = host.find(":");
+    if (pos == std::string::npos)
+      req->host_name_ = host;
+    else {
+      req->host_name_ = host.substr(0, pos++);
+      req->host_port_ = atoi(host.substr(pos, host.size()).c_str());
+    }
+  }
   req->content_type_ = GetFieldValue("Content-Type", recv_msg);
   req->content_length_ = GetFieldValueSize("Content-Length", recv_msg);
   GetMessageBody(recv_msg, req->body_);
@@ -72,6 +82,8 @@ int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
     std::cout << req->method_ << std::endl;
     std::cout << req->uri_ << std::endl;
     std::cout << req->version_ << std::endl;
+    std::cout << req->host_name_ << std::endl;
+    std::cout << req->host_port_ << std::endl;
     std::cout << req->content_type_ << std::endl;
     std::cout << req->content_length_ << std::endl;
     std::cout << req->body_ << std::endl;
