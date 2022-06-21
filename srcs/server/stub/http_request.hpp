@@ -9,7 +9,7 @@ struct HttpRequest {
   std::string uri_;
   std::string version_;
   std::string host_name_;
-  std::string host_port_;
+  size_t host_port_;
   std::string content_type_;
   size_t content_length_;
   std::string body_;

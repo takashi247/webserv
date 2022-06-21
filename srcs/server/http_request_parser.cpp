@@ -71,7 +71,7 @@ int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
       req->host_name_ = host;
     else {
       req->host_name_ = host.substr(0, pos++);
-      req->host_port_ = host.substr(pos, host.size());
+      req->host_port_ = atoi(host.substr(pos, host.size()).c_str());
     }
   }
   req->content_type_ = GetFieldValue("Content-Type", recv_msg);
