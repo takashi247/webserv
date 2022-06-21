@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cstdlib>
 #include "http_request.hpp"
+
 class HttpRequestParser {
  private:
   static const int kProtocolVersionPos = 5;
