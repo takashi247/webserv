@@ -10,13 +10,9 @@ class Socket {
   int listenfd_;
   int port_;
   struct sockaddr_in serv_addr_;
-  const ServerConfig* p_sc_;
 
  public:
-  explicit Socket(int port, const ServerConfig* config)
-      : port_(port), p_sc_(config) {
-    SetSocket();
-  }
+  explicit Socket(int port) : port_(port) { SetSocket(); }
   ~Socket() {}
 
  private:
@@ -30,9 +26,7 @@ class Socket {
 
 class ClientSocket {
  public:
-  int listenfd_;
   int fd_;
-  const ServerConfig* p_sc_;
-  ClientSocket(int fd, const ServerConfig* conf) : fd_(fd), p_sc_(conf) {}
+  ClientSocket(int fd) : fd_(fd) {}
 };
 #endif
