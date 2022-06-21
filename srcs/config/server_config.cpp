@@ -47,7 +47,7 @@ void ServerConfig::ParseListen(
 
 // return locationConfig whose location_path_'s length is longest.
 LocationConfig *ServerConfig::SelectLocationConfig(const std::string &uri) {
-  LocationConfig *selected = &default_location_config_;
+  LocationConfig *selected = NULL;
 
   for (std::vector<LocationConfig>::iterator it = vec_location_config_.begin();
        it != vec_location_config_.end(); ++it) {
@@ -59,7 +59,13 @@ LocationConfig *ServerConfig::SelectLocationConfig(const std::string &uri) {
       }
     }
   }
-  return (selected);
+
+  LocationConfig *config = new LocationConfig();
+  if (selected == NULL) {
+    return (config);
+  }
+  *config = *selected; 
+  return (config);
 }
 
 std::string ServerConfig::UpdateUri(std::string uri) {
@@ -73,9 +79,6 @@ std::string ServerConfig::UpdateUri(std::string uri) {
   }
 
   LocationConfig *lc = SelectLocationConfig(path);
-  if (lc == NULL) {
-    return ("");
-  }
 
   std::string root = lc->root_;
   if (lc->proxy_pass_.length() != 0) {
@@ -87,10 +90,13 @@ std::string ServerConfig::UpdateUri(std::string uri) {
   if (*(path.end() - 1) == '/') {
     for (std::vector<std::string>::iterator it = lc->vec_index_.begin(); it != lc->vec_index_.end(); ++it) {
       if (stat((path + *it).c_str(), &buffer) == 0) {
-        return (path + *it);
+        path += *it;
+        delete lc;
+        return (path);
       }
     }
   }
+  delete lc;
   return (path);
 }
 

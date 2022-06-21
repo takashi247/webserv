@@ -27,7 +27,7 @@ LocationConfig &LocationConfig::operator=(const LocationConfig &rhs) {
     is_uploadable_ = rhs.is_uploadable_;
     upload_dir_ = rhs.upload_dir_;
   }
-  return *this;
+  return (*this);
 }
 
 void LocationConfig::PrintVal() {

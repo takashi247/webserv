@@ -26,15 +26,15 @@ ServerConfig *Config::SelectServerConfig(const std::string &host,
     if (port == it->port_ &&
         std::find(it->vec_server_names_.begin(), it->vec_server_names_.end(),
                   host) != it->vec_server_names_.end()) {
-      return (it.base());
+      return (new ServerConfig(*it));
     }
   }
   // check if port matches the config and server_name is empty
   for (std::vector<ServerConfig>::iterator it = vec_server_config_.begin();
        it < vec_server_config_.end(); ++it) {
     if (port == it->port_ && it->vec_server_names_.empty()) {
-      return (it.base());
+      return (new ServerConfig(*it));
     }
   }
-  return (&vec_server_config_[0]);
+  return (new ServerConfig(vec_server_config_[0]));
 }

@@ -225,6 +225,7 @@ void Server::Run() {
          */
         ServerConfig *sc = config_.SelectServerConfig(request.host_name_, request.host_port_);
         HttpResponse response(request, *sc);
+        delete sc;
         std::string server_response = response.GetResponse();
         if (send(it->fd_, server_response.c_str(), server_response.length(),
                  0) == -1) {
