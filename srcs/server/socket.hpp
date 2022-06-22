@@ -30,6 +30,7 @@ class Socket {
 class ClientSocket {
  public:
   int fd_;
-  ClientSocket(int fd) : fd_(fd) {}
+  Socket* parent_;
+  ClientSocket(int fd, Socket* parent) : fd_(fd), parent_(parent) {}
 };
 #endif

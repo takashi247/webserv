@@ -132,7 +132,7 @@ int Server::AcceptNewClient(const fd_set *fds) {
       debug_print_accept_info(connfd);
 
       if (clients_.size() < kMaxSessionNum) {
-        clients_.push_back(ClientSocket(connfd));
+        clients_.push_back(ClientSocket(connfd, &(*it)));
       } else {
         close(connfd);
         std::cout << "over max connection." << std::endl;
@@ -220,8 +220,9 @@ void Server::Run() {
         /***
          * レスポンスメッセージを作成
          */
-        ServerConfig *sc =
-            config_.SelectServerConfig(request.host_name_, request.host_port_, "");
+        ServerConfig *sc = config_.SelectServerConfig(
+            it->parent_->host_, it->parent_->port_, request.host_name_);
+
         HttpResponse response(request, *sc);
         std::string server_response = response.GetResponse();
         if (send(it->fd_, server_response.c_str(), server_response.length(),
