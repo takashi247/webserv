@@ -16,7 +16,7 @@ std::string HttpRequestParser::GetUri(const std::string& recv_msg) {
 std::string HttpRequestParser::GetProtocolVersion(const std::string& recv_msg) {
   int start_pos = recv_msg.find(' ');
   start_pos = recv_msg.find(' ', start_pos + 1);
-  int end_pos = recv_msg.find('\r', start_pos + 1);
+  int end_pos = recv_msg.find("\r\n", start_pos + 1);
   std::string version(recv_msg.begin() + start_pos + 1,
                       recv_msg.begin() + end_pos);
   return version;
@@ -34,7 +34,7 @@ std::string HttpRequestParser::GetFieldValue(const char* field_name,
   int name_start_pos = recv_msg.find(field_name, 0, strlen(field_name));
   if (-1 == name_start_pos) return "";
   int value_start_pos = recv_msg.find(": ", name_start_pos + 1) + 2;
-  int value_end_pos = recv_msg.find('\r', value_start_pos + 1);
+  int value_end_pos = recv_msg.find("\r\n", value_start_pos + 1);
   std::string value(recv_msg.begin() + value_start_pos,
                     recv_msg.begin() + value_end_pos);
   return value;
