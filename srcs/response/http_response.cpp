@@ -418,9 +418,7 @@ void HttpResponse::SetStatusCode() {
 
 void HttpResponse::MakeCgiBody() {
   pid_t pid;
-  // char cgi[] = "perl";
-  // char *argv[3] = {cgi, const_cast< char * >(requested_file_path_.c_str()),
-  //  NULL};
+  char *argv[2] = {const_cast< char * >(requested_file_path_.c_str()), NULL};
   int fds[2];
   char buf[1000];  // TODO: Need to update
 
@@ -434,7 +432,7 @@ void HttpResponse::MakeCgiBody() {
     close(fds[0]);
     close(STDOUT_FILENO);
     dup2(fds[1], STDOUT_FILENO);
-    if (execve(requested_file_path_.c_str(), NULL, NULL) == -1) {
+    if (execve(argv[0], argv, NULL) == -1) {
       PrintErrorMessage("execve failed");
       return;
     }
