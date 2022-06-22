@@ -52,7 +52,7 @@ LocationConfig *ServerConfig::SelectLocationConfig(const std::string &uri) {
   for (std::vector<LocationConfig>::iterator it = vec_location_config_.begin();
        it != vec_location_config_.end(); ++it) {
     if (uri.find(it->location_path_) == 0) {
-      if (selected == NULL) {
+      if (selected == &default_location_config_) {
         selected = it.base();
       } else if (selected->location_path_.length() < it->location_path_.length()){
         selected = it.base();

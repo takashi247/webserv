@@ -24,15 +24,15 @@ int main()
 	config.vec_server_config_.push_back(sc2);
 	config.vec_server_config_.push_back(sc3);
 
-	ServerConfig *res1 = config.SelectServerConfig("localhost", port);
+	ServerConfig *res1 = config.SelectServerConfig("", port, "localhost");
 	std::cout << res1->error_page_path_ << std::endl;
 	// expecting 1
 
-	ServerConfig *res2 = config.SelectServerConfig("127.0.0.1", port);
+	ServerConfig *res2 = config.SelectServerConfig("", port, "127.0.0.1");
 	std::cout << res2->error_page_path_ << std::endl;
 	// expecting 2
 
-	ServerConfig *res3 = config.SelectServerConfig("127.0.0.1", port + 2);
+	ServerConfig *res3 = config.SelectServerConfig("", port + 2, "127.0.0.1");
 	std::cout << res3->error_page_path_ << std::endl;
 	// expecting 1
 }
