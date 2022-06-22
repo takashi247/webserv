@@ -17,8 +17,7 @@ int main(int ac, char **av) {
   std::string file_type = uri.substr(uri.find_last_of(".") + 1);
 
   // setting location config paramters
-  location_config.vec_cgi_file_extension_.push_back("js");
-  location_config.vec_cgi_file_extension_.push_back("pl");
+  location_config.vec_cgi_file_extension_.push_back("cgi");
   location_config.vec_accepted_method_.push_back("GET");
   location_config.autoindex_ = true;
 
