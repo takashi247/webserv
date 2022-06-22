@@ -19,11 +19,11 @@ Config &Config::operator=(Config const &rhs) {
 }
 
 ServerConfig *Config::SelectServerConfig(const std::string &host,
-                                         const size_t &port) {
-  // check if port and host match the config
+                                         const size_t &port, const size_t &server_name) {
+  // check if port and host match the config 
   for (std::vector<ServerConfig>::iterator it = vec_server_config_.begin();
        it < vec_server_config_.end(); ++it) {
-    if (port == it->port_ &&
+    if (port == it->port_ && host == it->host_ &&
         std::find(it->vec_server_names_.begin(), it->vec_server_names_.end(),
                   host) != it->vec_server_names_.end()) {
       return (it.base());
