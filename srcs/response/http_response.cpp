@@ -273,7 +273,7 @@ std::string HttpResponse::CreateFileList(
   for (std::vector< std::string >::iterator it = vec_file_names.begin();
        it != vec_file_names.end(); ++it) {
     if ((*it)[0] == '.') continue;
-    oss << "<a href=\"" << *it << "\">" << std::left << std::setw(50);
+    oss << "<a href=\"" << *it << "\">" << std::left << std::setw(54);
     std::string displayed_name;
     if (it->length() <= 50) {
       displayed_name = *it + "</a>";
@@ -305,13 +305,13 @@ void HttpResponse::CreateAutoindexPage() {
   body_ =
       "<html>\n"
       "<head><title>Index of ";
-  body_ += requested_file_path_;
+  body_ += http_request_.uri_;
   body_ +=
       "</title></head>\n"
       "<body bgcolor=\"white\">\n"
       "<h1>Index of ";
-  body_ += requested_file_path_;
-  body_ += "</h1><hr><pre><a href=../\">../</a>\n";
+  body_ += http_request_.uri_;
+  body_ += "</h1><hr><pre><a href=\"../\">../</a>\n";
   std::vector< std::string > vec_file_names = GetFileNames();
   body_ += CreateFileList(vec_file_names);
   body_ +=
