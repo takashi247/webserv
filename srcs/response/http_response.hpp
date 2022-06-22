@@ -3,18 +3,18 @@
 
 #include <dirent.h>    // for opendir, readdir
 #include <sys/stat.h>  // for stat
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <algorithm>  // for sort
 #include <cctype>     // for isdigit
 #include <ctime>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <sys/wait.h>
-#include <iomanip>
 
 #include "http_request.hpp"
 #include "server_config.hpp"
@@ -22,8 +22,7 @@
 class HttpResponse {
  public:
   // Constructor
-  HttpResponse(const HttpRequest &http_request,
-               const ServerConfig &server_config);
+  HttpResponse(HttpRequest &http_request, ServerConfig &server_config);
 
   // Destructor
   virtual ~HttpResponse();
@@ -81,8 +80,8 @@ class HttpResponse {
   std::string CreateFileList(std::vector< std::string >);
 
   // Data members
-  HttpRequest http_request_;
-  ServerConfig server_config_;
+  HttpRequest &http_request_;
+  ServerConfig &server_config_;
   int status_code_;
   std::string status_desc_;
   bool is_bad_request_;

@@ -9,8 +9,8 @@ const std::string HttpResponse::kStatusDescMethodNotAllowed = "405 Not Allowed";
 const std::string HttpResponse::kStatusDescVersionNotSupported =
     "505 HTTP Version Not Supported";
 
-HttpResponse::HttpResponse(const HttpRequest &http_request,
-                           const ServerConfig &server_config)
+HttpResponse::HttpResponse(HttpRequest &http_request,
+                           ServerConfig &server_config)
     : http_request_(http_request),
       server_config_(server_config),
       status_code_(kStatusCodeOK),
