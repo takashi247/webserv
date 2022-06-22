@@ -102,6 +102,10 @@ void debug_print_accept_info(int new_socket) {
 
   peer_host = gethostbyaddr((char *)&peer_sin.sin_addr.s_addr,
                             sizeof(peer_sin.sin_addr), AF_INET);
+  if (!peer_host) {
+    std::cout << "peer_host is null" << std::endl;
+    return;
+  }
 
   /* ホスト名 */
   strncpy(client_info[new_socket].hostname, peer_host->h_name,
@@ -125,7 +129,7 @@ int Server::AcceptNewClient(const fd_set *fds) {
     if (FD_ISSET(it->GetListenFd(), fds)) {
       int connfd = accept(it->GetListenFd(), (struct sockaddr *)NULL, NULL);
 
-      // debug_print_accept_info(connfd);
+      debug_print_accept_info(connfd);
 
       if (clients_.size() < kMaxSessionNum) {
         clients_.push_back(ClientSocket(connfd));
