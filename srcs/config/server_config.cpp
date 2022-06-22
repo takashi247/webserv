@@ -65,23 +65,18 @@ LocationConfig *ServerConfig::SelectLocationConfig(const std::string &uri) {
 std::string ServerConfig::UpdateUri(std::string uri) {
   std::string path;
 
-  size_t split = uri.find('/', uri.find("//") + 2);
-  if (split == std::string::npos) {
-    path = "/";
-  } else {
-    path = uri.substr(split);
-  }
-
-  LocationConfig *lc = SelectLocationConfig(path);
+  LocationConfig *lc = SelectLocationConfig(uri);
   if (lc == NULL) {
     return ("");
   }
 
-  std::string root = lc->root_;
-  if (lc->proxy_pass_.length() != 0) {
+  std::string root;
+  if (lc->proxy_pass_.empty()) {
+    root = lc->root_;
+  } else {
     root = lc->proxy_pass_;
   }
-  path = root + path;
+  path = root + uri;
 
   struct stat buffer;
   if (*(path.end() - 1) == '/') {
