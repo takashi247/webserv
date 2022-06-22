@@ -20,7 +20,7 @@ SRCS		:= $(addprefix $(SRCSDIR), $(SRCS))
 
 VPATH		:= $(SRCSDIR)
 
-INCLUDE		:= -I./
+INCLUDE		:= -I./ -I./tmp/
 
 RM			:= rm -rf
 
