@@ -52,6 +52,7 @@ void HttpRequestParser::GetMessageBody(const std::string& recv_msg,
 }
 
 int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
+  req->is_bad_request_ = false;
   req->method_ = GetMethod(recv_msg);
   req->uri_ = GetUri(recv_msg);
   {  // Http version check
