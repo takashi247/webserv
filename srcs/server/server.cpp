@@ -22,14 +22,17 @@ Server::Server() : config_("filename") {
     ServerConfig sc;
     sc.vec_location_config_.push_back(lc);
     sc.port_ = 5000;
+    sc.host_ = "127.0.0.1";
     sc.vec_server_names_.push_back("example.com");
     ServerConfig sc2;
     sc2.vec_location_config_.push_back(lc);
-    sc2.port_ = 4242;
+    sc2.port_ = 5000;
+    sc2.host_ = "192.168.1.6";
     sc2.vec_server_names_.push_back("fugafuga.com");
     ServerConfig sc3;
     sc3.vec_location_config_.push_back(lc);
-    sc3.port_ = 8080;
+    sc3.port_ = 5000;
+    sc3.host_ = "0.0.0.0";
     sc3.vec_server_names_.push_back("test.com");
     config_.vec_server_config_.push_back(sc);
     config_.vec_server_config_.push_back(sc2);
@@ -43,20 +46,19 @@ Server::Server(const char *conf) : config_(conf) {
 }
 
 void Server::CreateServerSockets() {
-  std::vector< ServerConfig >::iterator it =
-      config_.vec_server_config_.begin();
+  std::vector< ServerConfig >::iterator it = config_.vec_server_config_.begin();
   for (; it != config_.vec_server_config_.end(); ++it) {
     //重複するポートがないかチェック
     std::vector< Socket >::iterator sit = sockets_.begin();
     bool multiple_flag = false;
     for (; sit != sockets_.end(); ++sit) {
-      if (it->port_ == sit->port_) {
+      if (it->port_ == sit->port_ && it->host_ == sit->host_) {
         multiple_flag = true;
         break;
       }
     }
     if (multiple_flag) continue;
-    sockets_.push_back(Socket(it->port_));
+    sockets_.push_back(Socket(it->port_, it->host_));
     std::cout << "ポート " << it->port_ << " を監視します。\n";
   }
 }
@@ -69,9 +71,6 @@ int Server::SetStartFds(fd_set *p_fds) {
     FD_SET(it->GetListenFd(), p_fds);
     if (width < it->GetListenFd()) width = it->GetListenFd();
   }
-
-  // 2周目以降は、accfd[]に接続済みのfdが入っている。
-  // iは接続順で、できるだけ手前に入る。
   std::vector< ClientSocket >::iterator cit = clients_.begin();
   for (; cit < clients_.end(); ++cit) {
     FD_SET(cit->fd_, p_fds);
@@ -126,7 +125,7 @@ int Server::AcceptNewClient(const fd_set *fds) {
     if (FD_ISSET(it->GetListenFd(), fds)) {
       int connfd = accept(it->GetListenFd(), (struct sockaddr *)NULL, NULL);
 
-      debug_print_accept_info(connfd);
+      // debug_print_accept_info(connfd);
 
       if (clients_.size() < kMaxSessionNum) {
         clients_.push_back(ClientSocket(connfd));
@@ -170,25 +169,21 @@ std::string Server::ReadMessage(int *p_fd) {
 }
 
 void Server::Run() {
+  fd_set fds;
   /***
-   * 全ソケットを生成
+   * サーバーソケットを生成
    */
   CreateServerSockets();
-
-  fd_set fds;
-
   while (1) {
     /***
      * 複数のリスニングソケットをfdsに設定。
      * widthは参照するfdsの幅
      */
-    int width = 0;
-    width = SetStartFds(&fds);  // fdsへセット、widthを返す
+    int width = SetStartFds(&fds);
 
     /***
      * 受信設定
      */
-    //この時点で、fdsは、リスニングfdと複数の接続済みfdにフラグが立つ。
     struct timeval waitval;
     waitval.tv_sec = 2; /* 待ち時間に 2.500 秒を指定 */
     waitval.tv_usec = 500;
@@ -202,11 +197,9 @@ void Server::Run() {
      * 新規接続のClientSocketを生成
      */
     AcceptNewClient(&fds);
-
     /***
      *	受信処理（接続済みソケット宛にメッセージ受信）
      */
-
     std::vector< ClientSocket >::iterator it = clients_.begin();
     while (it != clients_.end()) {
       //すでに接続したClientSocketからの受信を検知
@@ -223,7 +216,8 @@ void Server::Run() {
         /***
          * レスポンスメッセージを作成
          */
-        ServerConfig *sc = config_.SelectServerConfig(request.host_name_, request.host_port_);
+        ServerConfig *sc =
+            config_.SelectServerConfig(request.host_name_, request.host_port_);
         HttpResponse response(request, *sc);
         std::string server_response = response.GetResponse();
         if (send(it->fd_, server_response.c_str(), server_response.length(),

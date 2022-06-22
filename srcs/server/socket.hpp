@@ -9,10 +9,13 @@ class Socket {
  public:
   int listenfd_;
   size_t port_;
+  std::string host_;
   struct sockaddr_in serv_addr_;
 
  public:
-  explicit Socket(int port) : port_(port) { SetSocket(); }
+  explicit Socket(int port, std::string host) : port_(port), host_(host) {
+    SetSocket();
+  }
   ~Socket() {}
 
  private:
