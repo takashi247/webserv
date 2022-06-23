@@ -13,7 +13,7 @@
 
 class Config {
  public:
-  Config(std::string config_file = "");
+  Config(const char *config_file = "");
   ~Config();
   Config(Config const& rhs);
   Config& operator=(Config const& rhs);

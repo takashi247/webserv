@@ -1,10 +1,10 @@
 #include "config.hpp"
 
-Config::Config(std::string config_file) : config_file_(config_file) {
-  if (!config_file.empty()) {
+Config::Config(const char *config_file) : config_file_(config_file) {
+  if (config_file != NULL) {
     ConfigParser cp;
 
-    cp.ParseConfigFile(vec_server_config_, config_file.c_str());
+    cp.ParseConfigFile(vec_server_config_, config_file);
   }
 }
 

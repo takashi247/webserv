@@ -14,7 +14,8 @@ ConfigParser &ConfigParser::operator=(ConfigParser const &rhs) {
   return (*this);
 }
 
-void ConfigParser::ParseConfigFile(std::vector<ServerConfig> &vec_server_config, const char *file_name) {
+void ConfigParser::ParseConfigFile(std::vector<ServerConfig> &vec_server_config,
+                                   const char *file_name) {
   Tokenize(file_name);
   BalanceBraces();
   Parse(vec_server_config);
@@ -24,7 +25,8 @@ void ConfigParser::Tokenize(const char *file_name) {
   std::ifstream ifs(file_name);
 
   if (ifs.fail()) {
-    ParserUtils::MakeUnexpected("failed to open config file", 0);
+    ParserUtils::MakeUnexpected(
+        std::string(file_name) + ": failed to open file", 0);
   }
 
   int line_count = 0;
@@ -76,25 +78,42 @@ void ConfigParser::BalanceBraces() {
     }
     // original rule
     if (depth > 2) {
-      ParserUtils::MakeUnexpected("unexpected \"{\", too much nesting", tokens_[i].first);
+      ParserUtils::MakeUnexpected("unexpected \"{\", too much nesting",
+                                  tokens_[i].first);
     }
   }
 
   if (depth > 0) {
-    ParserUtils::MakeUnexpected("unexpected end of file, expecting \"}\"", tokens_[i - 1].first);
+    ParserUtils::MakeUnexpected("unexpected end of file, expecting \"}\"",
+                                tokens_[i - 1].first);
   }
 }
 
 void ConfigParser::Parse(std::vector<ServerConfig> &vec_server_config) {
-  for (; index_ < tokens_.size(); ++index_) {
+  for (; index_ + 1 < tokens_.size(); ++index_) {
     if (tokens_[index_].second == "server" &&
         tokens_[index_ + 1].second == "{") {
       index_ += 2;
       ParseServerConfig(vec_server_config);
+    } else if (tokens_[index_].second != "server") {
+      ParserUtils::MakeUnexpected("unknown directive \"" +
+                                      tokens_[index_].second +
+                                      "\", expecting \"server\"",
+                                  tokens_[index_].first);
     } else {
-      ParserUtils::MakeUnexpected("unexpected block, expecting server",
-                     tokens_[index_].first);
+      ParserUtils::MakeUnexpected("unknown string \"" +
+                                      tokens_[index_ + 1].second +
+                                      "\", expecting \"{\"",
+                                  tokens_[index_ + 1].first);
     }
+  }
+  if (index_ + 1 == tokens_.size()) {
+    ParserUtils::MakeUnexpected("unexpected end of file, expecting \"{\"",
+                                index_);
+  }
+  if (vec_server_config.empty()) {
+    ParserUtils::MakeUnexpected("no \"server\" directive in configuration",
+                                index_);
   }
 }
 
@@ -103,19 +122,21 @@ void ConfigParser::SplitIntoList(
     std::vector<std::pair<int, std::string> > &list) {
   std::string item = tokens_[index_].second;
   if (item == ";" || item == "{" || item == "}") {
-      ParserUtils::MakeUnexpected("unexpected \"" + item + "\", expecting directive",
-                     tokens_[index_].first);
+    ParserUtils::MakeUnexpected(
+        "unexpected \"" + item + "\", expecting directive",
+        tokens_[index_].first);
   }
   for (; item != ";"; ++index_, item = tokens_[index_].second) {
     if (item == "{" || item == "}") {
       ParserUtils::MakeUnexpected("unexpected " + item + ", expecting \";\"",
-                     tokens_[index_].first);
+                                  tokens_[index_].first);
     }
     list.push_back(tokens_[index_]);
   }
 }
 
-void ConfigParser::ParseServerConfig(std::vector<ServerConfig> &vec_server_config) {
+void ConfigParser::ParseServerConfig(
+    std::vector<ServerConfig> &vec_server_config) {
   ServerConfig sc;
   std::vector<std::pair<int, std::string> > list;
   std::string item = tokens_[index_].second;
@@ -136,8 +157,9 @@ void ConfigParser::ParseServerConfig(std::vector<ServerConfig> &vec_server_confi
       } else if (item == "client_max_body_size") {
         ParserUtils::ParseInt(list, sc.client_max_body_size_);
       } else {
-        ParserUtils::MakeUnexpected("unknown directive" + tokens_[index_].second,
-                       tokens_[index_].first);
+        ParserUtils::MakeUnexpected(
+            "unknown directive" + tokens_[index_].second,
+            tokens_[index_].first);
       }
     }
     list.clear();
@@ -147,13 +169,14 @@ void ConfigParser::ParseServerConfig(std::vector<ServerConfig> &vec_server_confi
   vec_server_config.push_back(sc);
 }
 
-void ConfigParser::ParseLocationConfig(std::vector<LocationConfig> &vec_location_config) {
+void ConfigParser::ParseLocationConfig(
+    std::vector<LocationConfig> &vec_location_config) {
   LocationConfig lc;
   std::string item = tokens_[index_].second;
 
   if (item == "{" || item == "}" || item == ";") {
     ParserUtils::MakeUnexpected("unexpected \"" + item + "\", expecting path",
-                   tokens_[index_].first);
+                                tokens_[index_].first);
   }
   lc.location_path_ = item;
 
@@ -161,7 +184,7 @@ void ConfigParser::ParseLocationConfig(std::vector<LocationConfig> &vec_location
   item = tokens_[index_].second;
   if (item != "{") {
     ParserUtils::MakeUnexpected("unexpected " + item + ", expecting \"{\"",
-                   tokens_[index_].first);
+                                tokens_[index_].first);
   }
   ++index_;
 
@@ -194,4 +217,3 @@ void ConfigParser::ParseLocationConfig(std::vector<LocationConfig> &vec_location
   }
   vec_location_config.push_back(lc);
 }
-
