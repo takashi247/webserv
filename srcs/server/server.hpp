@@ -13,7 +13,7 @@ class Server {
   static const int kMaxSessionNum = 10;
 
   Config config_;
-  std::vector< Socket > sockets_;
+  std::vector< ServerSocket > sockets_;
   std::vector< ClientSocket > clients_;
 
   void CreateServerSockets();

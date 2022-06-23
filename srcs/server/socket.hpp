@@ -5,18 +5,21 @@
 
 #include "config.hpp"
 
-class Socket {
+extern void SetNonBlocking(int fd);
+
+class ServerSocket {
  public:
   int listenfd_;
   size_t port_;
   std::string host_;
   struct sockaddr_in serv_addr_;
+  sockaddr ahoge;
 
  public:
-  explicit Socket(int port, std::string host) : port_(port), host_(host) {
+  explicit ServerSocket(int port, std::string host) : port_(port), host_(host) {
     SetSocket();
   }
-  ~Socket() {}
+  ~ServerSocket() {}
 
  private:
   void SetListenfd();
@@ -30,7 +33,9 @@ class Socket {
 class ClientSocket {
  public:
   int fd_;
-  Socket* parent_;
-  ClientSocket(int fd, Socket* parent) : fd_(fd), parent_(parent) {}
+  const ServerSocket* parent_;
+  ClientSocket(int fd, const ServerSocket* parent) : fd_(fd), parent_(parent) {
+    SetNonBlocking(fd);
+  }
 };
 #endif

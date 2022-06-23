@@ -1,27 +1,34 @@
 #include "socket.hpp"
 
 #include <arpa/inet.h>  //htonlとか
-#include <netdb.h>      //gethostbyname
-#include <unistd.h>     //close
+#include <fcntl.h>
+#include <netdb.h>   //gethostbyname
+#include <unistd.h>  //close
 
 #include <cstring>   //memset
 #include <iostream>  //cout
 
-void Socket::SetListenfd() {
+void SetNonBlocking(int fd) {
+  if (-1 == fcntl(fd, F_SETFL, O_NONBLOCK)) {
+    std::cout << "Failure to set NonBlocking" << std::endl;
+  }
+}
+
+void ServerSocket::SetListenfd() {
   this->listenfd_ = socket(AF_INET, SOCK_STREAM, 0);
   if (this->listenfd_ == -1) {
     std::cout << "socket() failed." << std::endl;
     exit(1);
   }
+  SetNonBlocking(this->listenfd_);
 }
 
-void Socket::SetSockaddrIn() {
+void ServerSocket::SetSockaddrIn() {
   memset(&this->serv_addr_, 0, sizeof(this->serv_addr_));
   this->serv_addr_.sin_family = AF_INET;
   if (1) {
     this->serv_addr_.sin_addr.s_addr = inet_addr(host_.c_str());
     if (serv_addr_.sin_addr.s_addr == 0xffffffff) {
-      std::cout << "hotehote" << std::endl;
       struct hostent *host;
       host = gethostbyname(host_.c_str());
       if (host == NULL) {
@@ -38,8 +45,8 @@ void Socket::SetSockaddrIn() {
             << std::endl;
 }
 
-int Socket::SetSocket() {
-  Socket::SetListenfd();
+int ServerSocket::SetSocket() {
+  ServerSocket::SetListenfd();
   int optval = 1;
   if (setsockopt(listenfd_, SOL_SOCKET, SO_REUSEADDR, &optval,
                  sizeof(optval)) == -1) {
@@ -48,7 +55,7 @@ int Socket::SetSocket() {
     return -1;
   }
 
-  Socket::SetSockaddrIn();
+  ServerSocket::SetSockaddrIn();
   if (bind(this->listenfd_, (struct sockaddr *)&this->serv_addr_,
            sizeof(this->serv_addr_)) == -1) {
     std::cout << "bind() failed.(" << errno << ")" << std::endl;

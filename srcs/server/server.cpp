@@ -49,7 +49,7 @@ void Server::CreateServerSockets() {
   std::vector< ServerConfig >::iterator it = config_.vec_server_config_.begin();
   for (; it != config_.vec_server_config_.end(); ++it) {
     //重複するポートがないかチェック
-    std::vector< Socket >::iterator sit = sockets_.begin();
+    std::vector< ServerSocket >::iterator sit = sockets_.begin();
     bool multiple_flag = false;
     for (; sit != sockets_.end(); ++sit) {
       if (it->port_ == sit->port_ && it->host_ == sit->host_) {
@@ -58,14 +58,14 @@ void Server::CreateServerSockets() {
       }
     }
     if (multiple_flag) continue;
-    sockets_.push_back(Socket(it->port_, it->host_));
+    sockets_.push_back(ServerSocket(it->port_, it->host_));
     std::cout << "ポート " << it->port_ << " を監視します。\n";
   }
 }
 
 int Server::SetStartFds(fd_set *p_fds) {
   int width = 0;
-  std::vector< Socket >::iterator it;
+  std::vector< ServerSocket >::iterator it;
   FD_ZERO(p_fds);
   for (it = sockets_.begin(); it != sockets_.end(); ++it) {
     FD_SET(it->GetListenFd(), p_fds);
@@ -124,7 +124,7 @@ void debug_print_accept_info(int new_socket) {
 }
 
 int Server::AcceptNewClient(const fd_set *fds) {
-  std::vector< Socket >::iterator it = sockets_.begin();
+  std::vector< ServerSocket >::iterator it = sockets_.begin();
   for (; it != sockets_.end(); ++it) {
     if (FD_ISSET(it->GetListenFd(), fds)) {
       int connfd = accept(it->GetListenFd(), (struct sockaddr *)NULL, NULL);
@@ -241,7 +241,7 @@ void Server::Run() {
   /***
    * 全ソケットを閉じる
    */
-  std::vector< Socket >::iterator it;
+  std::vector< ServerSocket >::iterator it;
   it = sockets_.begin();
   for (; it != sockets_.end(); ++it) {
     close(it->GetListenFd());
