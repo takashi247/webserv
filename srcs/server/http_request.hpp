@@ -4,8 +4,7 @@
 #include <string>
 #include <vector>
 
-class HttpRequest {
- public:
+struct HttpRequest {
   std::string method_;
   std::string uri_;
   std::string version_;  // 0以外の数字から始まる文字列
