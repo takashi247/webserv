@@ -21,17 +21,17 @@ Server::Server() : config_("filename") {
 
     ServerConfig sc;
     sc.vec_location_config_.push_back(lc);
-    sc.port_ = 5000;
+    sc.port_ = 8080;
     sc.host_ = "127.0.0.1";
     sc.vec_server_names_.push_back("example.com");
     ServerConfig sc2;
     sc2.vec_location_config_.push_back(lc);
-    sc2.port_ = 5000;
+    sc2.port_ = 8080;
     sc2.host_ = "192.168.1.6";
     sc2.vec_server_names_.push_back("fugafuga.com");
     ServerConfig sc3;
     sc3.vec_location_config_.push_back(lc);
-    sc3.port_ = 5000;
+    sc3.port_ = 8080;
     sc3.host_ = "0.0.0.0";
     sc3.vec_server_names_.push_back("test.com");
     config_.vec_server_config_.push_back(sc);

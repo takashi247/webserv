@@ -14,6 +14,7 @@ struct HttpRequest {
   size_t content_length_;
   std::string body_;
 
+  bool is_chunked_;
   bool is_bad_request_;
 };
 

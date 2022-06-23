@@ -45,10 +45,46 @@ size_t HttpRequestParser::GetFieldValueSize(const char* field_name,
   int num = atoi(value.c_str());
   return num;
 }
+int HttpRequestParser::GetChunkSize(std::string::const_iterator* it) {
+  std::string::const_iterator cur = *it;
+  int size = 0;
+  while (('0' <= *cur && *cur <= '9') || ('A' <= *cur && *cur <= 'F')) {
+    size *= 16;
+    if ('0' <= *cur && *cur <= '9')
+      size += *cur - '0';
+    else if ('A' <= *cur && *cur <= 'F')
+      size += *cur - 'A' + 10;
+    ++cur;
+  }
+  if (*cur != '\r' || *(cur + 1) != '\n') {
+    std::cout << "Unexpected Separator" << std::endl;
+    return 0;
+  }
+  *it = cur + kCRLFSize;
+  return size;
+}
 void HttpRequestParser::GetMessageBody(const std::string& recv_msg,
-                                       std::string& body) {
-  int pos = recv_msg.find("\r\n\r\n");
-  body.assign(recv_msg.begin() + pos + 4, recv_msg.end());
+                                       bool is_chunked, std::string& body) {
+  int cur = recv_msg.find(SEPARATOR) + kSeparatorSize;
+  if (!is_chunked) {
+    body.assign(recv_msg.begin() + cur, recv_msg.end());
+    return;
+  }
+
+  std::string::const_iterator it = recv_msg.begin() + cur;
+  int size = GetChunkSize(&it);
+  while (0 < size) {
+    body.append(&(*it), size);
+    it += size;
+    if (*it != '\r' || *(it + 1) != '\n') {
+      std::cout << "Unexpected Separator" << std::endl;
+      break;
+    }
+    it += kCRLFSize;
+    size = GetChunkSize(&it);
+  }
+  // std::cout << "size=" << body.size() << " [" << body << "]" << std::endl;
+  return;
 }
 
 int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
@@ -77,7 +113,11 @@ int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
   }
   req->content_type_ = GetFieldValue("Content-Type", recv_msg);
   req->content_length_ = GetFieldValueSize("Content-Length", recv_msg);
-  GetMessageBody(recv_msg, req->body_);
+  {  // judge encoding
+    std::string encoding = GetFieldValue("Transfer-Encoding", recv_msg);
+    req->is_chunked_ = (encoding == "chunked");
+  }
+  GetMessageBody(recv_msg, req->is_chunked_, req->body_);
 
   if (0) {
     std::cout << req->method_ << std::endl;

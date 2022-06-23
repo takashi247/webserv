@@ -2,9 +2,9 @@
 
 #include <arpa/inet.h>  //htonlとか
 #include <netdb.h>      //gethostbyname
-#include <string.h>     //memset
 #include <unistd.h>     //close
 
+#include <cstring>   //memset
 #include <iostream>  //cout
 
 void Socket::SetListenfd() {

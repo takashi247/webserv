@@ -14,6 +14,7 @@ class HttpRequest {
   std::string content_type_;
   size_t content_length_;
   std::string body_;
+  bool is_chunked_;
   bool
       is_bad_request_;  // パースする際に、400になるものについてはフラグを立てる
 };
