@@ -9,8 +9,8 @@ const std::string HttpResponse::kStatusDescMethodNotAllowed = "405 Not Allowed";
 const std::string HttpResponse::kStatusDescVersionNotSupported =
     "505 HTTP Version Not Supported";
 
-HttpResponse::HttpResponse(HttpRequest &http_request,
-                           ServerConfig &server_config)
+HttpResponse::HttpResponse(const HttpRequest &http_request,
+                           const ServerConfig &server_config)
     : http_request_(http_request),
       server_config_(server_config),
       status_code_(kStatusCodeOK),
@@ -28,9 +28,9 @@ bool HttpResponse::IsCgiFileExtension(const std::string &file_type) const {
   if (!location_config_) {
     return false;
   }
-  std::vector< std::string >::iterator first =
+  std::vector< std::string >::const_iterator first =
       location_config_->vec_cgi_file_extension_.begin();
-  std::vector< std::string >::iterator last =
+  std::vector< std::string >::const_iterator last =
       location_config_->vec_cgi_file_extension_.end();
   if (std::find(first, last, file_type) == last) {
     return false;
@@ -333,7 +333,7 @@ void HttpResponse::MakeBody200() {
 }
 
 bool HttpResponse::IsAllowedMethod() const {
-  std::vector< std::string >::iterator it, first, last;
+  std::vector< std::string >::const_iterator it, first, last;
   if (!location_config_) {
     return false;
   }
@@ -358,8 +358,8 @@ bool HttpResponse::IsDigitSafe(char ch) {
 }
 
 void HttpResponse::ValidateVersion() {
-  std::string::iterator it = http_request_.version_.begin();
-  std::string::iterator end = http_request_.version_.end();
+  std::string::const_iterator it = http_request_.version_.begin();
+  std::string::const_iterator end = http_request_.version_.end();
   if (*it != '1') {
     is_supported_version_ = false;
     return;
