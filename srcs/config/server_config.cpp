@@ -39,7 +39,11 @@ void ServerConfig::ParseListen(
   std::string set_value = list[1].second;
   delim_pos = set_value.find(':');
   if (delim_pos == std::string::npos) {
-    port_ = std::atoi(set_value.c_str());
+    if (set_value.find('.') == std::string::npos) {
+      host_ = set_value;
+    } else {
+      port_ = std::atoi(set_value.c_str());
+    }
   } else {
     host_ = set_value.substr(0, delim_pos);
     port_ = std::atoi(set_value.substr(delim_pos + 1).c_str());

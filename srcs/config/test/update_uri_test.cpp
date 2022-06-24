@@ -7,13 +7,11 @@
 #include "../config_parser.hpp"
 
 void ExecUpdateUri(ServerConfig &sc) {
-  std::cout << "[" << sc.UpdateUri("https://localhost:8080/dir") << "]"
+  std::cout << "[" << sc.UpdateUri("/dir") << "]"
             << std::endl;
-  std::cout << "[" << sc.UpdateUri("https://localhost:8080/dir/dir/") << "]"
+  std::cout << "[" << sc.UpdateUri("/dir/dir/") << "]"
             << std::endl;
-  std::cout << "[" << sc.UpdateUri("https://localhost:8080") << "]"
-            << std::endl;
-  std::cout << "[" << sc.UpdateUri("https://localhost:8080/") << "]"
+  std::cout << "[" << sc.UpdateUri("/") << "]"
             << std::endl;
   std::cout << std::endl;
 }
@@ -28,7 +26,7 @@ void TestUpdateURi() {
     no_proxy.root_ = current_path;
     no_proxy.vec_index_.push_back("index.html");
     no_proxy.vec_index_.push_back("index.png");
-    no_proxy.vec_index_.push_back("test_update_uri.cpp");
+    no_proxy.vec_index_.push_back("test.sh");
 
     sc.vec_location_config_.push_back(no_proxy);
 
@@ -48,7 +46,7 @@ void TestUpdateURi() {
     proxy.vec_index_.push_back("index.png");
     proxy.vec_index_.push_back("test_update_uri.cpp");
 
-    proxy.proxy_pass_ = "http://localhost:8080";
+    proxy.proxy_pass_ = "http://proxy_host:8080";
     sc.vec_location_config_.push_back(proxy);
 
     // test
@@ -64,6 +62,7 @@ void TestUpdateURi() {
 
     autoindex.location_path_ = "/";
     autoindex.root_ = current_path;
+    autoindex.vec_index_.push_back("test.sh");
 
     autoindex.autoindex_ = true;
     sc.vec_location_config_.push_back(autoindex);

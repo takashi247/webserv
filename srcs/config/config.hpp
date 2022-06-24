@@ -13,7 +13,7 @@
 
 class Config {
  public:
-  Config(const char *config_file = "");
+  Config(const char *config_file = NULL);
   ~Config();
   Config(Config const& rhs);
   Config& operator=(Config const& rhs);
@@ -21,7 +21,7 @@ class Config {
   // hostとvec_server_names_, portとport_を照合する。
   ServerConfig* SelectServerConfig(const std::string &host, const size_t &port, const std::string &server_name);
 
-  std::string config_file_;
+  const char *config_file_;
   std::vector<ServerConfig> vec_server_config_;
 };
 

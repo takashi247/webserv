@@ -1,7 +1,10 @@
 make -C ../
 
-cd .. && ./webserv confs/test.conf > /dev/null &
+cd .. && ./webserv test/confs/test.conf > /dev/null &
 
-python3 request_test.py
+mkdir -p www/autoindex
 
-killall webserv
+if [ $? == 0 ]; then
+	python3 request_test.py
+	killall webserv
+fi
