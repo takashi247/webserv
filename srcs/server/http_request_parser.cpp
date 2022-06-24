@@ -1,29 +1,37 @@
 #include "http_request_parser.hpp"
 
 #include <iostream>
+#include <utility>
 
 std::string HttpRequestParser::GetMethod(const std::string& recv_msg) {
-  int pos = recv_msg.find(' ');
+  size_t pos = recv_msg.find(' ');
   std::string method(recv_msg.begin(), recv_msg.begin() + pos);
   return method;
 }
-std::string HttpRequestParser::GetUri(const std::string& recv_msg) {
-  int start_pos = recv_msg.find(' ');
-  int end_pos = recv_msg.find(' ', start_pos + 1);
+std::pair< std::string, std::string > HttpRequestParser::GetUri(
+    const std::string& recv_msg) {
+  size_t start_pos = recv_msg.find(' ');
+  size_t end_pos = recv_msg.find(' ', start_pos + 1);
   std::string uri(recv_msg.begin() + start_pos + 1, recv_msg.begin() + end_pos);
-  return uri;
+  start_pos = uri.find('?');
+  if (start_pos == std::string::npos) return std::make_pair(uri, "");
+  // クエリーがある場合
+  start_pos++;
+  std::string query(uri.substr(start_pos, uri.size() - start_pos));
+  uri = uri.substr(0, start_pos - 1);
+  return std::make_pair(uri, query);
 }
 std::string HttpRequestParser::GetProtocolVersion(const std::string& recv_msg) {
-  int start_pos = recv_msg.find(' ');
+  size_t start_pos = recv_msg.find(' ');
   start_pos = recv_msg.find(' ', start_pos + 1);
-  int end_pos = recv_msg.find("\r\n", start_pos + 1);
+  size_t end_pos = recv_msg.find("\r\n", start_pos + 1);
   std::string version(recv_msg.begin() + start_pos + 1,
                       recv_msg.begin() + end_pos);
   return version;
 }
 bool HttpRequestParser::IsValidHttpVersion(
     const std::string& protocol_version) {
-  int pos = protocol_version.find("HTTP/");
+  size_t pos = protocol_version.find("HTTP/");
   char version_head_num = protocol_version[kProtocolVersionPos];
   if (pos == 0 && ('0' < version_head_num && version_head_num <= '9'))
     return true;
@@ -31,10 +39,10 @@ bool HttpRequestParser::IsValidHttpVersion(
 }
 std::string HttpRequestParser::GetFieldValue(const char* field_name,
                                              const std::string& recv_msg) {
-  int name_start_pos = recv_msg.find(field_name, 0, strlen(field_name));
-  if (-1 == name_start_pos) return "";
-  int value_start_pos = recv_msg.find(": ", name_start_pos + 1) + 2;
-  int value_end_pos = recv_msg.find("\r\n", value_start_pos + 1);
+  size_t name_start_pos = recv_msg.find(field_name, 0, strlen(field_name));
+  if (std::string::npos == name_start_pos) return "";
+  size_t value_start_pos = recv_msg.find(": ", name_start_pos + 1) + 2;
+  size_t value_end_pos = recv_msg.find("\r\n", value_start_pos + 1);
   std::string value(recv_msg.begin() + value_start_pos,
                     recv_msg.begin() + value_end_pos);
   return value;
@@ -65,7 +73,7 @@ int HttpRequestParser::GetChunkSize(std::string::const_iterator* it) {
 }
 void HttpRequestParser::GetMessageBody(const std::string& recv_msg,
                                        bool is_chunked, std::string& body) {
-  int cur = recv_msg.find(SEPARATOR) + kSeparatorSize;
+  size_t cur = recv_msg.find(SEPARATOR) + kSeparatorSize;
   if (!is_chunked) {
     body.assign(recv_msg.begin() + cur, recv_msg.end());
     return;
@@ -100,7 +108,6 @@ int HttpRequestParser::GetHeaderFields(
     std::string value = recv_msg.substr(start, cur - start);
     start = cur + 2;
     fields->insert(std::make_pair(key, value));
-    // std::cout << "[" << key << ", " << value << "]" << std::endl;
   }
   return start + 2;  // bodyの先頭を指す
 }
@@ -108,7 +115,9 @@ int HttpRequestParser::GetHeaderFields(
 int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
   req->is_bad_request_ = false;
   req->method_ = GetMethod(recv_msg);
-  req->uri_ = GetUri(recv_msg);
+  std::pair< std::string, std::string > uri = GetUri(recv_msg);
+  req->uri_ = uri.first;
+  req->query_string_ = uri.second;
   {  // Http version check
     std::string version = GetProtocolVersion(recv_msg);
     bool is_valid_version = IsValidHttpVersion(version);

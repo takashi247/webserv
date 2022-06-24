@@ -7,6 +7,7 @@
 struct HttpRequest {
   std::string method_;
   std::string uri_;
+  std::string query_string_;
   std::string version_;  // 0以外の数字から始まる文字列
   std::string host_name_;
   size_t host_port_;

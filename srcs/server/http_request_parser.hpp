@@ -3,7 +3,7 @@
 
 #include <cstdlib>
 #include <cstring>
-#include <map>
+#include <utility>
 
 #include "http_request.hpp"
 
@@ -16,7 +16,8 @@ class HttpRequestParser {
   static const int kCRLFSize = 2;
 
   static std::string GetMethod(const std::string& recv_msg);
-  static std::string GetUri(const std::string& recv_msg);
+  static std::pair< std::string, std::string > GetUri(
+      const std::string& recv_msg);
   static std::string GetProtocolVersion(const std::string& recv_msg);
   static bool IsValidHttpVersion(const std::string& recv_msg);
   static std::string GetFieldValue(const char* field_name,
