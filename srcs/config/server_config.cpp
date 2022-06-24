@@ -29,11 +29,12 @@ ServerConfig &ServerConfig::operator=(ServerConfig const &rhs) {
 }
 
 void ServerConfig::ParseListen(
-    const std::vector<std::pair<int, std::string> > &list) {
+    const std::vector< std::pair< int, std::string > > &list) {
   std::string::size_type delim_pos;
 
   if (list.size() != 2) {
-    ParserUtils::MakeUnexpected("invalid number of args in listen directive", list[0].first);
+    ParserUtils::MakeUnexpected("invalid number of args in listen directive",
+                                list[0].first);
   }
   std::string set_value = list[1].second;
   delim_pos = set_value.find(':');
@@ -46,15 +47,18 @@ void ServerConfig::ParseListen(
 }
 
 // return locationConfig whose location_path_'s length is longest.
-LocationConfig *ServerConfig::SelectLocationConfig(const std::string &uri) {
-  LocationConfig *selected = &default_location_config_;
+const LocationConfig *ServerConfig::SelectLocationConfig(
+    const std::string &uri) const {
+  const LocationConfig *selected = &default_location_config_;
 
-  for (std::vector<LocationConfig>::iterator it = vec_location_config_.begin();
+  for (std::vector< LocationConfig >::const_iterator it =
+           vec_location_config_.begin();
        it != vec_location_config_.end(); ++it) {
     if (uri.find(it->location_path_) == 0) {
       if (selected == &default_location_config_) {
         selected = it.base();
-      } else if (selected->location_path_.length() < it->location_path_.length()){
+      } else if (selected->location_path_.length() <
+                 it->location_path_.length()) {
         selected = it.base();
       }
     }
@@ -62,10 +66,10 @@ LocationConfig *ServerConfig::SelectLocationConfig(const std::string &uri) {
   return (selected);
 }
 
-std::string ServerConfig::UpdateUri(std::string uri) {
+std::string ServerConfig::UpdateUri(std::string uri) const {
   std::string path;
 
-  LocationConfig *lc = SelectLocationConfig(uri);
+  const LocationConfig *lc = SelectLocationConfig(uri);
   if (lc == NULL) {
     return ("");
   }
@@ -80,7 +84,8 @@ std::string ServerConfig::UpdateUri(std::string uri) {
 
   struct stat buffer;
   if (*(path.end() - 1) == '/') {
-    for (std::vector<std::string>::iterator it = lc->vec_index_.begin(); it != lc->vec_index_.end(); ++it) {
+    for (std::vector< std::string >::const_iterator it = lc->vec_index_.begin();
+         it != lc->vec_index_.end(); ++it) {
       if (stat((path + *it).c_str(), &buffer) == 0) {
         return (path + *it);
       }
@@ -89,13 +94,12 @@ std::string ServerConfig::UpdateUri(std::string uri) {
   return (path);
 }
 
-
 void ServerConfig::PrintVal() {
   std::cout << "=====" << std::endl;
   std::cout << "listen " << host_ << ":" << port_ << std::endl;
 
   std::cout << "server_name ";
-  for (std::vector<std::string>::iterator it = vec_server_names_.begin();
+  for (std::vector< std::string >::iterator it = vec_server_names_.begin();
        it != vec_server_names_.end(); ++it) {
     std::cout << *it << " ";
   }
@@ -105,7 +109,8 @@ void ServerConfig::PrintVal() {
 
   std::cout << "client_max_body_size " << client_max_body_size_ << std::endl;
 
-  for (std::vector<LocationConfig>::iterator it = vec_location_config_.begin();
+  for (std::vector< LocationConfig >::iterator it =
+           vec_location_config_.begin();
        it != vec_location_config_.end(); ++it) {
     std::cout << "\n[location]" << std::endl;
     it->PrintVal();

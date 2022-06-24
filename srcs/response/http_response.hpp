@@ -22,7 +22,8 @@
 class HttpResponse {
  public:
   // Constructor
-  HttpResponse(HttpRequest &http_request, ServerConfig &server_config);
+  HttpResponse(const HttpRequest &http_request,
+               const ServerConfig &server_config);
 
   // Destructor
   virtual ~HttpResponse();
@@ -80,14 +81,14 @@ class HttpResponse {
   std::string CreateFileList(std::vector< std::string >);
 
   // Data members
-  HttpRequest &http_request_;
-  ServerConfig &server_config_;
+  const HttpRequest &http_request_;
+  const ServerConfig &server_config_;
   int status_code_;
   std::string status_desc_;
   bool is_bad_request_;
   bool is_supported_version_;
   std::string content_type_;
-  LocationConfig *location_config_;
+  const LocationConfig *location_config_;
   std::string requested_file_path_;
   std::ifstream requested_file_;
   bool is_file_exists_;
