@@ -87,6 +87,24 @@ void HttpRequestParser::GetMessageBody(const std::string& recv_msg,
   return;
 }
 
+int HttpRequestParser::GetHeaderFields(
+    const std::string& recv_msg, std::map< std::string, std::string >* fields) {
+  size_t cur = recv_msg.find("\r\n") + 2;
+  size_t start = cur;
+
+  while (start != recv_msg.find("\r\n", start)) {
+    cur = recv_msg.find(": ", start);
+    std::string key = recv_msg.substr(start, cur - start);
+    start = cur + 2;
+    cur = recv_msg.find("\r\n", start);
+    std::string value = recv_msg.substr(start, cur - start);
+    start = cur + 2;
+    fields->insert(std::make_pair(key, value));
+    // std::cout << "[" << key << ", " << value << "]" << std::endl;
+  }
+  return start + 2;  // bodyの先頭を指す
+}
+
 int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
   req->is_bad_request_ = false;
   req->method_ = GetMethod(recv_msg);
@@ -101,9 +119,10 @@ int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
     req->version_ =
         version.erase(0, kProtocolVersionPos);  //先頭の"HTTP/"を削除
   }
+  size_t pos;
   std::string host = GetFieldValue("Host", recv_msg);
   {  // separate host -> name:port
-    size_t pos = host.find(":");
+    pos = host.find(":");
     if (pos == std::string::npos)
       req->host_name_ = host;
     else {
@@ -117,6 +136,7 @@ int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
     std::string encoding = GetFieldValue("Transfer-Encoding", recv_msg);
     req->is_chunked_ = (encoding == "chunked");
   }
+  pos = GetHeaderFields(recv_msg, &req->header_fields_);
   GetMessageBody(recv_msg, req->is_chunked_, req->body_);
 
   if (0) {

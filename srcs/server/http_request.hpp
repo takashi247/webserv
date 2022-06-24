@@ -1,8 +1,8 @@
 #ifndef HTTP_REQUEST_HPP_
 #define HTTP_REQUEST_HPP_
 
+#include <map>
 #include <string>
-#include <vector>
 
 struct HttpRequest {
   std::string method_;
@@ -16,6 +16,7 @@ struct HttpRequest {
   bool is_chunked_;
   bool
       is_bad_request_;  // パースする際に、400になるものについてはフラグを立てる
+  std::map< std::string, std::string > header_fields_;
 };
 
 #endif  // HTTP_REQUEST_HPP_

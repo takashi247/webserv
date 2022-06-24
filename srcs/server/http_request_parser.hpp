@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <map>
 
 #include "http_request.hpp"
 
@@ -23,6 +24,8 @@ class HttpRequestParser {
   static size_t GetFieldValueSize(const char* field_name,
                                   const std::string& recv_msg);
   static int GetChunkSize(std::string::const_iterator* it);
+  static int GetHeaderFields(const std::string& recv_msg,
+                             std::map< std::string, std::string >* fields);
 
  public:
   static void GetMessageBody(const std::string& recv_msg, bool is_chunked,
