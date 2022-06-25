@@ -73,11 +73,14 @@ const LocationConfig *ServerConfig::SelectLocationConfig(
 std::string ServerConfig::UpdateUri(std::string uri) const {
   std::string path;
 
-  const LocationConfig *lc = SelectLocationConfig(uri);
-  if (lc == NULL) {
-    return ("");
+  // if there is no extension and uri does not end with '/', uri = uri + "/".
+  // [TODO]
+  if (uri.find_last_of(".", uri.find_last_of("/")) == std::string::npos &&
+      *(path.end() - 1) != '/') {
+    uri += "/";
   }
 
+  const LocationConfig *lc = SelectLocationConfig(uri);
   std::string root;
   if (lc->proxy_pass_.empty()) {
     root = lc->root_;
