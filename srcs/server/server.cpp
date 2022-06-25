@@ -148,27 +148,31 @@ std::string Server::ReadMessage(int *p_fd) {
   memset(buf, 0, sizeof(buf));
   ssize_t read_size = 0;
 
-  do {  //バッファサイズの制限は嫌なので、無制限に読み込めるようにしたい
-    read_size = recv(*p_fd, buf, sizeof(buf) - 1, 0);
-    if (read_size == -1) {
-      std::cout << "read() failed." << std::endl;
-      std::cout << "ERROR: " << errno << std::endl;
-      close(*p_fd);
-      *p_fd = -1;
-      break;
-    }
-    if (read_size > 0) {
-      recv_str.append(buf);
-      memset(buf, 0, sizeof(buf));
-    }
-    //読み込んだ最後が\r\n\r\nなら終了。
-    if ((recv_str[recv_str.length() - 4] == 0x0d) &&
-        (recv_str[recv_str.length() - 3] == 0x0a) &&
-        (recv_str[recv_str.length() - 2] == 0x0d) &&
-        (recv_str[recv_str.length() - 1] == 0x0a)) {
-      break;
-    }
-  } while (read_size > 0);
+  // do {  //バッファサイズの制限は嫌なので、無制限に読み込めるようにしたい
+  read_size = recv(*p_fd, buf, sizeof(buf) - 1, 0);
+  if (read_size == -1) {
+    std::cout << "recv() failed." << std::endl;
+    std::cout << "ERROR: " << strerror(errno) << std::endl;
+    close(*p_fd);
+    *p_fd = -1;
+    // break;
+    exit(1);
+  }
+  if (read_size > 0) {
+    std::string buf_string(buf, read_size);
+    recv_str.append(buf_string);
+    memset(buf, 0, sizeof(buf));
+  }
+  // 読み込んだ最後が\r\n\r\nなら終了。
+  // if ((recv_str[recv_str.length() - 4] == 0x0d) &&
+  //     (recv_str[recv_str.length() - 3] == 0x0a) &&
+  //     (recv_str[recv_str.length() - 2] == 0x0d) &&
+  //     (recv_str[recv_str.length() - 1] == 0x0a)) {
+  //   break;
+  // } else if (recv_str[recv_str.length() - 1] == '-' &&
+  //            recv_str[recv_str.length() - 2] == '-')
+  //   break;
+  // } while (read_size > 0);
   return recv_str;
 }
 
@@ -227,7 +231,7 @@ void Server::Run() {
         std::string server_response = response.GetResponse();
         if (send(it->fd_, server_response.c_str(), server_response.length(),
                  0) == -1) {
-          std::cout << "write() failed." << std::endl;
+          std::cout << "send() failed." << std::endl;
         }
         /***
          * fdを切断
