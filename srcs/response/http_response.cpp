@@ -2,6 +2,7 @@
 
 const std::string HttpResponse::kServerVersion = "webserv/1.0.0";
 const std::string HttpResponse::kStatusDescOK = "200 OK";
+const std::string HttpResponse::kStatusDescNoContent = "204 No Content";
 const std::string HttpResponse::kStatusDescBadRequest = "400 Bad Request";
 const std::string HttpResponse::kStatusDescForbidden = "403 Forbidden";
 const std::string HttpResponse::kStatusDescNotFound = "404 Not Found";
@@ -147,6 +148,16 @@ void HttpResponse::MakeErrorHeader() {
   header_.push_back("\r\n");
 }
 
+void HttpResponse::MakeHeader204() {
+  header_.push_back("HTTP/1.1 ");
+  header_.push_back(status_desc_);
+  header_.push_back("\r\n");
+  header_.push_back(server_header_);
+  header_.push_back(date_header_);
+  header_.push_back("Connection: keep-alive\r\n");
+  header_.push_back("\r\n");
+}
+
 void HttpResponse::MakeHeader200() {
   std::ostringstream oss_content_length, oss_content_type, oss_last_modified;
   oss_content_type << "Content-Type: " << content_type_ << "\r\n";
@@ -209,6 +220,13 @@ void HttpResponse::MakeErrorBody() {
     CreateDefaultErrorPage();
   } else {
     CreateCustomizedErrorPage();
+  }
+}
+
+void HttpResponse::DeleteRequestedFile() {
+  if (remove(requested_file_path_.c_str()) != 0) {
+    PrintErrorMessage("remove");
+    exit(1);
   }
 }
 
@@ -413,34 +431,118 @@ void HttpResponse::SetStatusCode() {
   } else if (is_file_forbidden_) {
     status_code_ = kStatusCodeForbidden;
     status_desc_ = kStatusDescForbidden;
+  } else if (http_request_.method_ == "DELETE") {
+    status_code_ = kStatusCodeNoContent;
+    status_desc_ = kStatusDescNoContent;
   }
+}
+
+void HttpResponse::DeleteCgiEnviron(char **cgi_env) {
+  char **head = cgi_env;
+  while (*cgi_env) {
+    delete *cgi_env;
+    ++cgi_env;
+  }
+  delete[] head;
+}
+
+char **HttpResponse::CreateCgiEnviron() {
+  std::map< std::string, std::string > map_env;
+  std::map< std::string, std::string >::const_iterator it_content_length =
+      http_request_.header_fields_.find("Content-Length");
+  if (it_content_length != http_request_.header_fields_.end()) {
+    map_env["CONTENT_LENGTH"] = it_content_length->second;
+  } else {
+    map_env["CONTENT_LENGTH"] = "";
+  }
+  std::map< std::string, std::string >::const_iterator it_content_type =
+      http_request_.header_fields_.find("Content-Type");
+  if (it_content_type != http_request_.header_fields_.end()) {
+    map_env["CONTENT_TYPE"] = it_content_type->second;
+  }
+  map_env["GATEWAY_INTERFACE"] = "CGI/1.1";
+  map_env["PATH_INFO"] = http_request_.uri_;
+  map_env["QUERY_STRING"] = http_request_.query_string_;
+  map_env["REQUEST_METHOD"] = http_request_.method_;
+  map_env["REQUEST_SCHEME"] = "http";
+  map_env["REQUEST_URI"] = http_request_.uri_;
+  map_env["SERVER_PORT"] = server_config_.port_;
+  map_env["SERVER_PROTOCOL"] = "HTTP/1.1";
+  map_env["SERVER_SOFTWARE"] = kServerVersion;
+  map_env["UPLOAD_DIR"] = location_config_->upload_dir_;
+  if (location_config_->is_uploadable_) {
+    map_env["IS_UPLOADABLE"] = "true";
+  } else {
+    map_env["IS_UPLOADABLE"] = "false";
+  }
+  char **cgi_env = new char *[map_env.size() + 1];
+  char **head = cgi_env;
+  for (std::map< std::string, std::string >::const_iterator it =
+           map_env.begin();
+       it != map_env.end(); ++it) {
+    std::string env_var = it->first + "=" + it->second;
+    *cgi_env = strdup(env_var.c_str());
+    if (!*cgi_env) {
+      DeleteCgiEnviron(head);
+      return NULL;
+    }
+    ++cgi_env;
+  }
+  *cgi_env = NULL;
+  return head;
 }
 
 void HttpResponse::MakeCgiBody() {
   pid_t pid;
   char *argv[2] = {const_cast< char * >(requested_file_path_.c_str()), NULL};
-  int fds[2];
-  char buf[1000];  // TODO: Need to update
+  char **cgi_environ;
+  int pipe_child2parent[2];
+  int pipe_parent2child[2];
+  char buf[kCgiBufferSize];  // TODO: Need to update
+  const int READ = 0;
+  const int WRITE = 1;
 
-  pipe(fds);
-  pid = fork();
-  if (pid < 0) {
-    PrintErrorMessage("fork(2) failed");
-    return;
+  if ((cgi_environ = CreateCgiEnviron()) == NULL) {
+    PrintErrorMessage("CreateCgiEnviron");
+    exit(1);
+  }
+  if (pipe(pipe_child2parent) < 0) {
+    PrintErrorMessage("pipe");
+    exit(1);
+  }
+  if (pipe(pipe_parent2child) < 0) {
+    PrintErrorMessage("pipe");
+    close(pipe_child2parent[READ]);
+    close(pipe_child2parent[WRITE]);
+    exit(1);
+  }
+  if ((pid = fork()) < 0) {
+    PrintErrorMessage("fork");
+    close(pipe_child2parent[READ]);
+    close(pipe_child2parent[WRITE]);
+    close(pipe_parent2child[READ]);
+    close(pipe_parent2child[WRITE]);
+    exit(1);
   }
   if (pid == 0) {
-    close(fds[0]);
-    close(STDOUT_FILENO);
-    dup2(fds[1], STDOUT_FILENO);
-    if (execve(argv[0], argv, NULL) == -1) {
+    dup2(pipe_parent2child[READ], STDIN_FILENO);
+    dup2(pipe_child2parent[WRITE], STDOUT_FILENO);
+    close(pipe_parent2child[WRITE]);
+    close(pipe_child2parent[READ]);
+    if (execve(argv[0], argv, cgi_environ) == -1) {
       PrintErrorMessage("execve failed");
-      return;
+      close(pipe_parent2child[READ]);
+      close(pipe_child2parent[WRITE]);
+      exit(1);
     }
   } else {
     int status;
-    close(fds[1]);
+    write(pipe_parent2child[WRITE], http_request_.body_.c_str(),
+          http_request_.body_.length());
     wait(&status);
-    read(fds[0], buf, 1000);  // TODO: Need to update
+    read(pipe_child2parent[READ], buf, kCgiBufferSize);  // TODO: Need to update
+    close(pipe_child2parent[WRITE]);
+    close(pipe_parent2child[READ]);
     body_ = std::string(buf);
     SetLastModifiedTime();
     body_len_ = body_.size();
@@ -460,6 +562,9 @@ void HttpResponse::MakeResponse() {
         MakeCgiHeader();
       }
       break;
+    case kStatusCodeNoContent:
+      DeleteRequestedFile();
+      MakeHeader204();
     default:
       MakeErrorBody();
       MakeErrorHeader();

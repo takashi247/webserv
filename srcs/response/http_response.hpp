@@ -2,12 +2,14 @@
 #define HTTP_RESPONSE_HPP_
 
 #include <dirent.h>    // for opendir, readdir
+#include <string.h>    // for strdup
 #include <sys/stat.h>  // for stat
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include <algorithm>  // for sort
 #include <cctype>     // for isdigit
+#include <cstring>    // for debugging
 #include <ctime>
 #include <fstream>
 #include <iomanip>
@@ -34,13 +36,16 @@ class HttpResponse {
  private:
   // Static constants
   static const int kStatusCodeOK = 200;
+  static const int kStatusCodeNoContent = 204;
   static const int kStatusCodeBadRequest = 400;
   static const int kStatusCodeForbidden = 403;
   static const int kStatusCodeNotFound = 404;
   static const int kStatusCodeMethodNotAllowed = 405;
   static const int kStatusCodeVersionNotSupported = 505;
+  static const int kCgiBufferSize = 5000;
   static const std::string kServerVersion;
   static const std::string kStatusDescOK;
+  static const std::string kStatusDescNoContent;
   static const std::string kStatusDescBadRequest;
   static const std::string kStatusDescForbidden;
   static const std::string kStatusDescNotFound;
@@ -57,8 +62,10 @@ class HttpResponse {
   void MakeResponse();
   void InitFileStream();
   void MakeHeader200();
+  void MakeHeader204();
   void MakeErrorHeader();
   void MakeBody200();
+  void DeleteRequestedFile();
   void MakeErrorBody();
   void CreateDefaultErrorPage();
   void CreateCustomizedErrorPage();
@@ -79,6 +86,8 @@ class HttpResponse {
   void CreateAutoindexPage();
   std::vector< std::string > GetFileNames();
   std::string CreateFileList(std::vector< std::string >);
+  char **CreateCgiEnviron();
+  void DeleteCgiEnviron(char **cgi_env);
 
   // Data members
   const HttpRequest &http_request_;
