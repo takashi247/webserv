@@ -7,6 +7,8 @@ server {
 
 	index index.html index.htm index.nginx-debian.html index.php;
 
+	dav_methods DELETE;
+
 	location /dir_on/ {
 		autoindex on;
 	}

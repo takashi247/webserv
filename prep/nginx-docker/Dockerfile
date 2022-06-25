@@ -26,6 +26,7 @@ RUN chown -R www-data:www-data /var/www; \
 	chmod 200 /var/www/html/writable.html; \
 	chmod 100 /var/www/html/executable.html; \
 	chmod 000 /var/www/html/dir_forbidden; \
+	chmod -R 755 /var/www/html/dir_on; \
 	chmod 000 /var/www/html/dir_on/sub_dir_forbidden;
 
 # Keep running the container
