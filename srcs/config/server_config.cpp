@@ -75,7 +75,8 @@ std::string ServerConfig::UpdateUri(std::string uri) const {
 
   // if there is no extension and uri does not end with '/', uri = uri + "/".
   // [TODO]
-  if (uri.find_last_of(".", uri.find_last_of("/")) == std::string::npos &&
+  size_t file_name_pos = uri.find_last_of("/");
+  if (uri.find_last_of(".", uri.length() - file_name_pos) == std::string::npos &&
       *(path.end() - 1) != '/') {
     uri += "/";
   }
