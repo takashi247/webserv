@@ -9,7 +9,7 @@
 
 class Server {
  private:
-  static const int kReadBufferSize = 1024;
+  static const int kReadBufferSize = 10000;
   static const int kMaxSessionNum = 10;
 
   Config config_;
