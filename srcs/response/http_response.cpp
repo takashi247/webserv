@@ -7,6 +7,8 @@ const std::string HttpResponse::kStatusDescBadRequest = "400 Bad Request";
 const std::string HttpResponse::kStatusDescForbidden = "403 Forbidden";
 const std::string HttpResponse::kStatusDescNotFound = "404 Not Found";
 const std::string HttpResponse::kStatusDescMethodNotAllowed = "405 Not Allowed";
+const std::string HttpResponse::kStatusDescRequestEntityTooLarge =
+    "413 Request Entity Too Large";
 const std::string HttpResponse::kStatusDescVersionNotSupported =
     "505 HTTP Version Not Supported";
 
@@ -434,6 +436,10 @@ void HttpResponse::SetStatusCode() {
   } else if (http_request_.method_ == "DELETE") {
     status_code_ = kStatusCodeNoContent;
     status_desc_ = kStatusDescNoContent;
+  } else if (server_config_.client_max_body_size_ <
+             http_request_.content_length_) {
+    status_code_ = kStatusCodeRequestEntityTooLarge;
+    status_desc_ = kStatusDescRequestEntityTooLarge;
   }
 }
 

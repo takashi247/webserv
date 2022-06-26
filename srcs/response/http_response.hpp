@@ -41,6 +41,7 @@ class HttpResponse {
   static const int kStatusCodeForbidden = 403;
   static const int kStatusCodeNotFound = 404;
   static const int kStatusCodeMethodNotAllowed = 405;
+  static const int kStatusCodeRequestEntityTooLarge = 413;
   static const int kStatusCodeVersionNotSupported = 505;
   static const int kCgiBufferSize = 5000;
   static const std::string kServerVersion;
@@ -50,6 +51,7 @@ class HttpResponse {
   static const std::string kStatusDescForbidden;
   static const std::string kStatusDescNotFound;
   static const std::string kStatusDescMethodNotAllowed;
+  static const std::string kStatusDescRequestEntityTooLarge;
   static const std::string kStatusDescVersionNotSupported;
 
   // Constructor and assignment operators
