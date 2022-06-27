@@ -32,6 +32,7 @@ class HttpResponse {
 
   // Other functions
   std::string GetResponse() const;
+  static std::map< std::string, std::string > CreateMimeTypeMap();
 
  private:
   // Static constants
@@ -44,7 +45,8 @@ class HttpResponse {
   static const int kStatusCodeMethodNotAllowed = 405;
   static const int kStatusCodeRequestEntityTooLarge = 413;
   static const int kStatusCodeVersionNotSupported = 505;
-  static const int kCgiBufferSize = 5000;
+  static const int kCgiBufferSize = 500;
+  static const int kAsciiCodeForEOF = 26;
   static const std::string kServerVersion;
   static const std::string kStatusDescOK;
   static const std::string kStatusDescNoContent;
@@ -55,6 +57,7 @@ class HttpResponse {
   static const std::string kStatusDescMethodNotAllowed;
   static const std::string kStatusDescRequestEntityTooLarge;
   static const std::string kStatusDescVersionNotSupported;
+  static const std::map< std::string, std::string > kMimeTypeMap;
 
   // Constructor and assignment operators
   HttpResponse();

@@ -13,6 +13,8 @@ const std::string HttpResponse::kStatusDescRequestEntityTooLarge =
     "413 Request Entity Too Large";
 const std::string HttpResponse::kStatusDescVersionNotSupported =
     "505 HTTP Version Not Supported";
+const std::map< std::string, std::string > HttpResponse::kMimeTypeMap =
+    HttpResponse::CreateMimeTypeMap();
 
 HttpResponse::HttpResponse(const HttpRequest &http_request,
                            const ServerConfig &server_config)
@@ -22,13 +24,96 @@ HttpResponse::HttpResponse(const HttpRequest &http_request,
       status_desc_(kStatusDescOK),
       is_bad_request_(http_request_.is_bad_request_),
       is_supported_version_(true),
-      content_type_("text/html"),
+      content_type_("applicaton/octet-stream"),
       requested_file_path_(http_request_.uri_) {
   InitParameters();
   MakeResponse();
 }
 
 HttpResponse::~HttpResponse() { requested_file_.close(); }
+
+std::map< std::string, std::string > HttpResponse::CreateMimeTypeMap() {
+  std::map< std::string, std::string > m;
+  m["aac"] = "audio/aac";
+  m["abw"] = "application/x-abiword";
+  m["arc"] = "application/x-freearc";
+  m["avi"] = "video/x-msvideo";
+  m["azw"] = "application/vnd.amazon.ebook";
+  m["bin"] = "application/octet-stream";
+  m["bmp"] = "image/bmp";
+  m["bz"] = "application/x-bzip";
+  m["bz2"] = "application/x-bzip2";
+  m["csh"] = "application/x-csh";
+  m["css"] = "text/css";
+  m["csv"] = "text/csv";
+  m["doc"] = "application/msword";
+  m["docx"] =
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  m["eot"] = "application/vnd.ms-fontobject";
+  m["epub"] = "application/epub+zip";
+  m["gz"] = "application/gzip";
+  m["gif"] = "image/gif";
+  m["htm"] = "text/html";
+  m["html"] = "text/html";
+  m["ico"] = "image/vnd.microsoft.icon";
+  m["ics"] = "text/calendar";
+  m["jar"] = "application/java-archive";
+  m["jpeg"] = "image/jpeg";
+  m["jpg"] = "image/jpeg";
+  m["js"] = "text/javascript";
+  m["json"] = "application/json";
+  m["jsonld"] = "application/ld+json";
+  m["mid"] = "audio/midi";
+  m["midi"] = "audio/midi";
+  m["mjs"] = "text/javascript";
+  m["mp3"] = "audio/mpeg";
+  m["mpeg"] = "video/mpeg";
+  m["mpkg"] = "application/vnd.apple.installer+xml";
+  m["odp"] = "application/vnd.oasis.opendocument.presentation";
+  m["ods"] = "application/vnd.oasis.opendocument.spreadsheet";
+  m["odt"] = "application/vnd.oasis.opendocument.text";
+  m["oga"] = "audio/ogg";
+  m["ogv"] = "video/ogg";
+  m["ogx"] = "application/ogg";
+  m["opus"] = "audio/opus";
+  m["otf"] = "font/otf";
+  m["png"] = "image/png";
+  m["pdf"] = "application/pdf";
+  m["php"] = "application/x-httpd-php";
+  m["ppt"] = "application/vnd.ms-powerpoint";
+  m["pptx"] =
+      "application/"
+      "vnd.openxmlformats-officedocument.presentationml.presentation";
+  m["rar"] = "application/vnd.rar";
+  m["rtf"] = "application/rtf";
+  m["sh"] = "application/x-sh";
+  m["svg"] = "image/svg+xml";
+  m["swf"] = "application/x-shockwave-flash";
+  m["tar"] = "application/x-tar";
+  m["tif"] = "image/tiff";
+  m["tiff"] = "image/tiff";
+  m["ts"] = "video/mp2t";
+  m["ttf"] = "font/ttf";
+  m["txt"] = "text/plain";
+  m["vsd"] = "application/vnd.visio";
+  m["wav"] = "audio/wav";
+  m["weba"] = "audio/webm";
+  m["webm"] = "video/webm";
+  m["webp"] = "image/webp";
+  m["woff"] = "font/woff";
+  m["woff2"] = "font/woff2";
+  m["xhtml"] = "application/xhtml+xml";
+  m["xls"] = "application/vnd.ms-excel";
+  m["xlsx"] =
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  m["xml"] = "application/xml";
+  m["xul"] = "application/vnd.mozilla.xul+xml";
+  m["zip"] = "application/zip";
+  m["3gp"] = "video/3gpp";
+  m["3g2"] = "video/3gpp2";
+  m["7z"] = "application/x-7z-compressed";
+  return m;
+}
 
 bool HttpResponse::IsCgiFileExtension(const std::string &file_type) const {
   if (!location_config_) {
@@ -46,17 +131,20 @@ bool HttpResponse::IsCgiFileExtension(const std::string &file_type) const {
 }
 
 void HttpResponse::SetContentType() {
-  file_type_ =
-      requested_file_path_.substr(requested_file_path_.find_last_of(".") + 1);
-  if (file_type_ == "png") {
-    content_type_ = "image/png";
-  } else if (file_type_ == "jpg" || file_type_ == "jpeg") {
-    content_type_ = "image/jpeg";
-  } else if (file_type_ == "ico") {
-    content_type_ = "image/x-icon";
-  } else if (IsCgiFileExtension(file_type_)) {
-    // TODO: Need to check Apache and NGINX behavior
-    content_type_ = file_type_;
+  if (requested_file_path_[requested_file_path_.length() - 1] == '/') {
+    content_type_ = "text/html";
+  } else {
+    file_type_ =
+        requested_file_path_.substr(requested_file_path_.find_last_of(".") + 1);
+    if (IsCgiFileExtension(file_type_)) {
+      content_type_ = file_type_;
+    } else {
+      std::map< std::string, std::string >::const_iterator it =
+          kMimeTypeMap.find(file_type_);
+      if (it != kMimeTypeMap.end()) {
+        content_type_ = it->second;
+      }
+    }
   }
 }
 
@@ -177,7 +265,7 @@ void HttpResponse::SetLastModifiedTime() {
 
 void HttpResponse::MakeHeader301() {
   std::ostringstream oss_content_length, oss_content_type, oss_location;
-  oss_content_type << "Content-Type: " << content_type_ << "\r\n";
+  oss_content_type << "Content-Type: text/html\r\n";
   oss_content_length << "Content-Length: " << body_len_ << "\r\n";
   std::map< std::string, std::string >::const_iterator it_host =
       http_request_.header_fields_.find("Host");
@@ -628,13 +716,21 @@ void HttpResponse::MakeCgiBody() {
     write(pipe_parent2child[WRITE], http_request_.body_.c_str(),
           http_request_.body_.length());
     wait(&status);
-    read(pipe_child2parent[READ], buf, kCgiBufferSize);  // TODO: Need to update
+    ssize_t read_size = 0;
+    memset(buf, 0, sizeof(buf));
+    while (1) {
+      read_size = read(pipe_child2parent[READ], buf, kCgiBufferSize);
+      std::string buf_string(buf, read_size);
+      body_.append(buf_string);
+      if (body_[body_.length() - 1] == kAsciiCodeForEOF) {
+        body_.erase(body_.length() - 1);
+        break;
+      }
+      memset(buf, 0, sizeof(buf));
+    }
     close(pipe_child2parent[WRITE]);
     close(pipe_parent2child[READ]);
-    body_ = std::string(buf);
-    SetLastModifiedTime();
     body_len_ = body_.size();
-    SetEtag();
   }
 }
 
