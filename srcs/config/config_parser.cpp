@@ -140,6 +140,7 @@ void ConfigParser::ParseServerConfig(
   ServerConfig sc;
   std::vector<std::pair<int, std::string> > list;
   std::string item = tokens_[index_].second;
+  int i;
 
   for (; tokens_[index_].second != "}";
        ++index_, item = tokens_[index_].second) {
@@ -147,6 +148,7 @@ void ConfigParser::ParseServerConfig(
       index_++;
       ParseLocationConfig(sc.vec_location_config_);
     } else {
+      i = tokens_[index_].first;
       SplitIntoList(list);
       if (item == "listen") {
         sc.ParseListen(list);
@@ -158,8 +160,7 @@ void ConfigParser::ParseServerConfig(
         ParserUtils::ParseInt(list, sc.client_max_body_size_);
       } else {
         ParserUtils::MakeUnexpected(
-            "unknown directive" + tokens_[index_].second,
-            tokens_[index_].first);
+            "unknown directive " + item, i);
       }
     }
     list.clear();
