@@ -62,3 +62,5 @@ print <<END_HTML;
 END_HTML
 
 }
+
+print chr(26);
