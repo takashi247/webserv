@@ -9,6 +9,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <map>
 
 #include "location_config.hpp"
 #include "parser_utils.hpp"
@@ -28,11 +29,12 @@ class ServerConfig {
   void PrintVal();
   // other configs are parsed by config utils
   void ParseListen(const std::vector< std::pair< int, std::string > > &list);
+  void ParseMaxBodySize(const std::vector< std::pair< int, std::string > > &list);
 
   size_t port_;
   std::string host_;
   std::vector< std::string > vec_server_names_;
-  std::string error_page_path_;
+  std::map<int, std::string> map_error_page_path_;
   size_t client_max_body_size_;
   std::vector< LocationConfig > vec_location_config_;
   LocationConfig default_location_config_;

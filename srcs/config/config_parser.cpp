@@ -128,7 +128,7 @@ void ConfigParser::SplitIntoList(
   }
   for (; item != ";"; ++index_, item = tokens_[index_].second) {
     if (item == "{" || item == "}") {
-      ParserUtils::MakeUnexpected("unexpected " + item + ", expecting \";\"",
+      ParserUtils::MakeUnexpected("unexpected \"" + item + "\", expecting \";\"",
                                   tokens_[index_].first);
     }
     list.push_back(tokens_[index_]);
@@ -155,7 +155,7 @@ void ConfigParser::ParseServerConfig(
       } else if (item == "server_name") {
         ParserUtils::ParseVector(list, sc.vec_server_names_);
       } else if (item == "error_page") {
-        ParserUtils::ParseString(list, sc.error_page_path_);
+        sc.ParseMaxBodySize(list);
       } else if (item == "client_max_body_size") {
         ParserUtils::ParseInt(list, sc.client_max_body_size_);
       } else {
@@ -184,7 +184,7 @@ void ConfigParser::ParseLocationConfig(
   ++index_;
   item = tokens_[index_].second;
   if (item != "{") {
-    ParserUtils::MakeUnexpected("unexpected " + item + ", expecting \"{\"",
+    ParserUtils::MakeUnexpected("unexpected \"" + item + "\", expecting \"{\"",
                                 tokens_[index_].first);
   }
   ++index_;

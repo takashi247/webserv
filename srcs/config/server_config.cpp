@@ -21,7 +21,7 @@ ServerConfig &ServerConfig::operator=(ServerConfig const &rhs) {
     port_ = rhs.port_;
     host_ = rhs.host_;
     vec_server_names_ = rhs.vec_server_names_;
-    error_page_path_ = rhs.error_page_path_;
+    map_error_page_path_ = rhs.map_error_page_path_;
     client_max_body_size_ = rhs.client_max_body_size_;
     vec_location_config_ = rhs.vec_location_config_;
   }
@@ -33,20 +33,39 @@ void ServerConfig::ParseListen(
   std::string::size_type delim_pos;
 
   if (list.size() != 2) {
-    ParserUtils::MakeUnexpected("invalid number of args in listen directive",
+    ParserUtils::MakeUnexpected("invalid number of args in \"listen\" directive",
                                 list[0].first);
   }
   std::string set_value = list[1].second;
   delim_pos = set_value.find(':');
   if (delim_pos == std::string::npos) {
     if (set_value.find('.') == std::string::npos) {
-      host_ = set_value;
-    } else {
       port_ = std::atoi(set_value.c_str());
+    } else {
+      host_ = set_value;
     }
   } else {
     host_ = set_value.substr(0, delim_pos);
     port_ = std::atoi(set_value.substr(delim_pos + 1).c_str());
+  }
+}
+
+void ServerConfig::ParseMaxBodySize(
+    const std::vector< std::pair< int, std::string > > &list) {
+  std::pair< int, std::string > elem;
+  std::vector< std::pair< int, std::string > >::const_iterator it = list.begin();
+
+  if (list.size() < 2 || list.size() % 2 != 1) {
+    ParserUtils::MakeUnexpected("invalid number of args in \"listen directive",
+                                list[0].first);
+  }
+  ++it;
+  while (it != list.end()) {
+    elem.first = atoi(it->second.c_str());
+    it++;
+    elem.second = it->second;
+    it++;
+    map_error_page_path_.insert(elem);
   }
 }
 
@@ -105,7 +124,12 @@ void ServerConfig::PrintVal() {
   }
   std::cout << std::endl;
 
-  std::cout << "error_page " << error_page_path_ << std::endl;
+  std::cout << "error_page ";
+  for (std::map< int, std::string >::iterator it = map_error_page_path_.begin();
+       it != map_error_page_path_.end(); ++it) {
+    std::cout << it->first << " " << it->second;
+  }
+  std::cout << std::endl;
 
   std::cout << "client_max_body_size " << client_max_body_size_ << std::endl;
 

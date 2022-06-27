@@ -13,7 +13,7 @@ void ParserUtils::MakeUnexpected(const std::string &msg, const int &pos) {
 void ParserUtils::ParseInt(
     const std::vector<std::pair<int, std::string> > &list, size_t &i) {
   if (list.size() != 2) {
-    MakeUnexpected("invalid number of args in server_name directive",
+    MakeUnexpected("invalid number of args in \""  + list[0].second +  "\" directive",
                    list[0].first);
   }
   i = atoi(list[1].second.c_str());
@@ -22,7 +22,7 @@ void ParserUtils::ParseInt(
 void ParserUtils::ParseBool(
     const std::vector<std::pair<int, std::string> > &list, bool &b) {
   if (list.size() != 2) {
-    MakeUnexpected("invalid number of args in " + list[0].second + " directive",
+    MakeUnexpected("invalid number of args in \"" + list[0].second + "\" directive",
                    list[0].first);
   }
   std::string item = list[1].second;
@@ -31,8 +31,8 @@ void ParserUtils::ParseBool(
   } else if (item == "off") {
     b = false;
   } else {
-    MakeUnexpected("unexpexted arg in " + list[0].second +
-                       " directive, please set with on/off",
+    MakeUnexpected("unexpexted arg in \"" + list[0].second +
+                       "\" directive, please set with on/off",
                    0);
   }
 }
@@ -40,7 +40,7 @@ void ParserUtils::ParseBool(
 void ParserUtils::ParseString(
     const std::vector<std::pair<int, std::string> > &list, std::string &str) {
   if (list.size() != 2) {
-    MakeUnexpected("invalid number of args in " + list[0].second + " directive",
+    MakeUnexpected("invalid number of args in \"" + list[0].second + "\" directive",
                    list[0].first);
   }
   str = list[1].second;
@@ -50,7 +50,7 @@ void ParserUtils::ParseVector(
     const std::vector<std::pair<int, std::string> > &list,
     std::vector<std::string> &vec) {
   if (list.size() == 1) {
-    MakeUnexpected("invalid number of args in " + list[0].second + " directive",
+    MakeUnexpected("invalid number of args in \"" + list[0].second + "\" directive",
                    list[0].first);
   }
   // delete default value
