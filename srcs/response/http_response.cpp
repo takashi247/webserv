@@ -3,6 +3,8 @@
 const std::string HttpResponse::kServerVersion = "webserv/1.0.0";
 const std::string HttpResponse::kStatusDescOK = "200 OK";
 const std::string HttpResponse::kStatusDescNoContent = "204 No Content";
+const std::string HttpResponse::kStatusDescMovedPermanently =
+    "301 Moved Permanently";
 const std::string HttpResponse::kStatusDescBadRequest = "400 Bad Request";
 const std::string HttpResponse::kStatusDescForbidden = "403 Forbidden";
 const std::string HttpResponse::kStatusDescNotFound = "404 Not Found";
@@ -20,7 +22,8 @@ HttpResponse::HttpResponse(const HttpRequest &http_request,
       status_desc_(kStatusDescOK),
       is_bad_request_(http_request_.is_bad_request_),
       is_supported_version_(true),
-      content_type_("text/html") {
+      content_type_("text/html"),
+      requested_file_path_(http_request_.uri_) {
   InitParameters();
   MakeResponse();
 }
@@ -78,19 +81,63 @@ void HttpResponse::ValidatePath() {
   }
 }
 
+bool HttpResponse::IsDirectory() const {
+  struct stat s;
+  if (stat(requested_file_path_.c_str(), &s) == 0) {
+    if (s.st_mode & S_IFDIR) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void HttpResponse::RemoveIndex(std::string &modified_path) {
+  std::size_t found = modified_path.find_last_of("/");
+  if (found == std::string::npos || found == modified_path.length()) {
+    return;
+  }
+  std::string file_name = modified_path.substr(found + 1);
+  for (std::vector< std::string >::const_iterator it =
+           location_config_->vec_index_.begin();
+       it != location_config_->vec_index_.end(); ++it) {
+    if (file_name == *it) {
+      modified_path.erase(found + 1);
+      return;
+    }
+  }
+}
+
+void HttpResponse::CheckRedirection() {
+  std::string modified_path =
+      requested_file_path_.substr(location_config_->root_.length());
+  RemoveIndex(modified_path);
+  if (modified_path != http_request_.uri_) {
+    is_redirected_ = true;
+  } else {
+    is_redirected_ = false;
+  }
+}
+
 void HttpResponse::InitFileStream() {
   requested_file_path_ = server_config_.UpdateUri(http_request_.uri_);
-  SetContentType();
-  ValidatePath();
-  if (is_path_exists_ && !is_path_forbidden_) {
-    struct stat buffer;
-    is_file_exists_ = stat(requested_file_path_.c_str(), &buffer) == 0;
-    if (is_file_exists_ && content_type_ != file_type_) {
-      requested_file_.open(requested_file_path_.c_str());
-      is_file_forbidden_ = requested_file_.fail();
-      if (requested_file_path_[requested_file_path_.length() - 1] == '/' &&
-          !location_config_->autoindex_) {
-        is_file_forbidden_ = true;
+  if (IsDirectory() &&
+      requested_file_path_[requested_file_path_.length() - 1] != '/') {
+    requested_file_path_ += "/";
+  }
+  CheckRedirection();
+  if (!is_redirected_) {
+    SetContentType();
+    ValidatePath();
+    if (is_path_exists_ && !is_path_forbidden_) {
+      struct stat buffer;
+      is_file_exists_ = stat(requested_file_path_.c_str(), &buffer) == 0;
+      if (is_file_exists_ && content_type_ != file_type_) {
+        requested_file_.open(requested_file_path_.c_str());
+        is_file_forbidden_ = requested_file_.fail();
+        if (requested_file_path_[requested_file_path_.length() - 1] == '/' &&
+            !location_config_->autoindex_) {
+          is_file_forbidden_ = true;
+        }
       }
     }
   }
@@ -103,9 +150,7 @@ void HttpResponse::InitParameters() {
   date_header_ = oss_date.str();
   oss_server << "Server: " << kServerVersion << "\r\n";
   server_header_ = oss_server.str();
-  // location_config_ =
-  // server_config_.SelectLocationConfig(requested_file_path_);
-  location_config_ = &(server_config_.vec_location_config_[0]);
+  location_config_ = server_config_.SelectLocationConfig(requested_file_path_);
   InitFileStream();
 }
 
@@ -130,6 +175,28 @@ void HttpResponse::SetLastModifiedTime() {
   }
 }
 
+void HttpResponse::MakeHeader301() {
+  std::ostringstream oss_content_length, oss_content_type, oss_location;
+  oss_content_type << "Content-Type: " << content_type_ << "\r\n";
+  oss_content_length << "Content-Length: " << body_len_ << "\r\n";
+  std::map< std::string, std::string >::const_iterator it_host =
+      http_request_.header_fields_.find("Host");
+  oss_location << "Location: http://" << it_host->second;
+  std::string requested_file_path_short_ =
+      requested_file_path_.substr(location_config_->root_.length());
+  oss_location << requested_file_path_short_ << "\r\n";
+  header_.push_back("HTTP/1.1 ");
+  header_.push_back(status_desc_);
+  header_.push_back("\r\n");
+  header_.push_back(server_header_);
+  header_.push_back(date_header_);
+  header_.push_back(oss_content_type.str());
+  header_.push_back(oss_content_length.str());
+  header_.push_back(oss_location.str());
+  header_.push_back("Connection: keep-alive\r\n");
+  header_.push_back("\r\n");
+}
+
 void HttpResponse::MakeErrorHeader() {
   std::ostringstream oss_content_length, oss_content_type;
   oss_content_type << "Content-Type: " << content_type_ << "\r\n";
@@ -141,6 +208,16 @@ void HttpResponse::MakeErrorHeader() {
   header_.push_back(date_header_);
   header_.push_back(oss_content_type.str());
   header_.push_back(oss_content_length.str());
+  if (status_code_ == kStatusCodeMovedPermanently) {
+    std::ostringstream oss_location;
+    std::map< std::string, std::string >::const_iterator it_host =
+        http_request_.header_fields_.find("Host");
+    oss_location << "Location: http://" << it_host->second;
+    std::string requested_file_path_short_ =
+        requested_file_path_.substr(location_config_->root_.length());
+    oss_location << requested_file_path_short_ << "\r\n";
+    header_.push_back(oss_location.str());
+  }
   if (status_code_ == kStatusCodeBadRequest ||
       status_code_ == kStatusCodeVersionNotSupported) {
     header_.push_back("Connection: close\r\n");
@@ -339,6 +416,8 @@ void HttpResponse::CreateAutoindexPage() {
       "</html>\n";
 }
 
+void HttpResponse::MakeBody301() { CreateDefaultErrorPage(); }
+
 void HttpResponse::MakeBody200() {
   if (requested_file_path_[requested_file_path_.length() - 1] == '/') {
     CreateAutoindexPage();
@@ -440,6 +519,9 @@ void HttpResponse::SetStatusCode() {
              http_request_.content_length_) {
     status_code_ = kStatusCodeRequestEntityTooLarge;
     status_desc_ = kStatusDescRequestEntityTooLarge;
+  } else if (is_redirected_) {
+    status_code_ = kStatusCodeMovedPermanently;
+    status_desc_ = kStatusDescMovedPermanently;
   }
 }
 
@@ -571,6 +653,10 @@ void HttpResponse::MakeResponse() {
     case kStatusCodeNoContent:
       DeleteRequestedFile();
       MakeHeader204();
+      break;
+    case kStatusCodeMovedPermanently:
+      MakeBody301();
+      MakeHeader301();
     default:
       MakeErrorBody();
       MakeErrorHeader();

@@ -37,6 +37,7 @@ class HttpResponse {
   // Static constants
   static const int kStatusCodeOK = 200;
   static const int kStatusCodeNoContent = 204;
+  static const int kStatusCodeMovedPermanently = 301;
   static const int kStatusCodeBadRequest = 400;
   static const int kStatusCodeForbidden = 403;
   static const int kStatusCodeNotFound = 404;
@@ -47,6 +48,7 @@ class HttpResponse {
   static const std::string kServerVersion;
   static const std::string kStatusDescOK;
   static const std::string kStatusDescNoContent;
+  static const std::string kStatusDescMovedPermanently;
   static const std::string kStatusDescBadRequest;
   static const std::string kStatusDescForbidden;
   static const std::string kStatusDescNotFound;
@@ -65,8 +67,10 @@ class HttpResponse {
   void InitFileStream();
   void MakeHeader200();
   void MakeHeader204();
+  void MakeHeader301();
   void MakeErrorHeader();
   void MakeBody200();
+  void MakeBody301();
   void DeleteRequestedFile();
   void MakeErrorBody();
   void CreateDefaultErrorPage();
@@ -90,6 +94,9 @@ class HttpResponse {
   std::string CreateFileList(std::vector< std::string >);
   char **CreateCgiEnviron();
   void DeleteCgiEnviron(char **cgi_env);
+  bool IsDirectory() const;
+  void CheckRedirection();
+  void RemoveIndex(std::string &modified_path);
 
   // Data members
   const HttpRequest &http_request_;
@@ -99,13 +106,14 @@ class HttpResponse {
   bool is_bad_request_;
   bool is_supported_version_;
   std::string content_type_;
-  const LocationConfig *location_config_;
   std::string requested_file_path_;
+  const LocationConfig *location_config_;
   std::ifstream requested_file_;
   bool is_file_exists_;
   bool is_file_forbidden_;
   bool is_path_exists_;
   bool is_path_forbidden_;
+  bool is_redirected_;
   std::string server_header_;
   std::string date_header_;
   std::string etag_header_;
