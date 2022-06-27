@@ -47,52 +47,12 @@ std::string HttpRequestParser::GetFieldValue(const char* field_name,
                     recv_msg.begin() + value_end_pos);
   return value;
 }
+
 size_t HttpRequestParser::GetFieldValueSize(const char* field_name,
                                             const std::string& recv_msg) {
   std::string value = GetFieldValue(field_name, recv_msg);
   int num = atoi(value.c_str());
   return num;
-}
-int HttpRequestParser::GetChunkSize(std::string::const_iterator* it) {
-  std::string::const_iterator cur = *it;
-  int size = 0;
-  while (('0' <= *cur && *cur <= '9') || ('A' <= *cur && *cur <= 'F')) {
-    size *= 16;
-    if ('0' <= *cur && *cur <= '9')
-      size += *cur - '0';
-    else if ('A' <= *cur && *cur <= 'F')
-      size += *cur - 'A' + 10;
-    ++cur;
-  }
-  if (*cur != '\r' || *(cur + 1) != '\n') {
-    std::cout << "Unexpected Separator" << std::endl;
-    return 0;
-  }
-  *it = cur + kCRLFSize;
-  return size;
-}
-void HttpRequestParser::GetMessageBody(const std::string& recv_msg,
-                                       bool is_chunked, std::string& body) {
-  size_t cur = recv_msg.find(SEPARATOR) + kSeparatorSize;
-  if (!is_chunked) {
-    body.assign(recv_msg.begin() + cur, recv_msg.end());
-    return;
-  }
-
-  std::string::const_iterator it = recv_msg.begin() + cur;
-  int size = GetChunkSize(&it);
-  while (0 < size) {
-    body.append(&(*it), size);
-    it += size;
-    if (*it != '\r' || *(it + 1) != '\n') {
-      std::cout << "Unexpected Separator" << std::endl;
-      break;
-    }
-    it += kCRLFSize;
-    size = GetChunkSize(&it);
-  }
-  // std::cout << "size=" << body.size() << " [" << body << "]" << std::endl;
-  return;
 }
 
 int HttpRequestParser::GetHeaderFields(
@@ -112,7 +72,8 @@ int HttpRequestParser::GetHeaderFields(
   return start + 2;  // bodyの先頭を指す
 }
 
-int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
+int HttpRequestParser::ParseHeader(const std::string& recv_msg,
+                                   HttpRequest* req) {
   req->is_bad_request_ = false;
   req->method_ = GetMethod(recv_msg);
   std::pair< std::string, std::string > uri = GetUri(recv_msg);
@@ -146,7 +107,6 @@ int HttpRequestParser::Parse(const std::string& recv_msg, HttpRequest* req) {
     req->is_chunked_ = (encoding == "chunked");
   }
   pos = GetHeaderFields(recv_msg, &req->header_fields_);
-  GetMessageBody(recv_msg, req->is_chunked_, req->body_);
 
   if (0) {
     std::cout << req->method_ << std::endl;

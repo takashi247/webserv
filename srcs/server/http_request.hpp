@@ -4,7 +4,16 @@
 #include <map>
 #include <string>
 
-struct HttpRequest {
+class HttpRequest {
+ public:
+  HttpRequest()
+      : host_port_(0),
+        content_length_(0),
+        is_chunked_(false),
+        is_bad_request_(false) {
+    header_fields_.clear();
+  }
+
   std::string method_;
   std::string uri_;
   std::string query_string_;

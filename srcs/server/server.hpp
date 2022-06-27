@@ -6,6 +6,7 @@
 
 #include "client_socket.hpp"
 #include "config.hpp"
+#include "http_request.hpp"
 #include "server_socket.hpp"
 
 class Server {
@@ -21,7 +22,7 @@ class Server {
   int SetStartFds(fd_set *p_fds);
   int AcceptNewClient(const fd_set *fds);
   ServerConfig *FindServerConfig(int fd);
-  std::string ReadMessage(int *p_fd);
+  int ReadAndParseMessage(int fd, HttpRequest &request);
 
  public:
   Server();  //削除予定

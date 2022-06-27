@@ -7,7 +7,6 @@
 #include <string>
 #include <vector>
 
-#include "http_request.hpp"
 #include "http_request_parser.hpp"
 #include "http_response.hpp"
 
@@ -142,38 +141,111 @@ int Server::AcceptNewClient(const fd_set *fds) {
   return 0;
 }
 
-std::string Server::ReadMessage(int *p_fd) {
-  std::string recv_str = "";
-  char buf[kReadBufferSize];
-  memset(buf, 0, sizeof(buf));
+/*
+ * fdから読み込み、recv_strに格納する。
+ */
+ssize_t ReceiveMessage(int fd, std::string &recv_str) {
   ssize_t read_size = 0;
-
-  // do {  //バッファサイズの制限は嫌なので、無制限に読み込めるようにしたい
-  read_size = recv(*p_fd, buf, sizeof(buf) - 1, 0);
+  char buf[1024];  // kReadBufferSize];
+  memset(buf, 0, sizeof(buf));
+  read_size = recv(fd, buf, sizeof(buf) - 1, 0);
   if (read_size == -1) {
-    std::cout << "recv() failed." << std::endl;
-    std::cout << "ERROR: " << strerror(errno) << std::endl;
-    close(*p_fd);
-    *p_fd = -1;
-    // break;
-    exit(1);
-  }
-  if (read_size > 0) {
+    std::cout << "recv() failed!!!" << std::endl;
+    std::cout << "ERROR: " << errno << std::endl;
+  } else if (read_size > 0) {
     std::string buf_string(buf, read_size);
     recv_str.append(buf_string);
-    memset(buf, 0, sizeof(buf));
+    // std::cout << "recv OK size(" << read_size << ")\n";
   }
-  // 読み込んだ最後が\r\n\r\nなら終了。
-  // if ((recv_str[recv_str.length() - 4] == 0x0d) &&
-  //     (recv_str[recv_str.length() - 3] == 0x0a) &&
-  //     (recv_str[recv_str.length() - 2] == 0x0d) &&
-  //     (recv_str[recv_str.length() - 1] == 0x0a)) {
-  //   break;
-  // } else if (recv_str[recv_str.length() - 1] == '-' &&
-  //            recv_str[recv_str.length() - 2] == '-')
-  //   break;
-  // } while (read_size > 0);
-  return recv_str;
+  return read_size;
+}
+
+int GetChunkSize(std::string::const_iterator *it) {
+  std::string::const_iterator cur = *it;
+  int size = 0;
+  while (('0' <= *cur && *cur <= '9') || ('A' <= *cur && *cur <= 'F')) {
+    size *= 16;
+    if ('0' <= *cur && *cur <= '9')
+      size += *cur - '0';
+    else if ('A' <= *cur && *cur <= 'F')
+      size += *cur - 'A' + 10;
+    ++cur;
+  }
+  if (*cur != '\r' || *(cur + 1) != '\n') {
+    std::cout << "Unexpected Separator" << std::endl;
+    return 0;
+  }
+  *it = cur + 2;  // kCRLFSize;
+  return size;
+}
+
+int ReceiveChunkedMessage(int fd, std::string &recv_msg, size_t start_pos) {
+  // body読み込み済み\r\nがあるかチェック
+  if (std::string::npos == recv_msg.find("\r\n", start_pos)) {
+    if (-1 == ReceiveMessage(fd, recv_msg)) {
+      return -1;
+    }
+  }
+  std::string::const_iterator it = recv_msg.begin() + start_pos;
+  int size = GetChunkSize(&it);
+  if (size == 0) {  //これでも読めないならエラー
+    return -1;
+  }
+  while (0 < size) {
+    it += size;
+    if (*it != '\r' || *(it + 1) != '\n') {
+      std::cout << "Unexpected Separator" << std::endl;
+      break;
+    }
+    it += 2;  // HttpRequestParser::kCRLFSize;
+    size = GetChunkSize(&it);
+  }
+  return 0;
+}
+
+/*
+ * この関数で、fdから情報を受け取り、requestを完成させる。
+ */
+int Server::ReadAndParseMessage(int fd, HttpRequest &request) {
+  std::string recv_str = "";
+  size_t header_end_pos;
+  do {
+    if (-1 == ReceiveMessage(fd, recv_str)) {
+      return -1;
+    }
+    header_end_pos = recv_str.find("\r\n\r\n");
+  } while (header_end_pos == std::string::npos);
+  // recv_strに、ヘッダ部分の読み込み完了。
+  HttpRequestParser::ParseHeader(recv_str, &request);
+  // リクエストヘッダまでは完成。
+  // message-bodyの読み込み
+  size_t body_start_pos = header_end_pos + HttpRequestParser::kSeparatorSize;
+  if (request.is_chunked_) {
+    // std::cout << "Read Chunked Message\n";
+    if (-1 == ReceiveChunkedMessage(fd, recv_str, body_start_pos)) {
+      return -1;
+    }
+  } else if (request.content_length_ != 0) {
+    // std::cout << "Read Not-Chunked Message\n";
+    ssize_t remain_length =
+        request.content_length_ - (recv_str.length() - body_start_pos);
+    ssize_t read_size = 0;
+    while (remain_length) {
+      if (-1 == (read_size = ReceiveMessage(fd, recv_str))) {
+        return -1;
+      }
+      if (remain_length < read_size) {
+        std::cout << "Read Error over Content-Length\n";
+        return -1;
+      }
+      remain_length -= read_size;
+    }
+    request.body_.assign(recv_str.begin() + body_start_pos, recv_str.end());
+  }
+  std::cout << "***** receive message *****\n";
+  std::cout << recv_str << std::endl;
+  std::cout << "***** receive message finished *****\n";
+  return 0;
 }
 
 void Server::Run() {
@@ -212,15 +284,12 @@ void Server::Run() {
     while (it != clients_.end()) {
       //すでに接続したClientSocketからの受信を検知
       if (FD_ISSET(it->fd_, &fds)) {
-        std::string recv_str = ReadMessage(&it->fd_);
-        std::cout << "***** receive message *****\n";
-        std::cout << recv_str << std::endl;
-        std::cout << "***** receive message finished *****\n";
-        /***
-         * リクエストをパース
-         */
         HttpRequest request;
-        HttpRequestParser::Parse(recv_str, &request);
+        if (-1 == ReadAndParseMessage(it->fd_, request)) {
+          close(it->fd_);
+          it = clients_.erase(it);
+          continue;
+        }
         /***
          * レスポンスメッセージを作成
          */
