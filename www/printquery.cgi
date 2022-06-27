@@ -1,10 +1,9 @@
 #!/usr/bin/perl -w
-
 use CGI;
 
 $query = new CGI;
 
-$filename = $query->param("photo");
+$name = $query->param("name");
 $email_address = $query->param("email_address");
 
 print <<END_HTML;
@@ -16,9 +15,9 @@ print <<END_HTML;
 
 <BODY>
 
-<P>Thanks for your input!</P>
+<P>Thanks for your response!</P>
+<P>Your name: $name</P>
 <P>Your email address: $email_address</P>
-<P>Your photo: $filename</P>
 
 </BODY>
 </HTML>
