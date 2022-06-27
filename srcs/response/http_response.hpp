@@ -77,10 +77,10 @@ class HttpResponse {
   void DeleteRequestedFile();
   void MakeErrorBody();
   void CreateDefaultErrorPage();
-  void CreateCustomizedErrorPage();
+  void CreateCustomizedErrorPage(const std::string &error_page_path);
   void PrintErrorMessage(const std::string &msg) const;
   void SetCurrentTime();
-  void SetLastModifiedTime();
+  void SetLastModifiedTime(const std::string &path);
   void SetStatusCode();
   bool IsValidMethod() const;
   bool IsAllowedMethod() const;
@@ -97,7 +97,7 @@ class HttpResponse {
   std::string CreateFileList(std::vector< std::string >);
   char **CreateCgiEnviron();
   void DeleteCgiEnviron(char **cgi_env);
-  bool IsDirectory() const;
+  bool IsDirectory(const std::string &path) const;
   void CheckRedirection();
   void RemoveIndex(std::string &modified_path);
 

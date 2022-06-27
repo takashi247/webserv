@@ -169,9 +169,9 @@ void HttpResponse::ValidatePath() {
   }
 }
 
-bool HttpResponse::IsDirectory() const {
+bool HttpResponse::IsDirectory(const std::string &path) const {
   struct stat s;
-  if (stat(requested_file_path_.c_str(), &s) == 0) {
+  if (stat(path.c_str(), &s) == 0) {
     if (s.st_mode & S_IFDIR) {
       return true;
     }
@@ -208,25 +208,23 @@ void HttpResponse::CheckRedirection() {
 
 void HttpResponse::InitFileStream() {
   requested_file_path_ = server_config_.UpdateUri(http_request_.uri_);
-  if (IsDirectory() &&
+  if (IsDirectory(requested_file_path_) &&
       requested_file_path_[requested_file_path_.length() - 1] != '/') {
     requested_file_path_ += "/";
   }
-  CheckRedirection();
-  if (!is_redirected_) {
-    SetContentType();
-    ValidatePath();
-    if (is_path_exists_ && !is_path_forbidden_) {
-      struct stat buffer;
-      is_file_exists_ = stat(requested_file_path_.c_str(), &buffer) == 0;
-      if (is_file_exists_ && content_type_ != file_type_) {
-        requested_file_.open(requested_file_path_.c_str());
-        is_file_forbidden_ = requested_file_.fail();
-        if (requested_file_path_[requested_file_path_.length() - 1] == '/' &&
-            !location_config_->autoindex_) {
-          is_file_forbidden_ = true;
-        }
+  SetContentType();
+  ValidatePath();
+  if (is_path_exists_ && !is_path_forbidden_) {
+    struct stat buffer;
+    is_file_exists_ = stat(requested_file_path_.c_str(), &buffer) == 0;
+    if (is_file_exists_ && content_type_ != file_type_) {
+      requested_file_.open(requested_file_path_.c_str());
+      is_file_forbidden_ = requested_file_.fail();
+      if (requested_file_path_[requested_file_path_.length() - 1] == '/' &&
+          !location_config_->autoindex_) {
+        is_file_forbidden_ = true;
       }
+      CheckRedirection();
     }
   }
 }
@@ -251,11 +249,11 @@ void HttpResponse::SetCurrentTime() {
   }
 }
 
-void HttpResponse::SetLastModifiedTime() {
+void HttpResponse::SetLastModifiedTime(const std::string &path) {
   struct stat result;
   // TODO: Replace 100 with constant variable
   char buffer[100];
-  if (stat(http_request_.uri_.c_str(), &result) == 0) {
+  if (stat(path.c_str(), &result) == 0) {
     if (std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT",
                       gmtime(&result.st_mtime))) {
       last_modified_ = std::string(buffer);
@@ -286,15 +284,14 @@ void HttpResponse::MakeHeader301() {
 }
 
 void HttpResponse::MakeErrorHeader() {
-  std::ostringstream oss_content_length, oss_content_type;
-  oss_content_type << "Content-Type: " << content_type_ << "\r\n";
+  std::ostringstream oss_content_length;
   oss_content_length << "Content-Length: " << body_len_ << "\r\n";
   header_.push_back("HTTP/1.1 ");
   header_.push_back(status_desc_);
   header_.push_back("\r\n");
   header_.push_back(server_header_);
   header_.push_back(date_header_);
-  header_.push_back(oss_content_type.str());
+  header_.push_back("Content-Type: text/html\r\n");
   header_.push_back(oss_content_length.str());
   if (status_code_ == kStatusCodeMovedPermanently) {
     std::ostringstream oss_location;
@@ -311,6 +308,9 @@ void HttpResponse::MakeErrorHeader() {
     header_.push_back("Connection: close\r\n");
   } else {
     header_.push_back("Connection: keep-alive\r\n");
+  }
+  if (etag_header_.length() != 0) {
+    header_.push_back(etag_header_);
   }
   header_.push_back("\r\n");
 }
@@ -356,9 +356,22 @@ void HttpResponse::MakeCgiHeader() {
   header_.push_back("\r\n");
 }
 
-void HttpResponse::CreateCustomizedErrorPage() {
-  // TODO: Dynamically create a customized error page using error_page_path_
-  return;
+void HttpResponse::CreateCustomizedErrorPage(
+    const std::string &error_page_path) {
+  std::string path = location_config_->root_ + error_page_path;
+  std::ifstream error_page_file(path.c_str());
+  if (error_page_file.fail() || IsDirectory(path)) {
+    error_page_file.close();
+    CreateDefaultErrorPage();
+  } else {
+    std::stringstream buffer;
+    buffer << error_page_file.rdbuf();
+    body_ = buffer.str();
+    SetLastModifiedTime(path);
+    SetEtag();
+    body_len_ = body_.size();
+    error_page_file.close();
+  }
 }
 
 void HttpResponse::CreateDefaultErrorPage() {
@@ -383,11 +396,13 @@ void HttpResponse::CreateDefaultErrorPage() {
 }
 
 void HttpResponse::MakeErrorBody() {
-  // if (server_config_.error_page_path_ == "") {
-  // } else {
-  //   CreateCustomizedErrorPage();
-  // }
-  CreateDefaultErrorPage();
+  std::map< int, std::string >::const_iterator it =
+      server_config_.map_error_page_path_.find(status_code_);
+  if (it != server_config_.map_error_page_path_.end()) {
+    CreateCustomizedErrorPage(it->second);
+  } else {
+    CreateDefaultErrorPage();
+  }
 }
 
 void HttpResponse::DeleteRequestedFile() {
@@ -513,7 +528,7 @@ void HttpResponse::MakeBody200() {
     std::stringstream buffer;
     buffer << requested_file_.rdbuf();
     body_ = buffer.str();
-    SetLastModifiedTime();
+    SetLastModifiedTime(requested_file_path_);
     SetEtag();
   }
   body_len_ = body_.size();
@@ -588,16 +603,13 @@ void HttpResponse::SetStatusCode() {
   } else if (!IsValidMethod()) {
     status_code_ = kStatusCodeMethodNotAllowed;
     status_desc_ = kStatusDescMethodNotAllowed;
-  } else if (!is_path_exists_) {
+  } else if (!is_path_exists_ || !is_file_exists_) {
     status_code_ = kStatusCodeNotFound;
     status_desc_ = kStatusDescNotFound;
-  } else if (is_path_forbidden_) {
-    status_code_ = kStatusCodeForbidden;
-    status_desc_ = kStatusDescForbidden;
-  } else if (!is_file_exists_) {
-    status_code_ = kStatusCodeNotFound;
-    status_desc_ = kStatusDescNotFound;
-  } else if (is_file_forbidden_) {
+  } else if (is_redirected_) {
+    status_code_ = kStatusCodeMovedPermanently;
+    status_desc_ = kStatusDescMovedPermanently;
+  } else if (is_path_forbidden_ || is_file_forbidden_) {
     status_code_ = kStatusCodeForbidden;
     status_desc_ = kStatusDescForbidden;
   } else if (http_request_.method_ == "DELETE") {
@@ -607,9 +619,6 @@ void HttpResponse::SetStatusCode() {
              http_request_.content_length_) {
     status_code_ = kStatusCodeRequestEntityTooLarge;
     status_desc_ = kStatusDescRequestEntityTooLarge;
-  } else if (is_redirected_) {
-    status_code_ = kStatusCodeMovedPermanently;
-    status_desc_ = kStatusDescMovedPermanently;
   }
 }
 
