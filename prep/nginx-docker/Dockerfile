@@ -27,7 +27,8 @@ RUN chown -R www-data:www-data /var/www; \
 	chmod 100 /var/www/html/executable.html; \
 	chmod 000 /var/www/html/dir_forbidden; \
 	chmod -R 755 /var/www/html/dir_on; \
-	chmod 000 /var/www/html/dir_on/sub_dir_forbidden;
+	chmod 000 /var/www/html/dir_on/sub_dir_forbidden; \
+	chmod 000 /var/www/html/error_404_not_permitted.html;
 
 # Keep running the container
 ENTRYPOINT [ "nginx" ]

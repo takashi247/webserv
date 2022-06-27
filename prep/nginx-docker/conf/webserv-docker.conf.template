@@ -9,6 +9,8 @@ server {
 
 	dav_methods DELETE;
 
+	error_page 404 /error_404.html;
+
 	location / {
 	}
 
