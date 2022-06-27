@@ -383,11 +383,11 @@ void HttpResponse::CreateDefaultErrorPage() {
 }
 
 void HttpResponse::MakeErrorBody() {
-  if (server_config_.error_page_path_ == "") {
-    CreateDefaultErrorPage();
-  } else {
-    CreateCustomizedErrorPage();
-  }
+  // if (server_config_.error_page_path_ == "") {
+  // } else {
+  //   CreateCustomizedErrorPage();
+  // }
+  CreateDefaultErrorPage();
 }
 
 void HttpResponse::DeleteRequestedFile() {
@@ -753,6 +753,7 @@ void HttpResponse::MakeResponse() {
     case kStatusCodeMovedPermanently:
       MakeBody301();
       MakeHeader301();
+      break;
     default:
       MakeErrorBody();
       MakeErrorHeader();
