@@ -29,7 +29,7 @@ class ServerConfig {
   void PrintVal();
   // other configs are parsed by config utils
   void ParseListen(const std::vector< std::pair< int, std::string > > &list);
-  void ParseMaxBodySize(const std::vector< std::pair< int, std::string > > &list);
+  void ParseErrorPagePath(const std::vector< std::pair< int, std::string > > &list);
 
   size_t port_;
   std::string host_;

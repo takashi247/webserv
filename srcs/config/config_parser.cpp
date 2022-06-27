@@ -155,7 +155,7 @@ void ConfigParser::ParseServerConfig(
       } else if (item == "server_name") {
         ParserUtils::ParseVector(list, sc.vec_server_names_);
       } else if (item == "error_page") {
-        sc.ParseMaxBodySize(list);
+        sc.ParseErrorPagePath(list);
       } else if (item == "client_max_body_size") {
         ParserUtils::ParseInt(list, sc.client_max_body_size_);
       } else {

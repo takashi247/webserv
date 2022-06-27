@@ -5,6 +5,8 @@
 #include <string>
 #include <iostream>
 #include <cstdlib>
+// it is like c because cstdint is not supported in c++98
+#include <stdint.h>
 
 class ParserUtils
 {
@@ -18,6 +20,7 @@ class ParserUtils
                    std::string& str);
   static void ParseVector(const std::vector<std::pair<int, std::string> >& list,
                    std::vector<std::string>& str);
+  static void AtoSizeT(const char *s, const std::pair<int, std::string> &dir_title, size_t &num);
 };
 
 #endif
