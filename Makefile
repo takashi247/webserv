@@ -12,7 +12,7 @@ OBJSDIR		:= objs/
 
 SRCS	:= main.cpp \
 		server/server.cpp \
-		server/socket.cpp \
+		server/server_socket.cpp \
 		server/http_request_parser.cpp \
 		response/http_response.cpp \
 		config/config_parser.cpp \

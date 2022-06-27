@@ -4,8 +4,9 @@
 #include <map>
 #include <vector>
 
+#include "client_socket.hpp"
 #include "config.hpp"
-#include "socket.hpp"
+#include "server_socket.hpp"
 
 class Server {
  private:

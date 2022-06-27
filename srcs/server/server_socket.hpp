@@ -1,5 +1,5 @@
-#ifndef SOCKET_HPP
-#define SOCKET_HPP
+#ifndef SERVER_SOCKET_HPP
+#define SERVER_SOCKET_HPP
 
 #include <netinet/in.h>
 
@@ -30,12 +30,4 @@ class ServerSocket {
   int GetListenFd() const { return this->listenfd_; }
 };
 
-class ClientSocket {
- public:
-  int fd_;
-  const ServerSocket* parent_;
-  ClientSocket(int fd, const ServerSocket* parent) : fd_(fd), parent_(parent) {
-    SetNonBlocking(fd);
-  }
-};
 #endif

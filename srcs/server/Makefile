@@ -1,6 +1,6 @@
 SRCS	= main.cpp \
 		server.cpp \
-		socket.cpp \
+		server_socket.cpp \
 		http_request_parser.cpp
 
 CXX		= c++
