@@ -224,7 +224,7 @@ void Server::Run() {
         /***
          * レスポンスメッセージを作成
          */
-        ServerConfig *sc = config_.SelectServerConfig(
+        const ServerConfig *sc = config_.SelectServerConfig(
             it->parent_->host_, it->parent_->port_, request.host_name_);
 
         HttpResponse response(request, *sc);
