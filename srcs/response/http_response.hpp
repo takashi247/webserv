@@ -101,7 +101,7 @@ class HttpResponse {
   char **CreateCgiEnviron();
   void DeleteCgiEnviron(char **cgi_env);
   bool IsDirectory(const std::string &path) const;
-  void CheckRedirection();
+  bool CheckRedirection();
   void RemoveIndex(std::string &modified_path);
   std::string GetHeaderValue(const std::string &header_name);
   void ExtractPathInfo();

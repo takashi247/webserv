@@ -198,14 +198,15 @@ void HttpResponse::RemoveIndex(std::string &modified_path) {
   }
 }
 
-void HttpResponse::CheckRedirection() {
+bool HttpResponse::CheckRedirection() {
   std::string modified_path =
       requested_file_path_.substr(location_config_->root_.length());
+  if (modified_path == http_request_.uri_) return false;
   RemoveIndex(modified_path);
   if (modified_path != http_request_.uri_) {
-    is_redirected_ = true;
+    return true;
   } else {
-    is_redirected_ = false;
+    return false;
   }
 }
 
@@ -258,7 +259,7 @@ void HttpResponse::InitFileStream() {
           !location_config_->autoindex_) {
         is_file_forbidden_ = true;
       }
-      CheckRedirection();
+      is_redirected_ = CheckRedirection();
     }
   }
 }
