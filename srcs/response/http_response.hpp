@@ -102,6 +102,7 @@ class HttpResponse {
   void RemoveIndex(std::string &modified_path);
   std::string GetHeaderValue(const std::string &header_name);
   void ExtractPathInfo();
+  std::string SizeTtoString(size_t num);
 
   // Data members
   const HttpRequest &http_request_;

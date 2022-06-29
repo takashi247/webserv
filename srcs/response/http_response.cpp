@@ -672,6 +672,12 @@ std::string HttpResponse::GetHeaderValue(const std::string &header_name) {
   }
 }
 
+std::string HttpResponse::SizeTtoString(size_t num) {
+  std::stringstream ss;
+  ss << num;
+  return ss.str();
+}
+
 char **HttpResponse::CreateCgiEnviron() {
   std::map< std::string, std::string > map_env;
   map_env["AUTH_TYPE"] = GetHeaderValue("Authorization");
@@ -681,10 +687,16 @@ char **HttpResponse::CreateCgiEnviron() {
   map_env["PATH_INFO"] = path_info_;
   map_env["PATH_TRANSLATED"] = path_translated_;
   map_env["QUERY_STRING"] = http_request_.query_string_;
+  map_env["REMOTE_ADDR"] = "";  // http_request_.remote_addr_;
+  map_env["REMOTE_HOST"] = "";  // http_request_.remote_host_;
+  map_env["REMOTE_PORT"] = "";  // http_request_.remote_port_;
   map_env["REQUEST_METHOD"] = http_request_.method_;
-  map_env["REQUEST_SCHEME"] = "http";
-  map_env["REQUEST_URI"] = http_request_.uri_;
-  map_env["SERVER_PORT"] = server_config_.port_;
+  map_env["SCRIPT_NAME"] =
+      path_info_.empty()
+          ? http_request_.uri_
+          : http_request_.uri_.substr(0, http_request_.uri_.find(path_info_));
+  map_env["SERVER_NAME"] = http_request_.host_name_;
+  map_env["SERVER_PORT"] = SizeTtoString(server_config_.port_);
   map_env["SERVER_PROTOCOL"] = "HTTP/1.1";
   map_env["SERVER_SOFTWARE"] = kServerVersion;
   map_env["UPLOAD_DIR"] = location_config_->upload_dir_;
