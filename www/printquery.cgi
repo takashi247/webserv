@@ -6,6 +6,7 @@ $query = new CGI;
 $name = $query->param("name");
 $email_address = $query->param("email_address");
 
+print $query->header();
 print <<END_HTML;
 
 <HTML>

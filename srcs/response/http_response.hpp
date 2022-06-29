@@ -44,9 +44,11 @@ class HttpResponse {
   static const int kStatusCodeNotFound = 404;
   static const int kStatusCodeMethodNotAllowed = 405;
   static const int kStatusCodeRequestEntityTooLarge = 413;
+  static const int kStatusCodeInternalServerError = 500;
   static const int kStatusCodeVersionNotSupported = 505;
   static const int kCgiBufferSize = 500;
   static const int kAsciiCodeForEOF = 26;
+  static const size_t kLenOfStatusCode = 3;
   static const std::string kServerVersion;
   static const std::string kStatusDescOK;
   static const std::string kStatusDescNoContent;
@@ -56,6 +58,7 @@ class HttpResponse {
   static const std::string kStatusDescNotFound;
   static const std::string kStatusDescMethodNotAllowed;
   static const std::string kStatusDescRequestEntityTooLarge;
+  static const std::string kStatusDescInternalServerError;
   static const std::string kStatusDescVersionNotSupported;
   static const std::map< std::string, std::string > kMimeTypeMap;
 
@@ -103,6 +106,9 @@ class HttpResponse {
   std::string GetHeaderValue(const std::string &header_name);
   void ExtractPathInfo();
   std::string SizeTtoString(size_t num);
+  void ParseCgiHeader();
+  int ExtractStatusCode(const std::string &header_field);
+  void SetStatusDescription();
 
   // Data members
   const HttpRequest &http_request_;

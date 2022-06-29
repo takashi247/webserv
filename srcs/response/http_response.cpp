@@ -11,6 +11,8 @@ const std::string HttpResponse::kStatusDescNotFound = "404 Not Found";
 const std::string HttpResponse::kStatusDescMethodNotAllowed = "405 Not Allowed";
 const std::string HttpResponse::kStatusDescRequestEntityTooLarge =
     "413 Request Entity Too Large";
+const std::string HttpResponse::kStatusDescInternalServerError =
+    "500 Internal Server Error";
 const std::string HttpResponse::kStatusDescVersionNotSupported =
     "505 HTTP Version Not Supported";
 const std::map< std::string, std::string > HttpResponse::kMimeTypeMap =
@@ -27,6 +29,7 @@ HttpResponse::HttpResponse(const HttpRequest &http_request,
       content_type_("applicaton/octet-stream"),
       requested_file_path_(http_request_.uri_) {
   InitParameters();
+  SetStatusCode();
   MakeResponse();
 }
 
@@ -378,13 +381,12 @@ void HttpResponse::MakeHeader200() {
 void HttpResponse::MakeCgiHeader() {
   std::ostringstream oss_content_length;
   oss_content_length << "Content-Length: " << body_len_ << "\r\n";
-  header_.push_back("HTTP/1.1 ");
-  header_.push_back(status_desc_);
-  header_.push_back("\r\n");
-  header_.push_back(server_header_);
-  header_.push_back(date_header_);
-  header_.push_back(oss_content_length.str());
-  header_.push_back("\r\n");
+  header_.insert(header_.begin(), oss_content_length.str());
+  header_.insert(header_.begin(), date_header_);
+  header_.insert(header_.begin(), server_header_);
+  header_.insert(header_.begin(), "\r\n");
+  header_.insert(header_.begin(), status_desc_);
+  header_.insert(header_.begin(), "HTTP/1.1 ");
 }
 
 void HttpResponse::CreateCustomizedErrorPage(
@@ -621,35 +623,65 @@ void HttpResponse::ValidateVersion() {
   }
 }
 
+void HttpResponse::SetStatusDescription() {
+  switch (status_code_) {
+    case kStatusCodeOK:
+      status_desc_ = kStatusDescOK;
+      break;
+    case kStatusCodeNoContent:
+      status_desc_ = kStatusDescNoContent;
+      break;
+    case kStatusCodeMovedPermanently:
+      status_desc_ = kStatusDescMovedPermanently;
+      break;
+    case kStatusCodeBadRequest:
+      status_desc_ = kStatusDescBadRequest;
+      break;
+    case kStatusCodeForbidden:
+      status_desc_ = kStatusDescForbidden;
+      break;
+    case kStatusCodeNotFound:
+      status_desc_ = kStatusDescNotFound;
+      break;
+    case kStatusCodeMethodNotAllowed:
+      status_desc_ = kStatusDescMethodNotAllowed;
+      break;
+    case kStatusCodeRequestEntityTooLarge:
+      status_desc_ = kStatusDescRequestEntityTooLarge;
+      break;
+    case kStatusCodeInternalServerError:
+      status_desc_ = kStatusDescInternalServerError;
+      break;
+    case kStatusCodeVersionNotSupported:
+      status_desc_ = kStatusDescVersionNotSupported;
+      break;
+    default:
+      status_desc_ = "Unknown status code";
+      break;
+  }
+}
+
 void HttpResponse::SetStatusCode() {
   if (!is_bad_request_) {
     ValidateVersion();
   }
   if (is_bad_request_) {
     status_code_ = kStatusCodeBadRequest;
-    status_desc_ = kStatusDescBadRequest;
   } else if (!is_supported_version_) {
     status_code_ = kStatusCodeVersionNotSupported;
-    status_desc_ = kStatusDescVersionNotSupported;
   } else if (!IsValidMethod()) {
     status_code_ = kStatusCodeMethodNotAllowed;
-    status_desc_ = kStatusDescMethodNotAllowed;
   } else if (!is_path_exists_ || !is_file_exists_) {
     status_code_ = kStatusCodeNotFound;
-    status_desc_ = kStatusDescNotFound;
   } else if (is_redirected_) {
     status_code_ = kStatusCodeMovedPermanently;
-    status_desc_ = kStatusDescMovedPermanently;
   } else if (is_path_forbidden_ || is_file_forbidden_) {
     status_code_ = kStatusCodeForbidden;
-    status_desc_ = kStatusDescForbidden;
   } else if (http_request_.method_ == "DELETE") {
     status_code_ = kStatusCodeNoContent;
-    status_desc_ = kStatusDescNoContent;
   } else if (server_config_.client_max_body_size_ <
              http_request_.content_length_) {
     status_code_ = kStatusCodeRequestEntityTooLarge;
-    status_desc_ = kStatusDescRequestEntityTooLarge;
   }
 }
 
@@ -719,6 +751,54 @@ char **HttpResponse::CreateCgiEnviron() {
   return head;
 }
 
+int HttpResponse::ExtractStatusCode(const std::string &header_field) {
+  size_t pos_white_space = header_field.find(" ");
+  if (pos_white_space == std::string::npos)
+    return kStatusCodeInternalServerError;
+  std::string status_code_str =
+      header_field.substr(pos_white_space + 1, kLenOfStatusCode);
+  for (std::string::const_iterator it = status_code_str.begin();
+       it != status_code_str.end(); ++it) {
+    if (!IsDigitSafe(*it)) return kStatusCodeInternalServerError;
+  }
+  int status_code_num;
+  std::stringstream ss;
+  ss << status_code_str;
+  ss >> status_code_num;
+  return status_code_num;
+}
+
+void HttpResponse::ParseCgiHeader() {
+  size_t found;
+  bool has_content_type_header = false;
+  while (1) {
+    found = body_.find("\r\n");
+    if (found == std::string::npos) {
+      status_code_ = kStatusCodeInternalServerError;
+      return;
+    }
+    std::string header_field = body_.substr(0, found + 2);
+    header_.push_back(header_field);
+    body_ = body_.substr(header_field.length());
+    if (header_field == "\r\n") {
+      if (!has_content_type_header) {
+        status_code_ = kStatusCodeInternalServerError;
+      }
+      return;
+    }
+    std::string field_name = header_field.substr(0, header_field.find(":"));
+    if (field_name == "Content-Type") {
+      has_content_type_header = true;
+    } else if (field_name == "Status") {
+      int status_code = ExtractStatusCode(header_field);
+      if (status_code != kStatusCodeOK) {
+        status_code_ = status_code;
+        return;
+      }
+    }
+  }
+}
+
 void HttpResponse::MakeCgiBody() {
   pid_t pid;
   char *argv[2] = {const_cast< char * >(requested_file_path_.c_str()), NULL};
@@ -781,12 +861,19 @@ void HttpResponse::MakeCgiBody() {
     }
     close(pipe_child2parent[WRITE]);
     close(pipe_parent2child[READ]);
-    body_len_ = body_.size();
+    ParseCgiHeader();
+    if (status_code_ != kStatusCodeOK) {
+      header_.clear();
+      body_.clear();
+      MakeResponse();
+    } else {
+      body_len_ = body_.size();
+    }
   }
 }
 
 void HttpResponse::MakeResponse() {
-  SetStatusCode();
+  SetStatusDescription();
   switch (status_code_) {
     case kStatusCodeOK:
       if (content_type_ != file_type_) {
