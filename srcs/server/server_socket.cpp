@@ -13,7 +13,17 @@ void SetNonBlocking(int fd) {
     std::cout << "Failure to set NonBlocking" << std::endl;
   }
 }
+ServerSocket::ServerSocket(int port, std::string host)
+    : port_(port), host_(host) {}
+ServerSocket::ServerSocket(const ServerSocket &other) { *this = other; }
 
+ServerSocket &ServerSocket::operator=(const ServerSocket &other) {
+  port_ = other.port_;
+  host_ = other.host_;
+  return *this;
+}
+
+void ServerSocket::Init() { SetSocket(); }
 void ServerSocket::SetListenfd() {
   this->listenfd_ = socket(AF_INET, SOCK_STREAM, 0);
   if (this->listenfd_ == -1) {

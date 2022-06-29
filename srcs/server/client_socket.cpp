@@ -8,6 +8,7 @@
 
 ClientSocket::ClientSocket(int fd, const ServerSocket *parent)
     : fd_(fd), parent_(parent) {
+  SetNonBlocking(fd_);
   struct sockaddr_in sin;
   socklen_t len = sizeof(sin);
 
@@ -32,6 +33,7 @@ ClientSocket::ClientSocket(int fd, const ServerSocket *parent)
 ClientSocket::ClientSocket(const ClientSocket &other) { *this = other; }
 
 ClientSocket &ClientSocket::operator=(const ClientSocket &other) {
+  status_ = other.status_;
   fd_ = other.fd_;
   parent_ = other.parent_;
   info_ = other.info_;
@@ -40,6 +42,8 @@ ClientSocket &ClientSocket::operator=(const ClientSocket &other) {
 }
 
 void ClientSocket::Init() {
-  SetNonBlocking(fd_);
+  recv_str_.clear();
+  ChangeStatus(WAIT_HEADER);
+  // request_.clear();
   time(&last_access_);
 }
