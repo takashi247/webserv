@@ -4,9 +4,9 @@
 #include <string>
 
 typedef struct s_client_info {
-  std::string hostname;
-  std::string ipaddr;
-  int port;
+  std::string hostname_;
+  std::string ipaddr_;
+  int port_;
 } t_client_info;
 
 #endif

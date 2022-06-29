@@ -21,12 +21,12 @@ ClientSocket::ClientSocket(int fd, const ServerSocket *parent)
     std::cout << "peer_host is null" << std::endl;
     return;
   }
-  info_.hostname.assign(peer_host->h_name);
-  info_.ipaddr.assign(inet_ntoa(sin.sin_addr));
-  info_.port = ntohs(sin.sin_port);
+  info_.hostname_.assign(peer_host->h_name);
+  info_.ipaddr_.assign(inet_ntoa(sin.sin_addr));
+  info_.port_ = ntohs(sin.sin_port);
 
-  std::cout << "接続: " << info_.hostname << "(" << info_.ipaddr << ")ポート "
-            << info_.port << " ディスクリプタ " << fd << " 番\n ";
+  std::cout << "接続: " << info_.hostname_ << "(" << info_.ipaddr_ << ")ポート "
+            << info_.port_ << " ディスクリプタ " << fd << " 番\n ";
 }
 
 ClientSocket::ClientSocket(const ClientSocket &other) { *this = other; }

@@ -716,9 +716,9 @@ char **HttpResponse::CreateCgiEnviron() {
   map_env["PATH_INFO"] = path_info_;
   map_env["PATH_TRANSLATED"] = path_translated_;
   map_env["QUERY_STRING"] = http_request_.query_string_;
-  map_env["REMOTE_ADDR"] = "";  // http_request_.remote_addr_;
-  map_env["REMOTE_HOST"] = "";  // http_request_.remote_host_;
-  map_env["REMOTE_PORT"] = "";  // http_request_.remote_port_;
+  map_env["REMOTE_ADDR"] = client_info_.ipaddr_;
+  map_env["REMOTE_HOST"] = client_info_.hostname_;
+  map_env["REMOTE_PORT"] = IntegerToString< int >(client_info_.port_);
   map_env["REQUEST_METHOD"] = http_request_.method_;
   map_env["SCRIPT_NAME"] =
       path_info_.empty()
