@@ -2,13 +2,13 @@
 
 use CGI;
 
-$is_uploadable = $ENV{'IS_UPLOADABLE'};
+$is_uploadable = $ENV{'X_IS_UPLOADABLE'};
 
 $query = new CGI;
 
 if ($is_uploadable eq "true") {
 
-$upload_dir = $ENV{'UPLOAD_DIR'};
+$upload_dir = $ENV{'X_UPLOAD_DIR'};
 
 $filename = $query->param("photo");
 $email_address = $query->param("email_address");

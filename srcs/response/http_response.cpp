@@ -732,8 +732,13 @@ char **HttpResponse::CreateCgiEnviron() {
   map_env["SERVER_PORT"] = SizeTtoString(server_config_.port_);
   map_env["SERVER_PROTOCOL"] = "HTTP/1.1";
   map_env["SERVER_SOFTWARE"] = kServerVersion;
-  map_env["UPLOAD_DIR"] = location_config_->upload_dir_;
-  map_env["IS_UPLOADABLE"] =
+  map_env["HTTP_ACCEPT"] = GetHeaderValue("Accept");
+  map_env["HTTP_FORWARDED"] = GetHeaderValue("Forwarded");
+  map_env["HTTP_REFERER"] = GetHeaderValue("Referer");
+  map_env["HTTP_USER_AGENT"] = GetHeaderValue("User-Agent");
+  map_env["HTTP_X_FORWARDED_FOR"] = GetHeaderValue("X-Forwarded-For");
+  map_env["X_UPLOAD_DIR"] = location_config_->upload_dir_;
+  map_env["X_IS_UPLOADABLE"] =
       location_config_->is_uploadable_ ? "true" : "false";
   char **cgi_env = new char *[map_env.size() + 1];
   char **head = cgi_env;
