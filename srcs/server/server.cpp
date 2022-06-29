@@ -65,23 +65,20 @@ void Server::CreateServerSockets() {
 
 int Server::SetStartFds(fd_set &r_fds, fd_set &w_fds) {
   int width = 0;
-  std::vector< ServerSocket >::iterator it;
   FD_ZERO(&r_fds);
   FD_ZERO(&w_fds);
-  // サーバー側のlistenFdの設定
-  for (it = sockets_.begin(); it != sockets_.end(); ++it) {
-    FD_SET(it->GetListenFd(), &r_fds);
-    if (width < it->GetListenFd()) width = it->GetListenFd();
-  }
-  // クライアント側のfdの設定
-  std::vector< ClientSocket >::iterator cit = clients_.begin();
-  for (; cit < clients_.end(); ++cit) {
-    if ((cit->status_ == ClientSocket::WAIT_HEADER) ||
-        (cit->status_ == ClientSocket::WAIT_BODY)) {
-      FD_SET(cit->fd_, &r_fds);
-    } else if (cit->status_ == ClientSocket::WAIT_SEND) {
-      FD_SET(cit->fd_, &w_fds);
+
+  std::vector< ServerSocket >::iterator sit;
+  for (sit = sockets_.begin(); sit != sockets_.end(); ++sit) {
+    FD_SET(sit->GetListenFd(), &r_fds);
+    if (width < sit->GetListenFd()) {
+      width = sit->GetListenFd();
     }
+  }
+  std::vector< ClientSocket >::iterator cit;
+  for (cit = clients_.begin(); cit < clients_.end(); ++cit) {
+    FD_SET(cit->fd_, &r_fds);
+    FD_SET(cit->fd_, &w_fds);
     if (width < cit->fd_) {
       width = cit->fd_;
     }
@@ -252,12 +249,10 @@ void Server::Run() {
               continue;
             }
           } else if (it->request_.content_length_ != 0) {
-            std::cout << "Read Not-Chunked Message\n";
             ssize_t remain_length = it->request_.content_length_ -
                                     (it->recv_str_.length() - body_start_pos);
             ssize_t read_size = 0;
             while (remain_length) {
-              std::cout << "ReceiveMsg.ContentLength!!!\t";
               if (-1 == (read_size = ReceiveMessage(it->fd_, it->recv_str_))) {
                 it->ChangeStatus(ClientSocket::WAIT_CLOSE);
                 continue;
