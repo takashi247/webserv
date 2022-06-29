@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include "client_info.hpp"
 #include "http_request.hpp"
 #include "server_config.hpp"
 
@@ -25,7 +26,8 @@ class HttpResponse {
  public:
   // Constructor
   HttpResponse(const HttpRequest &http_request,
-               const ServerConfig &server_config);
+               const ServerConfig &server_config,
+               const t_client_info &client_info);
 
   // Destructor
   virtual ~HttpResponse();
@@ -113,6 +115,7 @@ class HttpResponse {
   // Data members
   const HttpRequest &http_request_;
   const ServerConfig &server_config_;
+  const t_client_info &client_info_;
   int status_code_;
   std::string status_desc_;
   bool is_bad_request_;

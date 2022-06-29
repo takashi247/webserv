@@ -81,6 +81,7 @@ int Server::SetStartFds(fd_set *p_fds) {
   return width;
 }
 
+#if 0
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
@@ -122,17 +123,16 @@ void debug_print_accept_info(int new_socket) {
          client_info[new_socket].hostname, client_info[new_socket].ipaddr,
          client_info[new_socket].port, new_socket);
 }
+#endif
 
 int Server::AcceptNewClient(const fd_set *fds) {
   std::vector< ServerSocket >::iterator it = sockets_.begin();
   for (; it != sockets_.end(); ++it) {
     if (FD_ISSET(it->GetListenFd(), fds)) {
       int connfd = accept(it->GetListenFd(), (struct sockaddr *)NULL, NULL);
-
-      debug_print_accept_info(connfd);
-
       if (clients_.size() < kMaxSessionNum) {
         clients_.push_back(ClientSocket(connfd, &(*it)));
+        clients_.back().Init();
       } else {
         close(connfd);
         std::cout << "over max connection." << std::endl;
@@ -227,7 +227,7 @@ void Server::Run() {
         const ServerConfig *sc = config_.SelectServerConfig(
             it->parent_->host_, it->parent_->port_, request.host_name_);
 
-        HttpResponse response(request, *sc);
+        HttpResponse response(request, *sc, it->info_);
         std::string server_response = response.GetResponse();
         if (send(it->fd_, server_response.c_str(), server_response.length(),
                  0) == -1) {

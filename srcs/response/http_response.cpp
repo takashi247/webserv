@@ -19,9 +19,11 @@ const std::map< std::string, std::string > HttpResponse::kMimeTypeMap =
     HttpResponse::CreateMimeTypeMap();
 
 HttpResponse::HttpResponse(const HttpRequest &http_request,
-                           const ServerConfig &server_config)
+                           const ServerConfig &server_config,
+                           const t_client_info &client_info)
     : http_request_(http_request),
       server_config_(server_config),
+      client_info_(client_info),
       status_code_(kStatusCodeOK),
       status_desc_(kStatusDescOK),
       is_bad_request_(http_request_.is_bad_request_),
