@@ -705,12 +705,6 @@ std::string HttpResponse::GetHeaderValue(const std::string &header_name) {
   }
 }
 
-std::string HttpResponse::SizeTtoString(size_t num) {
-  std::stringstream ss;
-  ss << num;
-  return ss.str();
-}
-
 char **HttpResponse::CreateCgiEnviron() {
   std::map< std::string, std::string > map_env;
   map_env["AUTH_TYPE"] = GetHeaderValue("Authorization");
@@ -729,7 +723,7 @@ char **HttpResponse::CreateCgiEnviron() {
           ? http_request_.uri_
           : http_request_.uri_.substr(0, http_request_.uri_.find(path_info_));
   map_env["SERVER_NAME"] = http_request_.host_name_;
-  map_env["SERVER_PORT"] = SizeTtoString(server_config_.port_);
+  map_env["SERVER_PORT"] = IntegerToString< size_t >(server_config_.port_);
   map_env["SERVER_PROTOCOL"] = "HTTP/1.1";
   map_env["SERVER_SOFTWARE"] = kServerVersion;
   map_env["HTTP_ACCEPT"] = GetHeaderValue("Accept");

@@ -105,10 +105,16 @@ class HttpResponse {
   void RemoveIndex(std::string &modified_path);
   std::string GetHeaderValue(const std::string &header_name);
   void ExtractPathInfo();
-  std::string SizeTtoString(size_t num);
   void ParseCgiHeader();
   int ExtractStatusCode(const std::string &header_field);
   void SetStatusDescription();
+
+  template < class _Integer >
+  std::string IntegerToString(_Integer num) {
+    std::stringstream ss;
+    ss << num;
+    return ss.str();
+  }
 
   // Data members
   const HttpRequest &http_request_;
