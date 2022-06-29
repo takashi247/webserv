@@ -3,29 +3,122 @@
 const std::string HttpResponse::kServerVersion = "webserv/1.0.0";
 const std::string HttpResponse::kStatusDescOK = "200 OK";
 const std::string HttpResponse::kStatusDescNoContent = "204 No Content";
+const std::string HttpResponse::kStatusDescMovedPermanently =
+    "301 Moved Permanently";
 const std::string HttpResponse::kStatusDescBadRequest = "400 Bad Request";
 const std::string HttpResponse::kStatusDescForbidden = "403 Forbidden";
 const std::string HttpResponse::kStatusDescNotFound = "404 Not Found";
 const std::string HttpResponse::kStatusDescMethodNotAllowed = "405 Not Allowed";
 const std::string HttpResponse::kStatusDescRequestEntityTooLarge =
     "413 Request Entity Too Large";
+const std::string HttpResponse::kStatusDescInternalServerError =
+    "500 Internal Server Error";
 const std::string HttpResponse::kStatusDescVersionNotSupported =
     "505 HTTP Version Not Supported";
+const std::map< std::string, std::string > HttpResponse::kMimeTypeMap =
+    HttpResponse::CreateMimeTypeMap();
 
 HttpResponse::HttpResponse(const HttpRequest &http_request,
-                           const ServerConfig &server_config)
+                           const ServerConfig &server_config,
+                           const t_client_info &client_info)
     : http_request_(http_request),
       server_config_(server_config),
+      client_info_(client_info),
       status_code_(kStatusCodeOK),
       status_desc_(kStatusDescOK),
       is_bad_request_(http_request_.is_bad_request_),
       is_supported_version_(true),
-      content_type_("text/html") {
+      content_type_("applicaton/octet-stream"),
+      requested_file_path_(http_request_.uri_) {
   InitParameters();
+  SetStatusCode();
   MakeResponse();
 }
 
 HttpResponse::~HttpResponse() { requested_file_.close(); }
+
+std::map< std::string, std::string > HttpResponse::CreateMimeTypeMap() {
+  std::map< std::string, std::string > m;
+  m["aac"] = "audio/aac";
+  m["abw"] = "application/x-abiword";
+  m["arc"] = "application/x-freearc";
+  m["avi"] = "video/x-msvideo";
+  m["azw"] = "application/vnd.amazon.ebook";
+  m["bin"] = "application/octet-stream";
+  m["bmp"] = "image/bmp";
+  m["bz"] = "application/x-bzip";
+  m["bz2"] = "application/x-bzip2";
+  m["csh"] = "application/x-csh";
+  m["css"] = "text/css";
+  m["csv"] = "text/csv";
+  m["doc"] = "application/msword";
+  m["docx"] =
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  m["eot"] = "application/vnd.ms-fontobject";
+  m["epub"] = "application/epub+zip";
+  m["gz"] = "application/gzip";
+  m["gif"] = "image/gif";
+  m["htm"] = "text/html";
+  m["html"] = "text/html";
+  m["ico"] = "image/vnd.microsoft.icon";
+  m["ics"] = "text/calendar";
+  m["jar"] = "application/java-archive";
+  m["jpeg"] = "image/jpeg";
+  m["jpg"] = "image/jpeg";
+  m["js"] = "text/javascript";
+  m["json"] = "application/json";
+  m["jsonld"] = "application/ld+json";
+  m["mid"] = "audio/midi";
+  m["midi"] = "audio/midi";
+  m["mjs"] = "text/javascript";
+  m["mp3"] = "audio/mpeg";
+  m["mpeg"] = "video/mpeg";
+  m["mpkg"] = "application/vnd.apple.installer+xml";
+  m["odp"] = "application/vnd.oasis.opendocument.presentation";
+  m["ods"] = "application/vnd.oasis.opendocument.spreadsheet";
+  m["odt"] = "application/vnd.oasis.opendocument.text";
+  m["oga"] = "audio/ogg";
+  m["ogv"] = "video/ogg";
+  m["ogx"] = "application/ogg";
+  m["opus"] = "audio/opus";
+  m["otf"] = "font/otf";
+  m["png"] = "image/png";
+  m["pdf"] = "application/pdf";
+  m["php"] = "application/x-httpd-php";
+  m["ppt"] = "application/vnd.ms-powerpoint";
+  m["pptx"] =
+      "application/"
+      "vnd.openxmlformats-officedocument.presentationml.presentation";
+  m["rar"] = "application/vnd.rar";
+  m["rtf"] = "application/rtf";
+  m["sh"] = "application/x-sh";
+  m["svg"] = "image/svg+xml";
+  m["swf"] = "application/x-shockwave-flash";
+  m["tar"] = "application/x-tar";
+  m["tif"] = "image/tiff";
+  m["tiff"] = "image/tiff";
+  m["ts"] = "video/mp2t";
+  m["ttf"] = "font/ttf";
+  m["txt"] = "text/plain";
+  m["vsd"] = "application/vnd.visio";
+  m["wav"] = "audio/wav";
+  m["weba"] = "audio/webm";
+  m["webm"] = "video/webm";
+  m["webp"] = "image/webp";
+  m["woff"] = "font/woff";
+  m["woff2"] = "font/woff2";
+  m["xhtml"] = "application/xhtml+xml";
+  m["xls"] = "application/vnd.ms-excel";
+  m["xlsx"] =
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  m["xml"] = "application/xml";
+  m["xul"] = "application/vnd.mozilla.xul+xml";
+  m["zip"] = "application/zip";
+  m["3gp"] = "video/3gpp";
+  m["3g2"] = "video/3gpp2";
+  m["7z"] = "application/x-7z-compressed";
+  return m;
+}
 
 bool HttpResponse::IsCgiFileExtension(const std::string &file_type) const {
   if (!location_config_) {
@@ -43,17 +136,20 @@ bool HttpResponse::IsCgiFileExtension(const std::string &file_type) const {
 }
 
 void HttpResponse::SetContentType() {
-  file_type_ =
-      requested_file_path_.substr(requested_file_path_.find_last_of(".") + 1);
-  if (file_type_ == "png") {
-    content_type_ = "image/png";
-  } else if (file_type_ == "jpg" || file_type_ == "jpeg") {
-    content_type_ = "image/jpeg";
-  } else if (file_type_ == "ico") {
-    content_type_ = "image/x-icon";
-  } else if (IsCgiFileExtension(file_type_)) {
-    // TODO: Need to check Apache and NGINX behavior
-    content_type_ = file_type_;
+  if (requested_file_path_[requested_file_path_.length() - 1] == '/') {
+    content_type_ = "text/html";
+  } else {
+    file_type_ =
+        requested_file_path_.substr(requested_file_path_.find_last_of(".") + 1);
+    if (IsCgiFileExtension(file_type_)) {
+      content_type_ = file_type_;
+    } else {
+      std::map< std::string, std::string >::const_iterator it =
+          kMimeTypeMap.find(file_type_);
+      if (it != kMimeTypeMap.end()) {
+        content_type_ = it->second;
+      }
+    }
   }
 }
 
@@ -78,8 +174,81 @@ void HttpResponse::ValidatePath() {
   }
 }
 
+bool HttpResponse::IsDirectory(const std::string &path) const {
+  struct stat s;
+  if (stat(path.c_str(), &s) == 0) {
+    if (s.st_mode & S_IFDIR) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void HttpResponse::RemoveIndex(std::string &modified_path) {
+  std::size_t found = modified_path.find_last_of("/");
+  if (found == std::string::npos || found == modified_path.length()) {
+    return;
+  }
+  std::string file_name = modified_path.substr(found + 1);
+  for (std::vector< std::string >::const_iterator it =
+           location_config_->vec_index_.begin();
+       it != location_config_->vec_index_.end(); ++it) {
+    if (file_name == *it) {
+      modified_path.erase(found + 1);
+      return;
+    }
+  }
+}
+
+bool HttpResponse::CheckRedirection() {
+  std::string modified_path =
+      requested_file_path_.substr(location_config_->root_.length());
+  if (modified_path == http_request_.uri_) return false;
+  RemoveIndex(modified_path);
+  if (modified_path != http_request_.uri_) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void HttpResponse::ExtractPathInfo() {
+  std::string dir;
+  std::stringstream ss(requested_file_path_);
+  std::vector< std::string > vec_dirs;
+  while (std::getline(ss, dir, '/')) {
+    vec_dirs.push_back(dir);
+  }
+  std::string path;
+  if (vec_dirs.empty()) return;
+  for (std::vector< std::string >::iterator it = vec_dirs.begin();
+       it != vec_dirs.end() - 1; ++it) {
+    path = it == vec_dirs.begin() ? *it : path + "/" + *it;
+    std::string file_type = path.substr(path.find_last_of(".") + 1);
+    if (IsCgiFileExtension(file_type)) {
+      struct stat buffer;
+      if (stat(path.c_str(), &buffer) == 0 && (buffer.st_mode & S_IFREG)) {
+        path_info_ = requested_file_path_.substr(path.length());
+        path_translated_ = location_config_->root_ + path_info_;
+        requested_file_path_ = path;
+        return;
+      }
+    }
+
+    if (!is_path_exists_) return;
+    std::ifstream ifs(path.c_str());
+    is_path_forbidden_ = ifs.fail();
+    if (is_path_forbidden_) return;
+  }
+}
+
 void HttpResponse::InitFileStream() {
   requested_file_path_ = server_config_.UpdateUri(http_request_.uri_);
+  ExtractPathInfo();
+  if (IsDirectory(requested_file_path_) &&
+      requested_file_path_[requested_file_path_.length() - 1] != '/') {
+    requested_file_path_ += "/";
+  }
   SetContentType();
   ValidatePath();
   if (is_path_exists_ && !is_path_forbidden_) {
@@ -92,6 +261,7 @@ void HttpResponse::InitFileStream() {
           !location_config_->autoindex_) {
         is_file_forbidden_ = true;
       }
+      is_redirected_ = CheckRedirection();
     }
   }
 }
@@ -103,9 +273,7 @@ void HttpResponse::InitParameters() {
   date_header_ = oss_date.str();
   oss_server << "Server: " << kServerVersion << "\r\n";
   server_header_ = oss_server.str();
-  // location_config_ =
-  // server_config_.SelectLocationConfig(requested_file_path_);
-  location_config_ = &(server_config_.vec_location_config_[0]);
+  location_config_ = server_config_.SelectLocationConfig(requested_file_path_);
   InitFileStream();
 }
 
@@ -118,11 +286,11 @@ void HttpResponse::SetCurrentTime() {
   }
 }
 
-void HttpResponse::SetLastModifiedTime() {
+void HttpResponse::SetLastModifiedTime(const std::string &path) {
   struct stat result;
   // TODO: Replace 100 with constant variable
   char buffer[100];
-  if (stat(http_request_.uri_.c_str(), &result) == 0) {
+  if (stat(path.c_str(), &result) == 0) {
     if (std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT",
                       gmtime(&result.st_mtime))) {
       last_modified_ = std::string(buffer);
@@ -130,10 +298,16 @@ void HttpResponse::SetLastModifiedTime() {
   }
 }
 
-void HttpResponse::MakeErrorHeader() {
-  std::ostringstream oss_content_length, oss_content_type;
-  oss_content_type << "Content-Type: " << content_type_ << "\r\n";
+void HttpResponse::MakeHeader301() {
+  std::ostringstream oss_content_length, oss_content_type, oss_location;
+  oss_content_type << "Content-Type: text/html\r\n";
   oss_content_length << "Content-Length: " << body_len_ << "\r\n";
+  std::map< std::string, std::string >::const_iterator it_host =
+      http_request_.header_fields_.find("Host");
+  oss_location << "Location: http://" << it_host->second;
+  std::string requested_file_path_short_ =
+      requested_file_path_.substr(location_config_->root_.length());
+  oss_location << requested_file_path_short_ << "\r\n";
   header_.push_back("HTTP/1.1 ");
   header_.push_back(status_desc_);
   header_.push_back("\r\n");
@@ -141,11 +315,39 @@ void HttpResponse::MakeErrorHeader() {
   header_.push_back(date_header_);
   header_.push_back(oss_content_type.str());
   header_.push_back(oss_content_length.str());
+  header_.push_back(oss_location.str());
+  header_.push_back("Connection: keep-alive\r\n");
+  header_.push_back("\r\n");
+}
+
+void HttpResponse::MakeErrorHeader() {
+  std::ostringstream oss_content_length;
+  oss_content_length << "Content-Length: " << body_len_ << "\r\n";
+  header_.push_back("HTTP/1.1 ");
+  header_.push_back(status_desc_);
+  header_.push_back("\r\n");
+  header_.push_back(server_header_);
+  header_.push_back(date_header_);
+  header_.push_back("Content-Type: text/html\r\n");
+  header_.push_back(oss_content_length.str());
+  if (status_code_ == kStatusCodeMovedPermanently) {
+    std::ostringstream oss_location;
+    std::map< std::string, std::string >::const_iterator it_host =
+        http_request_.header_fields_.find("Host");
+    oss_location << "Location: http://" << it_host->second;
+    std::string requested_file_path_short_ =
+        requested_file_path_.substr(location_config_->root_.length());
+    oss_location << requested_file_path_short_ << "\r\n";
+    header_.push_back(oss_location.str());
+  }
   if (status_code_ == kStatusCodeBadRequest ||
       status_code_ == kStatusCodeVersionNotSupported) {
     header_.push_back("Connection: close\r\n");
   } else {
     header_.push_back("Connection: keep-alive\r\n");
+  }
+  if (etag_header_.length() != 0) {
+    header_.push_back(etag_header_);
   }
   header_.push_back("\r\n");
 }
@@ -182,18 +384,30 @@ void HttpResponse::MakeHeader200() {
 void HttpResponse::MakeCgiHeader() {
   std::ostringstream oss_content_length;
   oss_content_length << "Content-Length: " << body_len_ << "\r\n";
-  header_.push_back("HTTP/1.1 ");
-  header_.push_back(status_desc_);
-  header_.push_back("\r\n");
-  header_.push_back(server_header_);
-  header_.push_back(date_header_);
-  header_.push_back(oss_content_length.str());
-  header_.push_back("\r\n");
+  header_.insert(header_.begin(), oss_content_length.str());
+  header_.insert(header_.begin(), date_header_);
+  header_.insert(header_.begin(), server_header_);
+  header_.insert(header_.begin(), "\r\n");
+  header_.insert(header_.begin(), status_desc_);
+  header_.insert(header_.begin(), "HTTP/1.1 ");
 }
 
-void HttpResponse::CreateCustomizedErrorPage() {
-  // TODO: Dynamically create a customized error page using error_page_path_
-  return;
+void HttpResponse::CreateCustomizedErrorPage(
+    const std::string &error_page_path) {
+  std::string path = location_config_->root_ + error_page_path;
+  std::ifstream error_page_file(path.c_str());
+  if (error_page_file.fail() || IsDirectory(path)) {
+    error_page_file.close();
+    CreateDefaultErrorPage();
+  } else {
+    std::stringstream buffer;
+    buffer << error_page_file.rdbuf();
+    body_ = buffer.str();
+    SetLastModifiedTime(path);
+    SetEtag();
+    body_len_ = body_.size();
+    error_page_file.close();
+  }
 }
 
 void HttpResponse::CreateDefaultErrorPage() {
@@ -218,10 +432,12 @@ void HttpResponse::CreateDefaultErrorPage() {
 }
 
 void HttpResponse::MakeErrorBody() {
-  if (server_config_.error_page_path_ == "") {
-    CreateDefaultErrorPage();
+  std::map< int, std::string >::const_iterator it =
+      server_config_.map_error_page_path_.find(status_code_);
+  if (it != server_config_.map_error_page_path_.end()) {
+    CreateCustomizedErrorPage(it->second);
   } else {
-    CreateCustomizedErrorPage();
+    CreateDefaultErrorPage();
   }
 }
 
@@ -339,6 +555,8 @@ void HttpResponse::CreateAutoindexPage() {
       "</html>\n";
 }
 
+void HttpResponse::MakeBody301() { CreateDefaultErrorPage(); }
+
 void HttpResponse::MakeBody200() {
   if (requested_file_path_[requested_file_path_.length() - 1] == '/') {
     CreateAutoindexPage();
@@ -346,7 +564,7 @@ void HttpResponse::MakeBody200() {
     std::stringstream buffer;
     buffer << requested_file_.rdbuf();
     body_ = buffer.str();
-    SetLastModifiedTime();
+    SetLastModifiedTime(requested_file_path_);
     SetEtag();
   }
   body_len_ = body_.size();
@@ -408,38 +626,65 @@ void HttpResponse::ValidateVersion() {
   }
 }
 
+void HttpResponse::SetStatusDescription() {
+  switch (status_code_) {
+    case kStatusCodeOK:
+      status_desc_ = kStatusDescOK;
+      break;
+    case kStatusCodeNoContent:
+      status_desc_ = kStatusDescNoContent;
+      break;
+    case kStatusCodeMovedPermanently:
+      status_desc_ = kStatusDescMovedPermanently;
+      break;
+    case kStatusCodeBadRequest:
+      status_desc_ = kStatusDescBadRequest;
+      break;
+    case kStatusCodeForbidden:
+      status_desc_ = kStatusDescForbidden;
+      break;
+    case kStatusCodeNotFound:
+      status_desc_ = kStatusDescNotFound;
+      break;
+    case kStatusCodeMethodNotAllowed:
+      status_desc_ = kStatusDescMethodNotAllowed;
+      break;
+    case kStatusCodeRequestEntityTooLarge:
+      status_desc_ = kStatusDescRequestEntityTooLarge;
+      break;
+    case kStatusCodeInternalServerError:
+      status_desc_ = kStatusDescInternalServerError;
+      break;
+    case kStatusCodeVersionNotSupported:
+      status_desc_ = kStatusDescVersionNotSupported;
+      break;
+    default:
+      status_desc_ = "Unknown status code";
+      break;
+  }
+}
+
 void HttpResponse::SetStatusCode() {
   if (!is_bad_request_) {
     ValidateVersion();
   }
   if (is_bad_request_) {
     status_code_ = kStatusCodeBadRequest;
-    status_desc_ = kStatusDescBadRequest;
   } else if (!is_supported_version_) {
     status_code_ = kStatusCodeVersionNotSupported;
-    status_desc_ = kStatusDescVersionNotSupported;
   } else if (!IsValidMethod()) {
     status_code_ = kStatusCodeMethodNotAllowed;
-    status_desc_ = kStatusDescMethodNotAllowed;
-  } else if (!is_path_exists_) {
+  } else if (!is_path_exists_ || !is_file_exists_) {
     status_code_ = kStatusCodeNotFound;
-    status_desc_ = kStatusDescNotFound;
-  } else if (is_path_forbidden_) {
+  } else if (is_redirected_) {
+    status_code_ = kStatusCodeMovedPermanently;
+  } else if (is_path_forbidden_ || is_file_forbidden_) {
     status_code_ = kStatusCodeForbidden;
-    status_desc_ = kStatusDescForbidden;
-  } else if (!is_file_exists_) {
-    status_code_ = kStatusCodeNotFound;
-    status_desc_ = kStatusDescNotFound;
-  } else if (is_file_forbidden_) {
-    status_code_ = kStatusCodeForbidden;
-    status_desc_ = kStatusDescForbidden;
   } else if (http_request_.method_ == "DELETE") {
     status_code_ = kStatusCodeNoContent;
-    status_desc_ = kStatusDescNoContent;
   } else if (server_config_.client_max_body_size_ <
              http_request_.content_length_) {
     status_code_ = kStatusCodeRequestEntityTooLarge;
-    status_desc_ = kStatusDescRequestEntityTooLarge;
   }
 }
 
@@ -452,35 +697,45 @@ void HttpResponse::DeleteCgiEnviron(char **cgi_env) {
   delete[] head;
 }
 
+std::string HttpResponse::GetHeaderValue(const std::string &header_name) {
+  std::map< std::string, std::string >::const_iterator it =
+      http_request_.header_fields_.find(header_name);
+  if (it != http_request_.header_fields_.end()) {
+    return it->second;
+  } else {
+    return "";
+  }
+}
+
 char **HttpResponse::CreateCgiEnviron() {
   std::map< std::string, std::string > map_env;
-  std::map< std::string, std::string >::const_iterator it_content_length =
-      http_request_.header_fields_.find("Content-Length");
-  if (it_content_length != http_request_.header_fields_.end()) {
-    map_env["CONTENT_LENGTH"] = it_content_length->second;
-  } else {
-    map_env["CONTENT_LENGTH"] = "";
-  }
-  std::map< std::string, std::string >::const_iterator it_content_type =
-      http_request_.header_fields_.find("Content-Type");
-  if (it_content_type != http_request_.header_fields_.end()) {
-    map_env["CONTENT_TYPE"] = it_content_type->second;
-  }
+  map_env["AUTH_TYPE"] = GetHeaderValue("Authorization");
+  map_env["CONTENT_LENGTH"] = GetHeaderValue("Content-Length");
+  map_env["CONTENT_TYPE"] = GetHeaderValue("Content-Type");
   map_env["GATEWAY_INTERFACE"] = "CGI/1.1";
-  map_env["PATH_INFO"] = http_request_.uri_;
+  map_env["PATH_INFO"] = path_info_;
+  map_env["PATH_TRANSLATED"] = path_translated_;
   map_env["QUERY_STRING"] = http_request_.query_string_;
+  map_env["REMOTE_ADDR"] = client_info_.ipaddr_;
+  map_env["REMOTE_HOST"] = client_info_.hostname_;
+  map_env["REMOTE_PORT"] = IntegerToString< int >(client_info_.port_);
   map_env["REQUEST_METHOD"] = http_request_.method_;
-  map_env["REQUEST_SCHEME"] = "http";
-  map_env["REQUEST_URI"] = http_request_.uri_;
-  map_env["SERVER_PORT"] = server_config_.port_;
+  map_env["SCRIPT_NAME"] =
+      path_info_.empty()
+          ? http_request_.uri_
+          : http_request_.uri_.substr(0, http_request_.uri_.find(path_info_));
+  map_env["SERVER_NAME"] = http_request_.host_name_;
+  map_env["SERVER_PORT"] = IntegerToString< size_t >(server_config_.port_);
   map_env["SERVER_PROTOCOL"] = "HTTP/1.1";
   map_env["SERVER_SOFTWARE"] = kServerVersion;
-  map_env["UPLOAD_DIR"] = location_config_->upload_dir_;
-  if (location_config_->is_uploadable_) {
-    map_env["IS_UPLOADABLE"] = "true";
-  } else {
-    map_env["IS_UPLOADABLE"] = "false";
-  }
+  map_env["HTTP_ACCEPT"] = GetHeaderValue("Accept");
+  map_env["HTTP_FORWARDED"] = GetHeaderValue("Forwarded");
+  map_env["HTTP_REFERER"] = GetHeaderValue("Referer");
+  map_env["HTTP_USER_AGENT"] = GetHeaderValue("User-Agent");
+  map_env["HTTP_X_FORWARDED_FOR"] = GetHeaderValue("X-Forwarded-For");
+  map_env["X_UPLOAD_DIR"] = location_config_->upload_dir_;
+  map_env["X_IS_UPLOADABLE"] =
+      location_config_->is_uploadable_ ? "true" : "false";
   char **cgi_env = new char *[map_env.size() + 1];
   char **head = cgi_env;
   for (std::map< std::string, std::string >::const_iterator it =
@@ -496,6 +751,54 @@ char **HttpResponse::CreateCgiEnviron() {
   }
   *cgi_env = NULL;
   return head;
+}
+
+int HttpResponse::ExtractStatusCode(const std::string &header_field) {
+  size_t pos_white_space = header_field.find(" ");
+  if (pos_white_space == std::string::npos)
+    return kStatusCodeInternalServerError;
+  std::string status_code_str =
+      header_field.substr(pos_white_space + 1, kLenOfStatusCode);
+  for (std::string::const_iterator it = status_code_str.begin();
+       it != status_code_str.end(); ++it) {
+    if (!IsDigitSafe(*it)) return kStatusCodeInternalServerError;
+  }
+  int status_code_num;
+  std::stringstream ss;
+  ss << status_code_str;
+  ss >> status_code_num;
+  return status_code_num;
+}
+
+void HttpResponse::ParseCgiHeader() {
+  size_t found;
+  bool has_content_type_header = false;
+  while (1) {
+    found = body_.find("\r\n");
+    if (found == std::string::npos) {
+      status_code_ = kStatusCodeInternalServerError;
+      return;
+    }
+    std::string header_field = body_.substr(0, found + 2);
+    header_.push_back(header_field);
+    body_ = body_.substr(header_field.length());
+    if (header_field == "\r\n") {
+      if (!has_content_type_header) {
+        status_code_ = kStatusCodeInternalServerError;
+      }
+      return;
+    }
+    std::string field_name = header_field.substr(0, header_field.find(":"));
+    if (field_name == "Content-Type") {
+      has_content_type_header = true;
+    } else if (field_name == "Status") {
+      int status_code = ExtractStatusCode(header_field);
+      if (status_code != kStatusCodeOK) {
+        status_code_ = status_code;
+        return;
+      }
+    }
+  }
 }
 
 void HttpResponse::MakeCgiBody() {
@@ -546,18 +849,33 @@ void HttpResponse::MakeCgiBody() {
     write(pipe_parent2child[WRITE], http_request_.body_.c_str(),
           http_request_.body_.length());
     wait(&status);
-    read(pipe_child2parent[READ], buf, kCgiBufferSize);  // TODO: Need to update
+    ssize_t read_size = 0;
+    memset(buf, 0, sizeof(buf));
+    while (1) {
+      read_size = read(pipe_child2parent[READ], buf, kCgiBufferSize);
+      std::string buf_string(buf, read_size);
+      body_.append(buf_string);
+      if (body_[body_.length() - 1] == kAsciiCodeForEOF) {
+        body_.erase(body_.length() - 1);
+        break;
+      }
+      memset(buf, 0, sizeof(buf));
+    }
     close(pipe_child2parent[WRITE]);
     close(pipe_parent2child[READ]);
-    body_ = std::string(buf);
-    SetLastModifiedTime();
-    body_len_ = body_.size();
-    SetEtag();
+    ParseCgiHeader();
+    if (status_code_ != kStatusCodeOK) {
+      header_.clear();
+      body_.clear();
+      MakeResponse();
+    } else {
+      body_len_ = body_.size();
+    }
   }
 }
 
 void HttpResponse::MakeResponse() {
-  SetStatusCode();
+  SetStatusDescription();
   switch (status_code_) {
     case kStatusCodeOK:
       if (content_type_ != file_type_) {
@@ -571,6 +889,11 @@ void HttpResponse::MakeResponse() {
     case kStatusCodeNoContent:
       DeleteRequestedFile();
       MakeHeader204();
+      break;
+    case kStatusCodeMovedPermanently:
+      MakeBody301();
+      MakeHeader301();
+      break;
     default:
       MakeErrorBody();
       MakeErrorHeader();

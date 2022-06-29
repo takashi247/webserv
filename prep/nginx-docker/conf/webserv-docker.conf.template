@@ -9,6 +9,11 @@ server {
 
 	dav_methods DELETE;
 
+	error_page 404 /error_404.html;
+
+	location / {
+	}
+
 	location /dir_on/ {
 		autoindex on;
 	}
@@ -39,4 +44,48 @@ server {
 	# location /dir_on/sub_dir_no_loc_config/ {
 	# }
 
+	location /dir_off/dir_test/ {
+		autoindex on;
+	}
+
+}
+
+server {
+	listen PORT;
+
+	root /var/www/html;
+
+	server_name fuga;
+
+	index index-qiita.html index.html index.nginx-debian.html index.php;
+}
+
+server {
+	listen PORT;
+
+	root /var/www/html;
+
+	server_name fuga-4242;
+
+	index index.nginx-debian.html index.php;
+}
+
+server {
+	listen PORT;
+
+	root /var/www/html;
+
+	server_name fugo:4242;
+
+	index index-qiita.html index.php;
+}
+
+server {
+	listen PORT;
+
+	root /var/www/html;
+
+	server_name example.com;
+
+	index index.nginx-debian.html index.php;
 }

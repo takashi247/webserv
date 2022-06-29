@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "client_info.hpp"
 #include "config.hpp"
 #include "http_request.hpp"
 
@@ -11,11 +12,12 @@ class HttpResponse {
   HttpResponse();
   const HttpRequest &request_;
   const ServerConfig &sc_;
+  const t_client_info &info_;
 
  public:
   HttpResponse(const HttpRequest &http_request,
-               const ServerConfig &server_config)
-      : request_(http_request), sc_(server_config) {}
+               const ServerConfig &server_config, const t_client_info &info)
+      : request_(http_request), sc_(server_config), info_(info) {}
   ~HttpResponse() {}
 
   std::string GetResponse() {

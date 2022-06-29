@@ -7,6 +7,7 @@ $query = new CGI;
 $filename = $query->param("photo");
 $email_address = $query->param("email_address");
 
+print $query->header();
 print <<END_HTML;
 
 <HTML>
@@ -24,3 +25,5 @@ print <<END_HTML;
 </HTML>
 
 END_HTML
+
+print chr(26);

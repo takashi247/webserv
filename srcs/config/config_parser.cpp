@@ -128,7 +128,7 @@ void ConfigParser::SplitIntoList(
   }
   for (; item != ";"; ++index_, item = tokens_[index_].second) {
     if (item == "{" || item == "}") {
-      ParserUtils::MakeUnexpected("unexpected " + item + ", expecting \";\"",
+      ParserUtils::MakeUnexpected("unexpected \"" + item + "\", expecting \";\"",
                                   tokens_[index_].first);
     }
     list.push_back(tokens_[index_]);
@@ -140,6 +140,7 @@ void ConfigParser::ParseServerConfig(
   ServerConfig sc;
   std::vector<std::pair<int, std::string> > list;
   std::string item = tokens_[index_].second;
+  int i;
 
   for (; tokens_[index_].second != "}";
        ++index_, item = tokens_[index_].second) {
@@ -147,19 +148,19 @@ void ConfigParser::ParseServerConfig(
       index_++;
       ParseLocationConfig(sc.vec_location_config_);
     } else {
+      i = tokens_[index_].first;
       SplitIntoList(list);
       if (item == "listen") {
         sc.ParseListen(list);
       } else if (item == "server_name") {
         ParserUtils::ParseVector(list, sc.vec_server_names_);
       } else if (item == "error_page") {
-        ParserUtils::ParseString(list, sc.error_page_path_);
+        sc.ParseErrorPagePath(list);
       } else if (item == "client_max_body_size") {
         ParserUtils::ParseInt(list, sc.client_max_body_size_);
       } else {
         ParserUtils::MakeUnexpected(
-            "unknown directive" + tokens_[index_].second,
-            tokens_[index_].first);
+            "unknown directive " + item, i);
       }
     }
     list.clear();
@@ -183,7 +184,7 @@ void ConfigParser::ParseLocationConfig(
   ++index_;
   item = tokens_[index_].second;
   if (item != "{") {
-    ParserUtils::MakeUnexpected("unexpected " + item + ", expecting \"{\"",
+    ParserUtils::MakeUnexpected("unexpected \"" + item + "\", expecting \"{\"",
                                 tokens_[index_].first);
   }
   ++index_;

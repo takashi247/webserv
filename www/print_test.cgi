@@ -1,5 +1,11 @@
 #!/usr/bin/perl
 
+use CGI;
+
+$query = new CGI;
+
+print $query->header();
+
 print <<"END_HTML";
 
 <HTML>
@@ -16,3 +22,5 @@ Hey look I just created a virtual (yep, virtual) HTML document!
 </HTML>
 
 END_HTML
+
+print chr(26);

@@ -26,6 +26,10 @@ int main(int ac, char **av) {
     assert(sc.vec_server_names_.size(), (size_t)1, "size of server_name");
     assert(sc.vec_server_names_[0], std::string("localhost"), "server_name");
     assert(sc.client_max_body_size_, (size_t)10240, "client_max_body_size");
+    assert(sc.map_error_page_path_.size(), (size_t)2, "size of error_page_path");
+    assert(sc.map_error_page_path_[404], std::string("/error404.html"), "error_page_path");
+    assert(sc.map_error_page_path_[400], std::string("/error400.html"), "error_page_path");
+
 
     LocationConfig lc = sc.vec_location_config_[0];
     assert(lc.vec_accepted_method_.size(), (size_t)1, "size of http_method");

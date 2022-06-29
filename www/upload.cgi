@@ -2,13 +2,13 @@
 
 use CGI;
 
-$is_uploadable = $ENV{'IS_UPLOADABLE'};
+$is_uploadable = $ENV{'X_IS_UPLOADABLE'};
+
+$query = new CGI;
 
 if ($is_uploadable eq "true") {
 
-$upload_dir = $ENV{'UPLOAD_DIR'};
-
-$query = new CGI;
+$upload_dir = $ENV{'X_UPLOAD_DIR'};
 
 $filename = $query->param("photo");
 $email_address = $query->param("email_address");
@@ -24,6 +24,7 @@ while ( <$upload_filehandle> )
 
 close UPLOADFILE;
 
+print $query->header();
 print <<END_HTML;
 
 <HTML>
@@ -45,20 +46,8 @@ END_HTML
 
 } else {
 
-print <<END_HTML;
-
-<HTML>
-<HEAD>
-<TITLE>Error</TITLE>
-</HEAD>
-
-<BODY>
-
-<h1>You are not allowed to upload files!</h1>
-
-</BODY>
-</HTML>
-
-END_HTML
+print $query->header(-status => '405')
 
 }
+
+print chr(26);
