@@ -114,14 +114,13 @@ ssize_t ReceiveMessage(int fd, std::string &recv_str) {
   char buf[1024];  // kReadBufferSize];
   memset(buf, 0, sizeof(buf));
   read_size = recv(fd, buf, sizeof(buf) - 1, 0);
-  std::cout << "read_size(" << read_size << ")\n";
+  // std::cout << "read_size(" << read_size << ")\n";
   if (read_size == -1) {
     std::cout << "recv() failed!!!" << std::endl;
     std::cout << "ERROR: " << errno << std::endl;
   } else if (read_size > 0) {
     std::string buf_string(buf, read_size);
     recv_str.append(buf_string);
-    // std::cout << "recv OK size(" << read_size << ")\n";
   }
   return read_size;
 }
@@ -215,6 +214,10 @@ void Server::Run() {
           if (-1 == ReceiveMessage(it->fd_, it->recv_str_)) {
             it->ChangeStatus(ClientSocket::WAIT_CLOSE);
           }
+          // 先頭の改行は削除
+          if (0 == it->recv_str_.find("\r\n")) {
+            it->recv_str_.erase(0, 2);
+          }
           header_end_pos = it->recv_str_.find("\r\n\r\n");
           // recv_strに、ヘッダ部分の読み込み完了。
           if (header_end_pos != std::string::npos) {
@@ -299,7 +302,7 @@ void Server::Run() {
     }
   }
   /***
-   * 全ソケットを閉じる
+   * サーバー側のソケットを閉じる
    */
   std::vector< ServerSocket >::iterator sit;
   sit = sockets_.begin();
