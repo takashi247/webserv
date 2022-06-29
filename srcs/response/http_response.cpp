@@ -206,8 +206,39 @@ void HttpResponse::CheckRedirection() {
   }
 }
 
+void HttpResponse::ExtractPathInfo() {
+  std::string dir;
+  std::stringstream ss(requested_file_path_);
+  std::vector< std::string > vec_dirs;
+  while (std::getline(ss, dir, '/')) {
+    vec_dirs.push_back(dir);
+  }
+  std::string path;
+  if (vec_dirs.empty()) return;
+  for (std::vector< std::string >::iterator it = vec_dirs.begin();
+       it != vec_dirs.end() - 1; ++it) {
+    path = it == vec_dirs.begin() ? *it : path + "/" + *it;
+    std::string file_type = path.substr(path.find_last_of(".") + 1);
+    if (IsCgiFileExtension(file_type)) {
+      struct stat buffer;
+      if (stat(path.c_str(), &buffer) == 0 && (buffer.st_mode & S_IFREG)) {
+        path_info_ = requested_file_path_.substr(path.length());
+        path_translated_ = location_config_->root_ + path_info_;
+        requested_file_path_ = path;
+        return;
+      }
+    }
+
+    if (!is_path_exists_) return;
+    std::ifstream ifs(path.c_str());
+    is_path_forbidden_ = ifs.fail();
+    if (is_path_forbidden_) return;
+  }
+}
+
 void HttpResponse::InitFileStream() {
   requested_file_path_ = server_config_.UpdateUri(http_request_.uri_);
+  ExtractPathInfo();
   if (IsDirectory(requested_file_path_) &&
       requested_file_path_[requested_file_path_.length() - 1] != '/') {
     requested_file_path_ += "/";
@@ -631,22 +662,24 @@ void HttpResponse::DeleteCgiEnviron(char **cgi_env) {
   delete[] head;
 }
 
+std::string HttpResponse::GetHeaderValue(const std::string &header_name) {
+  std::map< std::string, std::string >::const_iterator it =
+      http_request_.header_fields_.find(header_name);
+  if (it != http_request_.header_fields_.end()) {
+    return it->second;
+  } else {
+    return "";
+  }
+}
+
 char **HttpResponse::CreateCgiEnviron() {
   std::map< std::string, std::string > map_env;
-  std::map< std::string, std::string >::const_iterator it_content_length =
-      http_request_.header_fields_.find("Content-Length");
-  if (it_content_length != http_request_.header_fields_.end()) {
-    map_env["CONTENT_LENGTH"] = it_content_length->second;
-  } else {
-    map_env["CONTENT_LENGTH"] = "";
-  }
-  std::map< std::string, std::string >::const_iterator it_content_type =
-      http_request_.header_fields_.find("Content-Type");
-  if (it_content_type != http_request_.header_fields_.end()) {
-    map_env["CONTENT_TYPE"] = it_content_type->second;
-  }
+  map_env["AUTH_TYPE"] = GetHeaderValue("Authorization");
+  map_env["CONTENT_LENGTH"] = GetHeaderValue("Content-Length");
+  map_env["CONTENT_TYPE"] = GetHeaderValue("Content-Type");
   map_env["GATEWAY_INTERFACE"] = "CGI/1.1";
-  map_env["PATH_INFO"] = http_request_.uri_;
+  map_env["PATH_INFO"] = path_info_;
+  map_env["PATH_TRANSLATED"] = path_translated_;
   map_env["QUERY_STRING"] = http_request_.query_string_;
   map_env["REQUEST_METHOD"] = http_request_.method_;
   map_env["REQUEST_SCHEME"] = "http";
@@ -655,11 +688,8 @@ char **HttpResponse::CreateCgiEnviron() {
   map_env["SERVER_PROTOCOL"] = "HTTP/1.1";
   map_env["SERVER_SOFTWARE"] = kServerVersion;
   map_env["UPLOAD_DIR"] = location_config_->upload_dir_;
-  if (location_config_->is_uploadable_) {
-    map_env["IS_UPLOADABLE"] = "true";
-  } else {
-    map_env["IS_UPLOADABLE"] = "false";
-  }
+  map_env["IS_UPLOADABLE"] =
+      location_config_->is_uploadable_ ? "true" : "false";
   char **cgi_env = new char *[map_env.size() + 1];
   char **head = cgi_env;
   for (std::map< std::string, std::string >::const_iterator it =

@@ -100,6 +100,8 @@ class HttpResponse {
   bool IsDirectory(const std::string &path) const;
   void CheckRedirection();
   void RemoveIndex(std::string &modified_path);
+  std::string GetHeaderValue(const std::string &header_name);
+  void ExtractPathInfo();
 
   // Data members
   const HttpRequest &http_request_;
@@ -112,6 +114,8 @@ class HttpResponse {
   std::string requested_file_path_;
   const LocationConfig *location_config_;
   std::ifstream requested_file_;
+  std::string path_info_;
+  std::string path_translated_;
   bool is_file_exists_;
   bool is_file_forbidden_;
   bool is_path_exists_;
