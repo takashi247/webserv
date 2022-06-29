@@ -98,11 +98,15 @@ const LocationConfig *ServerConfig::SelectLocationConfig(
   return (selected);
 }
 
-std::string ServerConfig::UpdateUri(std::string uri) const {
+std::string ServerConfig::UpdateUri(const std::string &uri) const {
   std::string path;
+  std::string config_uri = uri;
 
-  const LocationConfig *lc = SelectLocationConfig(uri);
+  if (*(config_uri.end() - 1) != '/')
+    config_uri += "/";
+  const LocationConfig *lc = SelectLocationConfig(config_uri);
   std::string root;
+  // nginx確認
   if (lc->proxy_pass_.empty()) {
     root = lc->root_;
   } else {

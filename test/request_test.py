@@ -48,6 +48,21 @@ class TestRequest(unittest.TestCase):
         got = self.send_request("http://localhost:8081/autoindex/inner")
         self.assertEqual(got.status_code, 301)
 
+    def test_autoindex_and_index(self):
+        got = self.send_request("http://localhost:8081/")
+        self.assertEqual(got.status_code, 200)
+        self.assertEqual(got.text, "1\n")
+
+    def test_autoindex_and_index(self):
+        got = self.send_request("http://localhost:8081")
+        self.assertEqual(got.status_code, 200)
+        self.assertEqual(got.text, "1\n")
+
+    def test_invalid_server_name(self):
+        got = self.send_request("http://127.0.0.1:8081/autoindex/inner/")
+        self.assertEqual(got.status_code, 200)
+        self.assertEqual(self.get_autoindex_titile(got.text), "<html><head><title>Index of /autoindex/inner/</title></head>")
+
     def test_nosuch_file(self):
         got = self.send_request("http://localhost:8081/nosuch.txt")
         self.assertEqual(got.status_code, 404)
@@ -56,14 +71,12 @@ class TestRequest(unittest.TestCase):
         got = self.send_request("http://localhost:8081/nosuchdir/")
         self.assertEqual(got.status_code, 404)
 
-    def test_illigal_location_1(self):
-        got = self.send_request("http://localhost:8081/cgi-bin/")
-        self.assertEqual(got.status_code, 200)
-        self.assertEqual(got.text, "index\n")
-    # index 要調査
+    def test_invalid_location_1(self):
+        got = self.send_request("http://localhost:8082/")
+        self.assertEqual(got.status_code, 403)
 
-    def test_illigal_location_2(self):
-        got = self.send_request("http://localhost:8081/cgi-bin/index.html")
+    def test_invalid_location_2(self):
+        got = self.send_request("http://localhost:8082/1.html")
         self.assertEqual(got.status_code, 200)
         self.assertEqual(got.text, "index\n")
     # 要調査
@@ -72,16 +85,12 @@ class TestRequest(unittest.TestCase):
     #     got = self.send_request("http://localhost:8082/cgi-bin/hello-perl.cgi")
     #     self.assertEqual(got.status_code, 200)
     #     self.assertEqual(got.text, "hello\n")
+    # infinite loop...
 
-    # def test_cgi_py(self):
-    #     got = self.send_request("http://localhost:8082/cgi-bin/hello-perl.cgi")
-    #     self.assertEqual(got.status_code, 200)
-    #     self.assertEqual(got.text, "hello\n")
-
-    # def test_cgi_pl(self):
-    #     got = self.send_request("http://localhost:8082/cgi-bin/hello.pl")
-    #     self.assertEqual(got.status_code, 200)
-    #     self.assertEqual(got.text, "hello\n")
+    def test_invalid_location_2(self):
+        got = self.send_request("http://localhost:8083/1.html")
+        self.assertEqual(got.status_code, 200)
+        self.assertEqual(got.text, "index\n")
 
 if __name__ == "__main__":
     unittest.main()

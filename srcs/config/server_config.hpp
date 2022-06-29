@@ -25,7 +25,7 @@ class ServerConfig {
   // URIとlocation_path_の前方一致で一番長いものを返す、見つからない場合はNULLは返さず、defaultの値が使われることにする。
   const LocationConfig *SelectLocationConfig(const std::string &uri) const;
   // テスト参照、返したパスにファイルが存在するかどうかは別で確認の必要があり。
-  std::string UpdateUri(std::string uri) const;
+  std::string UpdateUri(const std::string &uri) const;
   void PrintVal();
   // other configs are parsed by config utils
   void ParseListen(const std::vector< std::pair< int, std::string > > &list);
