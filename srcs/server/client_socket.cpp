@@ -9,15 +9,16 @@
 #include "http_request_parser.hpp"
 #include "http_response.hpp"
 
+static const int kReadBufferSize = 1024;
+static const int kCRLFSize = 2;
 /*
  * fdから読み込み、recv_strに格納する。
  */
 ssize_t ReceiveMessage(int fd, std::string &recv_str) {
   ssize_t read_size = 0;
-  char buf[1024];  // kReadBufferSize];
+  char buf[kReadBufferSize];
   memset(buf, 0, sizeof(buf));
   read_size = recv(fd, buf, sizeof(buf) - 1, 0);
-  // std::cout << "read_size(" << read_size << ")\n";
   if (read_size == -1) {
     std::cout << "recv() failed!!!" << std::endl;
     std::cout << "ERROR: " << errno << std::endl;
@@ -66,7 +67,7 @@ int ReceiveChunkedMessage(int fd, std::string &recv_msg, size_t start_pos) {
       std::cout << "Unexpected Separator" << std::endl;
       break;
     }
-    it += 2;  // HttpRequestParser::kCRLFSize;
+    it += kCRLFSize;
     size = GetChunkSize(&it);
   }
   return 0;
@@ -76,13 +77,6 @@ ClientSocket::ClientSocket(int fd, const ServerSocket *parent,
                            struct sockaddr_in &sin)
     : fd_(fd), parent_(parent) {
   SetNonBlocking(fd_);
-  // struct sockaddr_in sin;
-  // socklen_t len = sizeof(sin);
-
-  // if (-1 == getpeername(fd, (struct sockaddr *)&sin, &len)) {
-  //   std::cout << "ERROR getpeername fail!!!" << std::endl;
-  //   return;
-  // }
   struct hostent *peer_host;
   if (!(peer_host = gethostbyaddr((char *)&sin.sin_addr.s_addr,
                                   sizeof(sin.sin_addr), AF_INET))) {
@@ -158,8 +152,8 @@ int ClientSocket::ReceiveBody() {
       remain_length -= read_size;
     }
     request_.body_.assign(recv_str_.begin() + body_start_pos, recv_str_.end());
+    ChangeStatus(ClientSocket::CREATE_RESPONSE);
   }
-  ChangeStatus(ClientSocket::CREATE_RESPONSE);
   return 0;
 }
 
@@ -176,11 +170,10 @@ int ClientSocket::SendMessage() {
 int ClientSocket::EventHandler(bool is_readable, bool is_writable,
                                Config &config) {
   if (status_ == ClientSocket::WAIT_HEADER) {
-    if (is_readable)
-      if (ReceiveHeader()) {
-        ChangeStatus(ClientSocket::WAIT_CLOSE);
-        return 1;
-      }
+    if (is_readable && ReceiveHeader()) {
+      ChangeStatus(ClientSocket::WAIT_CLOSE);
+      return 1;
+    }
   }
   if (status_ == ClientSocket::PARSE_HEADER) {
     HttpRequestParser::ParseHeader(recv_str_, &request_);
@@ -194,11 +187,9 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     }
   }
   if (status_ == ClientSocket::WAIT_BODY) {
-    if (is_readable) {
-      if (ReceiveBody()) {
-        ChangeStatus(ClientSocket::WAIT_CLOSE);
-        return 1;
-      }
+    if (is_readable && ReceiveBody()) {
+      ChangeStatus(ClientSocket::WAIT_CLOSE);
+      return 1;
     }
   }
   if (status_ == ClientSocket::CREATE_RESPONSE) {
@@ -209,11 +200,9 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     ChangeStatus(ClientSocket::WAIT_SEND);
   }
   if (status_ == ClientSocket::WAIT_SEND) {
-    if (is_writable) {
-      if (SendMessage()) {
-        ChangeStatus(ClientSocket::WAIT_CLOSE);
-        return 1;
-      }
+    if (is_writable && SendMessage()) {
+      ChangeStatus(ClientSocket::WAIT_CLOSE);
+      return 1;
     }
   }
   if (status_ == ClientSocket::WAIT_CLOSE) {

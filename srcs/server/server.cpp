@@ -102,8 +102,10 @@ int Server::AcceptNewClient(const fd_set &fds) {
 }
 
 void Server::Run() {
+  int width;
   fd_set r_fds;
   fd_set w_fds;
+  struct timeval waitval;
   /***
    * サーバーソケットを生成
    */
@@ -113,12 +115,11 @@ void Server::Run() {
      * 複数のリスニングソケットをfdsに設定。
      * widthは参照するfdsの幅
      */
-    int width = SetStartFds(r_fds, w_fds);
+    width = SetStartFds(r_fds, w_fds);
 
     /***
      * 受信設定
      */
-    struct timeval waitval;
     waitval.tv_sec = 2; /* 待ち時間に 2.500 秒を指定 */
     waitval.tv_usec = 500;
     if (select(width + 1, &r_fds, &w_fds, NULL, &waitval) == -1) {
@@ -143,7 +144,7 @@ void Server::Run() {
         it = clients_.erase(it);
         continue;
       }
-      ++it;  //次のクライアントへ
+      ++it;
     }
   }
 
