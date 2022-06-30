@@ -3,6 +3,7 @@ import unittest
 
 
 class TestRequest(unittest.TestCase):
+    # TODO CUSTAMIZE HEADER!!!
     def send_request(self, uri: str) -> requests.Response:
         try:
             response = requests.get(uri, timeout=2.0, allow_redirects=False)
@@ -77,20 +78,22 @@ class TestRequest(unittest.TestCase):
 
     def test_invalid_location_2(self):
         got = self.send_request("http://localhost:8082/1.html")
-        self.assertEqual(got.status_code, 200)
-        self.assertEqual(got.text, "index\n")
-    # 要調査
+        self.assertEqual(got.status_code, 404)
 
-    # def test_cgi_cgi(self):
-    #     got = self.send_request("http://localhost:8082/cgi-bin/hello-perl.cgi")
-    #     self.assertEqual(got.status_code, 200)
-    #     self.assertEqual(got.text, "hello\n")
-    # infinite loop...
-
-    def test_invalid_location_2(self):
-        got = self.send_request("http://localhost:8083/1.html")
+    def test_cgi(self):
+        got = self.send_request("http://localhost:8082/cgi-bin/hello.cgi")
         self.assertEqual(got.status_code, 200)
-        self.assertEqual(got.text, "index\n")
+        self.assertEqual(got.text, "hello")
+
+    # def test_cgi_no_header(self):
+    #     got = self.send_request("http://localhost:8082/cgi-bin/no_header_perl.cgi")
+    #     self.assertEqual(got.status_code, 500)
+    #     self.assertEqual(got.text, "hello")
+
+    def test_cgi_index(self):
+        got = self.send_request("http://localhost:8082/cgi-bin/")
+        self.assertEqual(got.status_code, 200)
+        self.assertEqual(got.text, "hello")
 
 if __name__ == "__main__":
     unittest.main()
