@@ -6,11 +6,36 @@
 
 class HttpRequest {
  public:
-  HttpRequest()
-      : host_port_(0),
-        content_length_(0),
-        is_chunked_(false),
-        is_bad_request_(false) {
+  HttpRequest() { Init(); }
+  ~HttpRequest() {}
+  HttpRequest &operator=(const HttpRequest &other) {
+    method_ = other.method_;
+    uri_ = other.uri_;
+    query_string_ = other.query_string_;
+    version_ = other.version_;
+    host_name_ = other.host_name_;
+    host_port_ = other.host_port_;
+    content_type_ = other.content_type_;
+    content_length_ = other.content_length_;
+    body_ = other.body_;
+    is_chunked_ = other.is_chunked_;
+    is_bad_request_ = other.is_bad_request_;
+    header_fields_ = other.header_fields_;
+    return *this;
+  };
+
+  void Init() {
+    method_.clear();
+    uri_.clear();
+    query_string_.clear();
+    version_.clear();
+    host_name_.clear();
+    host_port_ = 0;
+    content_type_.clear();
+    content_length_ = 0;
+    body_.clear();
+    is_chunked_ = false;
+    is_bad_request_ = false;
     header_fields_.clear();
   }
 

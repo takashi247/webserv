@@ -2,6 +2,7 @@
 #define SERVER_SOCKET_HPP
 
 #include <netinet/in.h>
+#include <unistd.h>
 
 #include "config.hpp"
 
@@ -17,7 +18,7 @@ class ServerSocket {
  public:
   ServerSocket(int port, std::string host);
   ServerSocket(const ServerSocket &other);
-  ~ServerSocket() {}
+  ~ServerSocket() { close(listenfd_); }
   ServerSocket &operator=(const ServerSocket &other);
 
  private:
