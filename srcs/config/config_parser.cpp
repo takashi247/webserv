@@ -195,8 +195,8 @@ void ConfigParser::ParseLocationConfig(
     SplitIntoList(list);
     if (item == "http_method") {
       ParserUtils::ParseVector(list, lc.vec_accepted_method_);
-    } else if (item == "proxy_path") {
-      ParserUtils::ParseString(list, lc.proxy_pass_);
+    } else if (item == "rewrite") {
+      ParserUtils::ParseString(list, lc.rewrite_);
     } else if (item == "root") {
       ParserUtils::ParseString(list, lc.root_);
     } else if (item == "autoindex") {

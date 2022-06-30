@@ -107,10 +107,10 @@ std::string ServerConfig::UpdateUri(const std::string &uri) const {
   const LocationConfig *lc = SelectLocationConfig(config_uri);
   std::string root;
   // nginx確認
-  if (lc->proxy_pass_.empty()) {
+  if (lc->rewrite_.empty()) {
     root = lc->root_;
   } else {
-    root = lc->proxy_pass_;
+    root = lc->rewrite_;
   }
   path = root + uri;
 

@@ -19,7 +19,7 @@ LocationConfig &LocationConfig::operator=(const LocationConfig &rhs) {
   if (this != &rhs) {
     location_path_ = rhs.location_path_;
     vec_accepted_method_ = rhs.vec_accepted_method_;
-    proxy_pass_ = rhs.proxy_pass_;
+    rewrite_ = rhs.rewrite_;
     root_ = rhs.root_;
     autoindex_ = rhs.autoindex_;
     vec_index_ = rhs.vec_index_;
@@ -40,7 +40,7 @@ void LocationConfig::PrintVal() {
   }
   std::cout << std::endl;
 
-  std::cout << "proxy_pass " << proxy_pass_ << std::endl;
+  std::cout << "rewrite " << rewrite_ << std::endl;
 
   std::cout << "root " << root_ << std::endl;
 
