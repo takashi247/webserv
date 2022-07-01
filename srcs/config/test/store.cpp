@@ -34,7 +34,7 @@ int main(int ac, char **av) {
     LocationConfig lc = sc.vec_location_config_[0];
     assert(lc.vec_accepted_method_.size(), (size_t)1, "size of http_method");
     assert(lc.vec_accepted_method_[0], std::string("GET"), "http_method");
-    assert(lc.proxy_pass_, std::string("http://localhost:8080/"), "proxy_pass");
+    assert(lc.rewrite_, std::string("http://localhost:8080/"), "rewrite");
     assert(lc.root_, std::string("/etc/www"), "root");
     assert(lc.vec_index_.size(), (size_t)2, "size of index");
     assert(lc.vec_index_[0], std::string("index.html"), "index1");
@@ -66,7 +66,7 @@ int main(int ac, char **av) {
     assert(lc.vec_accepted_method_[0], std::string("GET"), "http_method1");
     assert(lc.vec_accepted_method_[1], std::string("POST"), "http_method2");
     assert(lc.vec_accepted_method_[2], std::string("DELETE"), "http_method3");
-    assert(lc.proxy_pass_, std::string(""), "proxy_pass");
+    assert(lc.rewrite_, std::string(""), "rewrite");
     assert(lc.root_, std::string("/etc/www"), "root");
     assert(lc.vec_index_.size(), (size_t)1, "size of index");
     assert(lc.vec_cgi_file_extension_.size(), (size_t)0,
@@ -79,7 +79,7 @@ int main(int ac, char **av) {
     assert(lc.vec_accepted_method_[0], std::string("GET"), "http_method1");
     assert(lc.vec_accepted_method_[1], std::string("POST"), "http_method2");
     assert(lc.vec_accepted_method_[2], std::string("DELETE"), "http_method3");
-    assert(lc.proxy_pass_, std::string(""), "proxy_pass");
+    assert(lc.rewrite_, std::string(""), "rewrite");
     assert(lc.root_, std::string(""), "root");
     assert(lc.vec_index_.size(), (size_t)1, "size of index");
     assert(lc.vec_index_[0], std::string("index.html"), "index1");

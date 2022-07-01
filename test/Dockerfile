@@ -11,7 +11,7 @@ RUN set -ex; \
 	rm -rf /var/lib/apt/lists;
 
 # Copy files in conf directory to docker container
-COPY confs/nginx.conf /etc/nginx/conf.d/default.conf
+COPY confs/nginx.conf /etc/nginx/nginx.conf
 COPY www/ /var/www/html/
 
 # Create simlink in sites-enabled directory

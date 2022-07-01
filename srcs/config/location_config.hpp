@@ -18,7 +18,7 @@ class LocationConfig {
 
   std::string location_path_;
   std::vector<std::string> vec_accepted_method_;
-  std::string proxy_pass_;
+  std::string rewrite_;
   std::string root_;
   bool autoindex_;
   std::vector<std::string> vec_index_;

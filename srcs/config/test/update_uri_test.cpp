@@ -46,7 +46,7 @@ void TestUpdateURi() {
     proxy.vec_index_.push_back("index.png");
     proxy.vec_index_.push_back("test_update_uri.cpp");
 
-    proxy.proxy_pass_ = "http://proxy_host:8080";
+    proxy.rewrite_ = "http://proxy_host:8080";
     sc.vec_location_config_.push_back(proxy);
 
     // test
