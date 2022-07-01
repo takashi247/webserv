@@ -29,7 +29,7 @@ ServerConfig &ServerConfig::operator=(ServerConfig const &rhs) {
 }
 
 void ServerConfig::ParseListen(
-    const std::vector<std::pair<int, std::string> > &list) {
+    const std::vector< std::pair< int, std::string > > &list) {
   std::string::size_type delim_pos;
 
   if (list.size() != 2) {
@@ -52,9 +52,10 @@ void ServerConfig::ParseListen(
 }
 
 void ServerConfig::ParseErrorPagePath(
-    const std::vector<std::pair<int, std::string> > &list) {
-  std::pair<int, std::string> elem;
-  std::vector<std::pair<int, std::string> >::const_iterator it = list.begin();
+    const std::vector< std::pair< int, std::string > > &list) {
+  std::pair< int, std::string > elem;
+  std::vector< std::pair< int, std::string > >::const_iterator it =
+      list.begin();
   size_t i;
 
   if (list.size() < 2 || list.size() % 2 != 1) {
@@ -83,7 +84,7 @@ const LocationConfig *ServerConfig::SelectLocationConfig(
     const std::string &uri) const {
   const LocationConfig *selected = &default_location_config_;
 
-  for (std::vector<LocationConfig>::const_iterator it =
+  for (std::vector< LocationConfig >::const_iterator it =
            vec_location_config_.begin();
        it != vec_location_config_.end(); ++it) {
     if (uri.find(it->location_path_) == 0) {
@@ -100,23 +101,22 @@ const LocationConfig *ServerConfig::SelectLocationConfig(
 
 std::string ServerConfig::UpdateUri(const std::string &uri) const {
   std::string path;
-  std::string config_uri = uri;
 
-  if (*(config_uri.end() - 1) != '/')
-    config_uri += "/";
-  const LocationConfig *lc = SelectLocationConfig(config_uri);
+  const LocationConfig *lc = SelectLocationConfig(uri);
   std::string root;
   // nginx確認
   if (lc->rewrite_.empty()) {
-    root = lc->root_;
+    path = lc->root_ + uri;
   } else {
-    root = lc->rewrite_;
+    path = (lc->location_path_ == "/")
+               ? uri
+               : uri.substr(lc->location_path_.length());
+    path = lc->rewrite_ + path;
   }
-  path = root + uri;
 
   struct stat buffer;
   if (*(path.end() - 1) == '/') {
-    for (std::vector<std::string>::const_iterator it = lc->vec_index_.begin();
+    for (std::vector< std::string >::const_iterator it = lc->vec_index_.begin();
          it != lc->vec_index_.end(); ++it) {
       if (stat((path + *it).c_str(), &buffer) == 0) {
         return (path + *it);
@@ -131,14 +131,14 @@ void ServerConfig::PrintVal() {
   std::cout << "listen " << host_ << ":" << port_ << std::endl;
 
   std::cout << "server_name ";
-  for (std::vector<std::string>::iterator it = vec_server_names_.begin();
+  for (std::vector< std::string >::iterator it = vec_server_names_.begin();
        it != vec_server_names_.end(); ++it) {
     std::cout << *it << " ";
   }
   std::cout << std::endl;
 
   std::cout << "error_page ";
-  for (std::map<int, std::string>::iterator it = map_error_page_path_.begin();
+  for (std::map< int, std::string >::iterator it = map_error_page_path_.begin();
        it != map_error_page_path_.end(); ++it) {
     std::cout << it->first << " " << it->second;
   }
@@ -146,7 +146,8 @@ void ServerConfig::PrintVal() {
 
   std::cout << "client_max_body_size " << client_max_body_size_ << std::endl;
 
-  for (std::vector<LocationConfig>::iterator it = vec_location_config_.begin();
+  for (std::vector< LocationConfig >::iterator it =
+           vec_location_config_.begin();
        it != vec_location_config_.end(); ++it) {
     std::cout << "\n[location]" << std::endl;
     it->PrintVal();
