@@ -2,6 +2,7 @@
 #define SERVER_SOCKET_HPP
 
 #include <netinet/in.h>
+#include <unistd.h>
 
 #include "config.hpp"
 
@@ -13,21 +14,21 @@ class ServerSocket {
   size_t port_;
   std::string host_;
   struct sockaddr_in serv_addr_;
-  sockaddr ahoge;
 
  public:
-  explicit ServerSocket(int port, std::string host) : port_(port), host_(host) {
-    SetSocket();
-  }
-  ~ServerSocket() {}
+  ServerSocket(int port, std::string host);
+  ServerSocket(const ServerSocket &other);
+  ~ServerSocket() { close(listenfd_); }
+  ServerSocket &operator=(const ServerSocket &other);
 
  private:
+  int SetSocket();
   void SetListenfd();
   void SetSockaddrIn();
 
  public:
-  int SetSocket();
-  int GetListenFd() const { return this->listenfd_; }
+  int GetListenFd() { return this->listenfd_; }
+  void Init();
 };
 
 #endif

@@ -1,7 +1,6 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include <map>
 #include <vector>
 
 #include "client_socket.hpp"
@@ -10,7 +9,6 @@
 
 class Server {
  private:
-  static const int kReadBufferSize = 10000;
   static const int kMaxSessionNum = 10;
 
   Config config_;
@@ -18,13 +16,11 @@ class Server {
   std::vector< ClientSocket > clients_;
 
   void CreateServerSockets();
-  int SetStartFds(fd_set *p_fds);
-  int AcceptNewClient(const fd_set *fds);
-  ServerConfig *FindServerConfig(int fd);
-  std::string ReadMessage(int *p_fd);
+  int SetStartFds(fd_set &r_fds, fd_set &w_fds);
+  int AcceptNewClient(const fd_set &fds);
 
  public:
-  Server();  //削除予定
+  Server();
   Server(const char *conf);
   ~Server(){};
 
