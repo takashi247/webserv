@@ -5,6 +5,7 @@ const std::string HttpResponse::kStatusDescOK = "200 OK";
 const std::string HttpResponse::kStatusDescNoContent = "204 No Content";
 const std::string HttpResponse::kStatusDescMovedPermanently =
     "301 Moved Permanently";
+const std::string HttpResponse::kStatusDescFound = "302 Found";
 const std::string HttpResponse::kStatusDescBadRequest = "400 Bad Request";
 const std::string HttpResponse::kStatusDescForbidden = "403 Forbidden";
 const std::string HttpResponse::kStatusDescNotFound = "404 Not Found";
@@ -28,6 +29,12 @@ HttpResponse::HttpResponse(const HttpRequest &http_request,
       status_desc_(kStatusDescOK),
       is_bad_request_(http_request_.is_bad_request_),
       is_supported_version_(true),
+      is_file_exists_(true),
+      is_path_exists_(true),
+      is_file_forbidden_(false),
+      is_path_forbidden_(false),
+      is_permanently_redirected_(false),
+      is_temporarily_redirected_(false),
       content_type_("applicaton/octet-stream"),
       requested_file_path_(http_request_.uri_) {
   InitParameters();
@@ -200,18 +207,6 @@ void HttpResponse::RemoveIndex(std::string &modified_path) {
   }
 }
 
-bool HttpResponse::CheckRedirection() {
-  std::string modified_path =
-      requested_file_path_.substr(location_config_->root_.length());
-  if (modified_path == http_request_.uri_) return false;
-  RemoveIndex(modified_path);
-  if (modified_path != http_request_.uri_) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
 void HttpResponse::ExtractPathInfo() {
   std::string dir;
   std::stringstream ss(requested_file_path_);
@@ -244,10 +239,16 @@ void HttpResponse::ExtractPathInfo() {
 
 void HttpResponse::InitFileStream() {
   requested_file_path_ = server_config_.UpdateUri(http_request_.uri_);
+  if (!location_config_->rewrite_.empty()) {
+    is_temporarily_redirected_ = true;
+    return;
+  }
   ExtractPathInfo();
   if (IsDirectory(requested_file_path_) &&
       requested_file_path_[requested_file_path_.length() - 1] != '/') {
     requested_file_path_ += "/";
+    is_permanently_redirected_ = true;
+    return;
   }
   SetContentType();
   ValidatePath();
@@ -261,7 +262,6 @@ void HttpResponse::InitFileStream() {
           !location_config_->autoindex_) {
         is_file_forbidden_ = true;
       }
-      is_redirected_ = CheckRedirection();
     }
   }
 }
@@ -298,16 +298,20 @@ void HttpResponse::SetLastModifiedTime(const std::string &path) {
   }
 }
 
-void HttpResponse::MakeHeader301() {
+void HttpResponse::MakeHeaderRedirection() {
   std::ostringstream oss_content_length, oss_content_type, oss_location;
   oss_content_type << "Content-Type: text/html\r\n";
   oss_content_length << "Content-Length: " << body_len_ << "\r\n";
-  std::map< std::string, std::string >::const_iterator it_host =
-      http_request_.header_fields_.find("Host");
-  oss_location << "Location: http://" << it_host->second;
-  std::string requested_file_path_short_ =
-      requested_file_path_.substr(location_config_->root_.length());
-  oss_location << requested_file_path_short_ << "\r\n";
+  if (status_code_ == kStatusCodeMovedPermanently) {
+    std::map< std::string, std::string >::const_iterator it_host =
+        http_request_.header_fields_.find("Host");
+    oss_location << "Location: http://" << it_host->second;
+    std::string requested_file_path_short_ =
+        requested_file_path_.substr(location_config_->root_.length());
+    oss_location << requested_file_path_short_ << "\r\n";
+  } else {
+    oss_location << "Location: " << requested_file_path_ << "\r\n";
+  }
   header_.push_back("HTTP/1.1 ");
   header_.push_back(status_desc_);
   header_.push_back("\r\n");
@@ -474,7 +478,6 @@ std::vector< std::string > HttpResponse::GetFileNames() {
   if (dir) {
     while ((diread = readdir(dir)) != NULL) {
       std::string item_name(diread->d_name);
-      // TODO: Handle when the file name is longer than 1024
       if (diread->d_type == DT_DIR) {
         item_name += "/";
         dir_names.push_back(item_name);
@@ -555,7 +558,7 @@ void HttpResponse::CreateAutoindexPage() {
       "</html>\n";
 }
 
-void HttpResponse::MakeBody301() { CreateDefaultErrorPage(); }
+void HttpResponse::MakeBodyRedirection() { CreateDefaultErrorPage(); }
 
 void HttpResponse::MakeBody200() {
   if (requested_file_path_[requested_file_path_.length() - 1] == '/') {
@@ -565,7 +568,7 @@ void HttpResponse::MakeBody200() {
     buffer << requested_file_.rdbuf();
     body_ = buffer.str();
     SetLastModifiedTime(requested_file_path_);
-    SetEtag();
+    SetEtag();  // TODO: Check RFC
   }
   body_len_ = body_.size();
 }
@@ -583,6 +586,7 @@ bool HttpResponse::IsAllowedMethod() const {
 
 // Q: How should we handle if no location config is given? >> A: Only GET is
 // allowed
+
 bool HttpResponse::IsValidMethod() const {
   if (http_request_.method_ == "GET" && !location_config_) {
     return true;
@@ -594,6 +598,8 @@ bool HttpResponse::IsValidMethod() const {
 bool HttpResponse::IsDigitSafe(char ch) {
   return std::isdigit(static_cast< unsigned char >(ch));
 }
+
+// TODO: Check RFC if this logic is compliant with RFC
 
 void HttpResponse::ValidateVersion() {
   std::string::const_iterator it = http_request_.version_.begin();
@@ -637,6 +643,9 @@ void HttpResponse::SetStatusDescription() {
     case kStatusCodeMovedPermanently:
       status_desc_ = kStatusDescMovedPermanently;
       break;
+    case kStatusCodeFound:
+      status_desc_ = kStatusDescFound;
+      break;
     case kStatusCodeBadRequest:
       status_desc_ = kStatusDescBadRequest;
       break;
@@ -676,8 +685,10 @@ void HttpResponse::SetStatusCode() {
     status_code_ = kStatusCodeMethodNotAllowed;
   } else if (!is_path_exists_ || !is_file_exists_) {
     status_code_ = kStatusCodeNotFound;
-  } else if (is_redirected_) {
+  } else if (is_permanently_redirected_) {
     status_code_ = kStatusCodeMovedPermanently;
+  } else if (is_temporarily_redirected_) {
+    status_code_ = kStatusCodeFound;
   } else if (is_path_forbidden_ || is_file_forbidden_) {
     status_code_ = kStatusCodeForbidden;
   } else if (http_request_.method_ == "DELETE") {
@@ -791,7 +802,8 @@ void HttpResponse::ParseCgiHeader() {
     std::string field_name = header_field.substr(0, header_field.find(":"));
     if (field_name == "Content-Type") {
       has_content_type_header = true;
-    } else if (field_name == "Status") {
+    } else if (field_name == "Status") {  // TODO: stop infinite loop; stop if
+                                          // redirected path is the one itself
       int status_code = ExtractStatusCode(header_field);
       if (status_code != kStatusCodeOK) {
         status_code_ = status_code;
@@ -846,12 +858,13 @@ void HttpResponse::MakeCgiBody() {
     }
   } else {
     int status;
+    // TODO: modify body_ by checking EOF
     write(pipe_parent2child[WRITE], http_request_.body_.c_str(),
           http_request_.body_.length());
     wait(&status);
     ssize_t read_size = 0;
     memset(buf, 0, sizeof(buf));
-    while (1) {
+    while (1) {  // TODO: update end condition
       read_size = read(pipe_child2parent[READ], buf, kCgiBufferSize);
       std::string buf_string(buf, read_size);
       body_.append(buf_string);
@@ -891,8 +904,12 @@ void HttpResponse::MakeResponse() {
       MakeHeader204();
       break;
     case kStatusCodeMovedPermanently:
-      MakeBody301();
-      MakeHeader301();
+      MakeBodyRedirection();
+      MakeHeaderRedirection();
+      break;
+    case kStatusCodeFound:
+      MakeBodyRedirection();
+      MakeHeaderRedirection();
       break;
     default:
       MakeErrorBody();
