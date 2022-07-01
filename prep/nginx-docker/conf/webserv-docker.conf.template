@@ -14,11 +14,12 @@ server {
 	location / {
 	}
 
-	location /dir_on/ {
+	location /dir_on {
 		autoindex on;
 	}
 
 	location /dir_empty/ {
+		root /var/www/html/dir_on;
 		autoindex on;
 	}
 
