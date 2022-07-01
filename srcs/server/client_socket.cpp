@@ -14,7 +14,7 @@ static const int kCRLFSize = 2;
 /*
  * fdから読み込み、recv_strに格納する。
  */
-ssize_t ReceiveMessage(int fd, std::string &recv_str) {
+static ssize_t ReceiveMessage(int fd, std::string &recv_str) {
   ssize_t read_size = 0;
   char buf[kReadBufferSize];
   memset(buf, 0, sizeof(buf));
@@ -29,7 +29,7 @@ ssize_t ReceiveMessage(int fd, std::string &recv_str) {
   return read_size;
 }
 
-int GetChunkSize(std::string::const_iterator *it) {
+static int GetChunkSize(std::string::const_iterator *it) {
   std::string::const_iterator cur = *it;
   int size = 0;
   while (('0' <= *cur && *cur <= '9') || ('A' <= *cur && *cur <= 'F')) {
@@ -48,7 +48,8 @@ int GetChunkSize(std::string::const_iterator *it) {
   return size;
 }
 
-int ReceiveChunkedMessage(int fd, std::string &recv_msg, size_t start_pos) {
+static int ReceiveChunkedMessage(int fd, std::string &recv_msg,
+                                 size_t start_pos) {
   // body読み込み済み\r\nがあるかチェック
   if (std::string::npos == recv_msg.find("\r\n", start_pos)) {
     std::cout << "ReceiveMsg.Chunk!!!\t";
@@ -152,8 +153,8 @@ int ClientSocket::ReceiveBody() {
       remain_length -= read_size;
     }
     request_.body_.assign(recv_str_.begin() + body_start_pos, recv_str_.end());
-    ChangeStatus(ClientSocket::CREATE_RESPONSE);
   }
+  ChangeStatus(ClientSocket::CREATE_RESPONSE);
   return 0;
 }
 

@@ -27,7 +27,7 @@ class ServerSocket {
   void SetSockaddrIn();
 
  public:
-  int GetListenFd() const { return this->listenfd_; }
+  int GetListenFd() { return this->listenfd_; }
   void Init();
 };
 
