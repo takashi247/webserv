@@ -14,7 +14,6 @@ class HttpRequest {
     query_string_ = other.query_string_;
     version_ = other.version_;
     host_name_ = other.host_name_;
-    host_port_ = other.host_port_;
     content_type_ = other.content_type_;
     content_length_ = other.content_length_;
     body_ = other.body_;
@@ -30,7 +29,6 @@ class HttpRequest {
     query_string_.clear();
     version_.clear();
     host_name_.clear();
-    host_port_ = 0;
     content_type_.clear();
     content_length_ = 0;
     body_.clear();
@@ -42,9 +40,8 @@ class HttpRequest {
   std::string method_;
   std::string uri_;
   std::string query_string_;
-  std::string version_;  // 0以外の数字から始まる文字列
-  std::string host_name_;
-  size_t host_port_;
+  std::string version_;    // 0以外の数字から始まる文字列
+  std::string host_name_;  // Host: からポート番号を取り除いたもの
   std::string content_type_;
   size_t content_length_;
   std::string body_;

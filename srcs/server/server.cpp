@@ -89,6 +89,7 @@ int Server::AcceptNewClient(const fd_set &fds) {
   for (; it != sockets_.end(); ++it) {
     if (FD_ISSET(it->GetListenFd(), &fds)) {
       int connfd = accept(it->GetListenFd(), (struct sockaddr *)&sin, &len);
+      // TODO 最大接続数を10にした理由を課題分やレビューから見つける。
       if (clients_.size() < kMaxSessionNum) {
         clients_.push_back(ClientSocket(connfd, &(*it), sin));
         clients_.back().Init();
@@ -140,7 +141,6 @@ void Server::Run() {
     while (it != clients_.end()) {
       if (it->EventHandler(FD_ISSET(it->GetFd(), &r_fds),
                            FD_ISSET(it->GetFd(), &w_fds), config_)) {
-        close(it->GetFd());
         it = clients_.erase(it);
         continue;
       }
@@ -148,6 +148,7 @@ void Server::Run() {
     }
   }
 
+  // TODO:  後処理自体はメモリリークしないことだけ確認したい
   std::vector< ClientSocket >::iterator cit;
   for (cit = clients_.begin(); cit != clients_.end(); ++cit) {
     close(cit->GetFd());

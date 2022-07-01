@@ -142,6 +142,8 @@ int ClientSocket::ReceiveBody() {
     ssize_t remain_length =
         request_.content_length_ - (recv_str_.length() - body_start_pos);
     ssize_t read_size = 0;
+    // TODO
+    // telnetからのPOSTなど、bodyが断片的にくる場合は分割して受け取れるようにしないと
     while (remain_length) {
       if (-1 == (read_size = ReceiveMessage(fd_, recv_str_))) {
         return 1;
@@ -163,8 +165,6 @@ int ClientSocket::SendMessage() {
     std::cout << "send() failed." << std::endl;
     return 1;
   }
-  //送信成功したら待ち状態に戻る
-  Init();
   return 0;
 }
 
@@ -173,7 +173,6 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
   if (status_ == ClientSocket::WAIT_HEADER) {
     if (is_readable && ReceiveHeader()) {
       ChangeStatus(ClientSocket::WAIT_CLOSE);
-      return 1;
     }
   }
   if (status_ == ClientSocket::PARSE_HEADER) {
@@ -190,7 +189,6 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
   if (status_ == ClientSocket::WAIT_BODY) {
     if (is_readable && ReceiveBody()) {
       ChangeStatus(ClientSocket::WAIT_CLOSE);
-      return 1;
     }
   }
   if (status_ == ClientSocket::CREATE_RESPONSE) {
@@ -198,15 +196,20 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
         parent_->host_, parent_->port_, request_.host_name_);
     HttpResponse response(request_, *sc, info_);
     server_response_ = response.GetResponse();
+    // TODO:HttpRequestでBadRequestになった場合、sendしてからCloseするのに取得
+    // request_.is_bad_request_ = response.GetBadRequest();
     ChangeStatus(ClientSocket::WAIT_SEND);
   }
   if (status_ == ClientSocket::WAIT_SEND) {
-    if (is_writable && SendMessage()) {
+    if ((is_writable && SendMessage()) || request_.is_bad_request_) {
       ChangeStatus(ClientSocket::WAIT_CLOSE);
-      return 1;
+      std::cout << "WAIT_SEND bad_request!!!" << std::endl;
+    } else {
+      Init();
     }
   }
   if (status_ == ClientSocket::WAIT_CLOSE) {
+    close(fd_);
     return 1;
   }
   return 0;

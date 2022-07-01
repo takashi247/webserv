@@ -61,6 +61,7 @@ int HttpRequestParser::GetHeaderFields(
   size_t start = cur;
 
   while (start != recv_msg.find("\r\n", start)) {
+    // TODO telnet対策、スペースが多い時、少ない時も対応できるように。
     cur = recv_msg.find(": ", start);
     std::string key = recv_msg.substr(start, cur - start);
     start = cur + 2;
@@ -96,8 +97,7 @@ int HttpRequestParser::ParseHeader(const std::string& recv_msg,
     if (pos == std::string::npos)
       req->host_name_ = host;
     else {
-      req->host_name_ = host.substr(0, pos++);
-      req->host_port_ = atoi(host.substr(pos, host.size()).c_str());
+      req->host_name_ = host.substr(0, pos);
     }
   }
   req->content_type_ = GetFieldValue("Content-Type", recv_msg);
@@ -113,7 +113,6 @@ int HttpRequestParser::ParseHeader(const std::string& recv_msg,
     std::cout << req->uri_ << std::endl;
     std::cout << req->version_ << std::endl;
     std::cout << req->host_name_ << std::endl;
-    std::cout << req->host_port_ << std::endl;
     std::cout << req->content_type_ << std::endl;
     std::cout << req->content_length_ << std::endl;
     std::cout << req->body_ << std::endl;
