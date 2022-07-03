@@ -207,6 +207,12 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
       Init();
     }
   }
+  if (time(NULL) - kDisconnectSec > last_access_) {
+    std::cout << info_.hostname_ << " (" << info_.ipaddr_ << ") ポート "
+              << info_.port_ << " ディスクリプタ " << fd_ << "番から"
+              << kDisconnectSec << "秒以上アクセスがないので切断します。\n";
+    ChangeStatus(ClientSocket::WAIT_CLOSE);
+  }
   if (status_ == ClientSocket::WAIT_CLOSE) {
     close(fd_);
     return 1;

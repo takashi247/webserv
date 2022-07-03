@@ -20,6 +20,7 @@ class ClientSocket {
   } t_status;
   t_status status_;
 
+  static const int kDisconnectSec = 60;
   int fd_;
   const ServerSocket *parent_;
   t_client_info info_;
