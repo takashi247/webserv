@@ -1,42 +1,41 @@
 #include "http_request_parser.hpp"
 
 #include <iostream>
+#include <istream>  // std::getline
+#include <sstream>  // std::stringstream
 #include <utility>
+#include <vector>
 
-std::string HttpRequestParser::GetMethod(const std::string& recv_msg) {
-  size_t pos = recv_msg.find(' ');
-  std::string method(recv_msg.begin(), recv_msg.begin() + pos);
-  return method;
+bool HttpRequestParser::SplitRequestLine(const std::string& recv_msg,
+                                         std::vector< std::string >& v) {
+  size_t pos = recv_msg.find("\r\n");
+  if (pos == std::string::npos) return false;
+  std::string req_line = recv_msg.substr(0, pos);
+  std::stringstream ss(req_line);
+  std::string buf;
+  while (std::getline(ss, buf, ' ')) {
+    if (!buf.empty()) v.push_back(buf);
+  }
+  if (v.size() != kReqLineSize) return false;
+  // Method
+  std::string::iterator it = v[kReqLineMethod].begin();
+  for (; it != v[kReqLineMethod].end(); ++it) {
+    if (!std::isupper(*it)) return false;
+  }
+  // Uri
+  if ((v[kReqLineUri])[0] != '/') return false;
+  // HttpVersion
+  if (v[kReqLineHttpVersion].find("HTTP/") != 0)
+    return false;
+  else if (!isdigit((v[kReqLineHttpVersion])[kProtocolVersionPos]))
+    return false;
+  else if ((v[kReqLineHttpVersion])[kProtocolVersionPos] == '0')
+    return false;
+  v[kReqLineHttpVersion].erase(0, kProtocolVersionPos);
+
+  return true;
 }
-std::pair< std::string, std::string > HttpRequestParser::GetUri(
-    const std::string& recv_msg) {
-  size_t start_pos = recv_msg.find(' ');
-  size_t end_pos = recv_msg.find(' ', start_pos + 1);
-  std::string uri(recv_msg.begin() + start_pos + 1, recv_msg.begin() + end_pos);
-  start_pos = uri.find('?');
-  if (start_pos == std::string::npos) return std::make_pair(uri, "");
-  // クエリーがある場合
-  start_pos++;
-  std::string query(uri.substr(start_pos, uri.size() - start_pos));
-  uri = uri.substr(0, start_pos - 1);
-  return std::make_pair(uri, query);
-}
-std::string HttpRequestParser::GetProtocolVersion(const std::string& recv_msg) {
-  size_t start_pos = recv_msg.find(' ');
-  start_pos = recv_msg.find(' ', start_pos + 1);
-  size_t end_pos = recv_msg.find("\r\n", start_pos + 1);
-  std::string version(recv_msg.begin() + start_pos + 1,
-                      recv_msg.begin() + end_pos);
-  return version;
-}
-bool HttpRequestParser::IsValidHttpVersion(
-    const std::string& protocol_version) {
-  size_t pos = protocol_version.find("HTTP/");
-  char version_head_num = protocol_version[kProtocolVersionPos];
-  if (pos == 0 && ('0' < version_head_num && version_head_num <= '9'))
-    return true;
-  return false;
-}
+
 std::string HttpRequestParser::GetFieldValue(const char* field_name,
                                              const std::string& recv_msg) {
   size_t name_start_pos = recv_msg.find(field_name, 0, strlen(field_name));
@@ -75,30 +74,34 @@ int HttpRequestParser::GetHeaderFields(
 
 int HttpRequestParser::ParseHeader(const std::string& recv_msg,
                                    HttpRequest* req) {
-  req->is_bad_request_ = false;
-  req->method_ = GetMethod(recv_msg);
-  std::pair< std::string, std::string > uri = GetUri(recv_msg);
-  req->uri_ = uri.first;
-  req->query_string_ = uri.second;
-  {  // Http version check
-    std::string version = GetProtocolVersion(recv_msg);
-    bool is_valid_version = IsValidHttpVersion(version);
-    if (!is_valid_version) {
-      req->is_bad_request_ = true;
-      return (1);
-    }
-    req->version_ =
-        version.erase(0, kProtocolVersionPos);  //先頭の"HTTP/"を削除
+  std::vector< std::string > req_line;
+  if ((req->is_bad_request_ = !SplitRequestLine(recv_msg, req_line))) {
+    return 1;
   }
+  req->method_ = req_line[kReqLineMethod];
+  {
+    std::string uri = req_line[kReqLineUri];
+    size_t start_pos = uri.find('?');
+    if (start_pos == std::string::npos)
+      req->query_string_ = "";
+    else {  // クエリーがある場合
+      req->query_string_ = uri.substr(start_pos, uri.size() - (start_pos + 1));
+      uri = uri.substr(0, start_pos);
+    }
+    req->uri_ = uri;
+  }
+  req->version_ = req_line[kReqLineHttpVersion];
+
   size_t pos;
   std::string host = GetFieldValue("Host", recv_msg);
-  {  // separate host -> name:port
+  if (host.empty()) {
+    req->is_bad_request_ = true;
+  } else {  // separate host -> name:port
     pos = host.find(":");
     if (pos == std::string::npos)
       req->host_name_ = host;
-    else {
+    else
       req->host_name_ = host.substr(0, pos);
-    }
   }
   req->content_type_ = GetFieldValue("Content-Type", recv_msg);
   req->content_length_ = GetFieldValueSize("Content-Length", recv_msg);

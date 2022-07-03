@@ -203,7 +203,6 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
   if (status_ == ClientSocket::WAIT_SEND) {
     if ((is_writable && SendMessage()) || request_.is_bad_request_) {
       ChangeStatus(ClientSocket::WAIT_CLOSE);
-      std::cout << "WAIT_SEND bad_request!!!" << std::endl;
     } else {
       Init();
     }

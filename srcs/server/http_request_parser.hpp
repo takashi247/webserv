@@ -7,6 +7,7 @@
 
 #include "http_request.hpp"
 
+#define CRLF "\r\n"
 #define SEPARATOR "\r\n\r\n"
 
 class HttpRequestParser {
@@ -15,12 +16,16 @@ class HttpRequestParser {
   static const int kSeparatorSize = 4;
   static const int kCRLFSize = 2;
 
+  enum e_req_line {
+    kReqLineMethod = 0,
+    kReqLineUri,
+    kReqLineHttpVersion,
+    kReqLineSize
+  };
+
  private:
-  static std::string GetMethod(const std::string& recv_msg);
-  static std::pair< std::string, std::string > GetUri(
-      const std::string& recv_msg);
-  static std::string GetProtocolVersion(const std::string& recv_msg);
-  static bool IsValidHttpVersion(const std::string& recv_msg);
+  static bool SplitRequestLine(const std::string& recv_msg,
+                               std::vector< std::string >& v);
   static std::string GetFieldValue(const char* field_name,
                                    const std::string& recv_msg);
   static size_t GetFieldValueSize(const char* field_name,
