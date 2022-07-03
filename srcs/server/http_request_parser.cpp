@@ -38,12 +38,20 @@ bool HttpRequestParser::SplitRequestLine(const std::string& recv_msg,
 
 std::string HttpRequestParser::GetFieldValue(const char* field_name,
                                              const std::string& recv_msg) {
-  size_t name_start_pos = recv_msg.find(field_name, 0, strlen(field_name));
-  if (std::string::npos == name_start_pos) return "";
-  size_t value_start_pos = recv_msg.find(": ", name_start_pos + 1) + 2;
-  size_t value_end_pos = recv_msg.find("\r\n", value_start_pos + 1);
-  std::string value(recv_msg.begin() + value_start_pos,
-                    recv_msg.begin() + value_end_pos);
+  std::string search_name(CRLF);
+  search_name.append(field_name);  // "\r\n"field の文字列を生成
+  size_t pos = recv_msg.find(search_name, 0);  // 探す
+  if (std::string::npos == pos) return "";  // field_nameがみつから無ければ終了
+  pos += (kCRLFSize + strlen(field_name));
+  if (recv_msg[pos] != ':') return "";  // field_nameの直後に : でなければ終了
+  pos++;                                // : の直後を指す
+  pos = recv_msg.find_first_not_of(' ', pos);  // スペース読み飛ばす
+  //  std::cout << "pos=" << pos << std::endl;
+  if (0 == recv_msg.find(CRLF, pos)) return "";  // field_name:  \r\nなら終了
+  //この時点でposは値の先頭
+  //  std::cout << "find CRLF OK" << std::endl;
+  size_t value_end_pos = recv_msg.find("\r\n", pos);
+  std::string value(recv_msg.begin() + pos, recv_msg.begin() + value_end_pos);
   return value;
 }
 
@@ -60,8 +68,8 @@ int HttpRequestParser::GetHeaderFields(
   size_t start = cur;
 
   while (start != recv_msg.find("\r\n", start)) {
-    // TODO telnet対策、スペースが多い時、少ない時も対応できるように。
-    cur = recv_msg.find(": ", start);
+    cur = recv_msg.find(":", start);
+    cur = recv_msg.find_first_not_of(' ', cur);
     std::string key = recv_msg.substr(start, cur - start);
     start = cur + 2;
     cur = recv_msg.find("\r\n", start);
