@@ -72,6 +72,7 @@ class TestRequest(unittest.TestCase):
         got = self.send_request("http://localhost:8081/nosuchdir/")
         self.assertEqual(got.status_code, 404)
 
+    # apache only
     def test_invalid_location_1(self):
         got = self.send_request("http://localhost:8082/")
         self.assertEqual(got.status_code, 403)
@@ -80,6 +81,7 @@ class TestRequest(unittest.TestCase):
         got = self.send_request("http://localhost:8082/1.html")
         self.assertEqual(got.status_code, 404)
 
+    # apache only
     def test_cgi(self):
         got = self.send_request("http://localhost:8082/cgi-bin/hello.cgi")
         self.assertEqual(got.status_code, 200)
@@ -90,10 +92,26 @@ class TestRequest(unittest.TestCase):
     #     self.assertEqual(got.status_code, 500)
     #     self.assertEqual(got.text, "hello")
 
+    # apache only
     def test_cgi_index(self):
         got = self.send_request("http://localhost:8082/cgi-bin/")
         self.assertEqual(got.status_code, 200)
         self.assertEqual(got.text, "hello")
+
+    def test_rewrite_1(self):
+        got = self.send_request("http://localhost:8083/nosuchfile")
+        self.assertEqual(got.status_code, 302)
+        self.assertEqual(got.headers["Location"], "http://localhost:8080//nosuchfile")
+
+    def test_rewrite_2(self):
+        got = self.send_request("http://localhost:8083")
+        self.assertEqual(got.status_code, 302)
+        self.assertEqual(got.headers["Location"], "http://localhost:8080//")
+
+    def test_rewrite_3(self):
+        got = self.send_request("http://localhost:8083/rewrite/")
+        self.assertEqual(got.status_code, 302)
+        self.assertEqual(got.headers["Location"], "http://localhost:8080//rewrite/")
 
 if __name__ == "__main__":
     unittest.main()
