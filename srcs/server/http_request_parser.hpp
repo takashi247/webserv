@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <utility>
+#include <vector>
 
 #include "http_request.hpp"
 
