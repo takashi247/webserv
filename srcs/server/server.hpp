@@ -9,7 +9,7 @@
 
 class Server {
  private:
-  static const int kMaxSessionNum = 10;
+  static const int kMaxSessionNum = 512;
 
   Config config_;
   std::vector< ServerSocket > sockets_;
