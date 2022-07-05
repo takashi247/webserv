@@ -21,6 +21,8 @@ ServerSocket::ServerSocket(const ServerSocket &other) { *this = other; }
 ServerSocket &ServerSocket::operator=(const ServerSocket &other) {
   port_ = other.port_;
   host_ = other.host_;
+  listenfd_ = other.listenfd_;
+  serv_addr_ = other.serv_addr_;
   return *this;
 }
 
