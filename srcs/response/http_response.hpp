@@ -52,6 +52,7 @@ class HttpResponse {
   static const int kCgiBufferSize = 500;
   static const int kAsciiCodeForEOF = 26;
   static const size_t kLenOfStatusCode = 3;
+  static const size_t kLenOfDateBuffer = 100;
   static const std::string kServerVersion;
   static const std::string kStatusDescOK;
   static const std::string kStatusDescNoContent;
@@ -108,9 +109,15 @@ class HttpResponse {
   void RemoveIndex(std::string &modified_path);
   std::string GetHeaderValue(const std::string &header_name);
   void ExtractPathInfo();
-  void ParseCgiHeader();
-  int ExtractStatusCode(const std::string &header_field);
+  bool ParseCgiHeader();
+  int ExtractStatusCode(const std::string &header_value);
   void SetStatusDescription();
+  std::string ExtractLocationPath(const std::string &header_value);
+  std::string GetFieldValue(const std::string &header_field);
+  bool CreateCgiBody(bool has_content_length);
+
+  // Helper functions
+  std::string ShortenRequestBody(const std::string &);
 
   template < class _Integer >
   std::string IntegerToString(_Integer num) {
@@ -119,7 +126,23 @@ class HttpResponse {
     return ss.str();
   }
 
+  template < class _Integer >
+  _Integer StringToInteger(std::string num_str) {
+    _Integer num;
+    std::stringstream ss;
+    ss << num_str;
+    ss >> num;
+    return num;
+  }
+
   // Data members
+  typedef enum e_cgi_status {
+    kReadHeader = 0,
+    kParseHeader,
+    kCreateBody,
+    kCloseConnection
+  } t_cgi_status;
+
   const HttpRequest &http_request_;
   const ServerConfig &server_config_;
   const t_client_info &client_info_;
@@ -135,6 +158,7 @@ class HttpResponse {
   bool is_temporarily_redirected_;
   std::string content_type_;
   std::string requested_file_path_;
+  t_cgi_status cgi_status_;
   const LocationConfig *location_config_;
   std::ifstream requested_file_;
   std::string path_info_;

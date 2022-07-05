@@ -36,7 +36,8 @@ HttpResponse::HttpResponse(const HttpRequest &http_request,
       is_permanently_redirected_(false),
       is_temporarily_redirected_(false),
       content_type_("applicaton/octet-stream"),
-      requested_file_path_(http_request_.uri_) {
+      requested_file_path_(http_request_.uri_),
+      cgi_status_(kReadHeader) {
   InitParameters();
   SetStatusCode();
   MakeResponse();
@@ -288,8 +289,7 @@ void HttpResponse::SetCurrentTime() {
 
 void HttpResponse::SetLastModifiedTime(const std::string &path) {
   struct stat result;
-  // TODO: Replace 100 with constant variable
-  char buffer[100];
+  char buffer[kLenOfDateBuffer];
   if (stat(path.c_str(), &result) == 0) {
     if (std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT",
                       gmtime(&result.st_mtime))) {
@@ -521,8 +521,7 @@ std::string HttpResponse::CreateFileList(
     }
     oss << displayed_name;
     struct stat result;
-    // TODO: Replace 100 with constant variable
-    char buffer[100];
+    char buffer[kLenOfDateBuffer];
     std::string path = requested_file_path_ + *it;
     if (stat(path.c_str(), &result) == 0) {
       if (std::strftime(buffer, sizeof(buffer), "%d-%b-%Y %H:%M",
@@ -583,9 +582,6 @@ bool HttpResponse::IsAllowedMethod() const {
   it = std::find(first, last, http_request_.method_);
   return it != last;
 }
-
-// Q: How should we handle if no location config is given? >> A: Only GET is
-// allowed
 
 bool HttpResponse::IsValidMethod() const {
   if (http_request_.method_ == "GET" && !location_config_) {
@@ -764,32 +760,44 @@ char **HttpResponse::CreateCgiEnviron() {
   return head;
 }
 
-int HttpResponse::ExtractStatusCode(const std::string &header_field) {
-  size_t pos_white_space = header_field.find(" ");
-  if (pos_white_space == std::string::npos)
+int HttpResponse::ExtractStatusCode(const std::string &header_value) {
+  if (header_value.length() < kLenOfStatusCode) {
     return kStatusCodeInternalServerError;
-  std::string status_code_str =
-      header_field.substr(pos_white_space + 1, kLenOfStatusCode);
+  } else if (kLenOfStatusCode < header_value.length()) {
+    if (header_value[kLenOfStatusCode] != ' ' &&
+        header_value[kLenOfStatusCode] != '\r') {
+      return kStatusCodeInternalServerError;
+    }
+  }
+  std::string status_code_str = header_value.substr(0, kLenOfStatusCode);
   for (std::string::const_iterator it = status_code_str.begin();
        it != status_code_str.end(); ++it) {
     if (!IsDigitSafe(*it)) return kStatusCodeInternalServerError;
   }
-  int status_code_num;
-  std::stringstream ss;
-  ss << status_code_str;
-  ss >> status_code_num;
-  return status_code_num;
+  return StringToInteger< int >(status_code_str);
 }
 
-void HttpResponse::ParseCgiHeader() {
+std::string HttpResponse::GetFieldValue(const std::string &header_field) {
+  std::string field_value;
+  size_t pos_colon = header_field.find(":");
+  if (pos_colon != std::string::npos) {
+    field_value = header_field.substr(pos_colon + 1);
+    if (!field_value.empty()) {
+      size_t pos_non_space = field_value.find_first_not_of(" ");
+      field_value = (pos_non_space == std::string::npos)
+                        ? ""
+                        : field_value.substr(pos_non_space);
+    }
+  }
+  return field_value;
+}
+
+bool HttpResponse::ParseCgiHeader() {
   size_t found;
   bool has_content_type_header = false;
+  bool has_content_length_header = false;
   while (1) {
     found = body_.find("\r\n");
-    if (found == std::string::npos) {
-      status_code_ = kStatusCodeInternalServerError;
-      return;
-    }
     std::string header_field = body_.substr(0, found + 2);
     header_.push_back(header_field);
     body_ = body_.substr(header_field.length());
@@ -797,20 +805,49 @@ void HttpResponse::ParseCgiHeader() {
       if (!has_content_type_header) {
         status_code_ = kStatusCodeInternalServerError;
       }
-      return;
+      return has_content_length_header;
     }
     std::string field_name = header_field.substr(0, header_field.find(":"));
+    std::string field_value = GetFieldValue(header_field);
+    if (field_value.empty()) continue;
     if (field_name == "Content-Type") {
       has_content_type_header = true;
-    } else if (field_name == "Status") {  // TODO: stop infinite loop; stop if
-                                          // redirected path is the one itself
-      int status_code = ExtractStatusCode(header_field);
+    } else if (field_name == "Status") {
+      int status_code = ExtractStatusCode(field_value);
       if (status_code != kStatusCodeOK) {
         status_code_ = status_code;
-        return;
+        return has_content_length_header;
       }
+    } else if (field_name == "Location") {
+      // TODO: Check if there are any other cases where location path should
+      // be treated as the same
+      if (field_value == requested_file_path_) {
+        status_code_ = kStatusCodeInternalServerError;
+        return has_content_length_header;
+      } else {
+        status_code_ = kStatusCodeFound;
+        requested_file_path_ = field_value;
+        return has_content_length_header;
+      }
+    } else if (field_name == "Content-Length") {
+      has_content_length_header = true;
+      body_len_ = StringToInteger< size_t >(field_value);
     }
   }
+}
+
+bool HttpResponse::CreateCgiBody(bool has_content_length) {
+  bool is_body_completed = false;
+  if (!has_content_length) {
+    if (body_[body_.length() - 1] == kAsciiCodeForEOF) {
+      body_.erase(body_.length() - 1);
+      body_len_ = body_.size();
+      is_body_completed = true;
+    }
+  } else if (body_.size() == body_len_) {
+    is_body_completed = true;
+  }
+  return is_body_completed;
 }
 
 void HttpResponse::MakeCgiBody() {
@@ -819,7 +856,6 @@ void HttpResponse::MakeCgiBody() {
   char **cgi_environ;
   int pipe_child2parent[2];
   int pipe_parent2child[2];
-  char buf[kCgiBufferSize];  // TODO: Need to update
   const int READ = 0;
   const int WRITE = 1;
 
@@ -858,31 +894,39 @@ void HttpResponse::MakeCgiBody() {
     }
   } else {
     int status;
-    // TODO: modify body_ by checking EOF
     write(pipe_parent2child[WRITE], http_request_.body_.c_str(),
           http_request_.body_.length());
     wait(&status);
-    ssize_t read_size = 0;
-    memset(buf, 0, sizeof(buf));
-    while (1) {  // TODO: update end condition
+    bool has_content_length_header = false;
+    while (cgi_status_ != kCloseConnection) {
+      char buf[kCgiBufferSize];
+      ssize_t read_size = 0;
+      memset(buf, 0, sizeof(buf));
       read_size = read(pipe_child2parent[READ], buf, kCgiBufferSize);
       std::string buf_string(buf, read_size);
       body_.append(buf_string);
-      if (body_[body_.length() - 1] == kAsciiCodeForEOF) {
-        body_.erase(body_.length() - 1);
-        break;
+      if (cgi_status_ == kReadHeader) {
+        size_t header_end = body_.find("\r\n\r\n");
+        if (header_end != std::string::npos) {
+          cgi_status_ = kParseHeader;
+        }
       }
-      memset(buf, 0, sizeof(buf));
+      if (cgi_status_ == kParseHeader) {
+        has_content_length_header = ParseCgiHeader();
+        cgi_status_ =
+            (status_code_ == kStatusCodeOK) ? kCreateBody : kCloseConnection;
+      }
+      if (cgi_status_ == kCreateBody &&
+          CreateCgiBody(has_content_length_header)) {
+        cgi_status_ = kCloseConnection;
+      }
     }
     close(pipe_child2parent[WRITE]);
     close(pipe_parent2child[READ]);
-    ParseCgiHeader();
     if (status_code_ != kStatusCodeOK) {
       header_.clear();
       body_.clear();
       MakeResponse();
-    } else {
-      body_len_ = body_.size();
     }
   }
 }
