@@ -2,7 +2,7 @@ FROM httpd:2.4
 
 # install required packages to use CGI module
 RUN apt update; \
-  apt install -y libcgi-session-perl;
+  apt install -y libcgi-session-perl vim;
 
 # copy html/cgi/config documents
 COPY ./www/ /usr/local/apache2/htdocs/
