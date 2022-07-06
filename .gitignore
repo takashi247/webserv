@@ -42,3 +42,6 @@ webserv
 
 # nginx-docker related
 webserv-docker.conf
+
+# for mac
+.DS_Store
