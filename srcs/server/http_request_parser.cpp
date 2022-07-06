@@ -93,7 +93,7 @@ int HttpRequestParser::ParseHeader(const std::string& recv_msg,
     if (start_pos == std::string::npos)
       req->query_string_ = "";
     else {  // クエリーがある場合
-      req->query_string_ = uri.substr(start_pos, uri.size() - (start_pos + 1));
+      req->query_string_ = uri.substr(start_pos + 1);
       uri = uri.substr(0, start_pos);
     }
     req->uri_ = uri;
