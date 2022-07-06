@@ -97,8 +97,8 @@ class HttpResponse {
   bool IsDigitSafe(char ch);
   void SetContentType();
   bool IsCgiFileExtension(const std::string &file_type) const;
-  void MakeCgiBody();
-  void MakeCgiHeader();
+  void MakeCgiResponse();
+  void CreateCgiHeader();
   void ValidatePath();
   void CreateAutoindexPage();
   std::vector< std::string > GetFileNames();
@@ -109,7 +109,7 @@ class HttpResponse {
   void RemoveIndex(std::string &modified_path);
   std::string GetHeaderValue(const std::string &header_name);
   void ExtractPathInfo();
-  bool ParseCgiHeader();
+  void ParseCgiHeader();
   int ExtractStatusCode(const std::string &header_value);
   void SetStatusDescription();
   std::string ExtractLocationPath(const std::string &header_value);
@@ -157,8 +157,11 @@ class HttpResponse {
   bool is_permanently_redirected_;
   bool is_temporarily_redirected_;
   std::string content_type_;
-  std::string requested_file_path_;
+  std::string original_uri_;
   t_cgi_status cgi_status_;
+  bool has_content_length_header_;
+  bool is_local_redirection_;
+  std::string requested_file_path_;
   const LocationConfig *location_config_;
   std::ifstream requested_file_;
   std::string path_info_;
