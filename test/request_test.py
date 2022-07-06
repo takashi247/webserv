@@ -1,30 +1,34 @@
-from email.policy import HTTP
 from http import HTTPStatus
-from sys import argv
+import os
 import requests
 import unittest
 import sys
+
 
 server = ""
 
 class TestRequest(unittest.TestCase):
     def setUp(self) -> None:
         self.server = server
+        os.chmod('www/no_perm.html', 0o333)
+
+    def tearDown(self) -> None:
+        os.chmod('www/no_perm.html', 0o755)
 
     # [TODO] CUSTAMIZE HEADER!!!
     def send_get_request(self, uri: str, header = None) -> requests.Response:
         try:
             response = requests.get(uri, timeout=2.0, allow_redirects=False, headers=header)
         except Exception as e:
-            print(e)
+            # print(e)
             self.fail()
         return (response)
 
-    def send_post_request(self, uri: str) -> requests.Response:
+    def send_post_request(self, uri: str, header = None, data = None) -> requests.Response:
         try:
-            response = requests.post(uri, timeout=2.0, allow_redirects=False)
+            response = requests.post(uri, timeout=2.0, allow_redirects=False, headers=header, data=data)
         except Exception as e:
-            print(e)
+            # print(e)
             self.fail()
         return (response)
 
@@ -99,6 +103,18 @@ class TestRequest(unittest.TestCase):
         self.assertEqual(got.status_code, HTTPStatus.OK)
         self.assertEqual(got.text, "hello")
 
+    def test_cgi_post(self):
+        self.skip_test_if_not_suppoeted("nginx")
+        got = self.send_post_request("http://localhost:8082/cgi-bin/upload.cgi", data={'param': 'hello'})
+        self.assertEqual(got.status_code, HTTPStatus.OK)
+        self.assertEqual(got.text, "param = hello")
+
+    # OK??
+    def test_cgi_post_by_get(self):
+        self.skip_test_if_not_suppoeted("nginx")
+        got = self.send_get_request("http://localhost:8082/cgi-bin/upload.cgi")
+        self.assertEqual(got.status_code, HTTPStatus.OK)
+
     # [TODO] when sys calls failure in cgi
     # def test_cgi_no_header(self):
     #     got = self.send_request("http://localhost:8082/cgi-bin/no_header_perl.cgi")
@@ -125,7 +141,12 @@ class TestRequest(unittest.TestCase):
     def test_rewrite_3(self):
         got = self.send_get_request("http://localhost:8083/rewrite/")
         self.assertEqual(got.status_code, HTTPStatus.FOUND)
-        self.assertEqual(got.headers["Location"], "http://localhost:8080//rewrite/")
+        self.assertEqual(got.headers["Location"], "http://localhost:8081/")
+
+    def test_error_page(self):
+        got = self.send_get_request("http://localhost:8080/nosuchfile")
+        self.assertEqual(got.status_code, HTTPStatus.NOT_FOUND)
+        self.assertEqual(got.text, "2\n")
 
     # apache only
     def test_invalid_location_1(self):
@@ -141,16 +162,27 @@ class TestRequest(unittest.TestCase):
         got = self.send_post_request("http://localhost:8080/1.html")
         self.assertEqual(got.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
 
+    # [TODO] confirm apache!!
+    def test_post_request_to_cgi_file(self):
+        self.skip_test_if_not_suppoeted("nginx")
+        got = self.send_post_request("http://localhost:8082/cgi-bin/hello.cgi")
+        self.assertEqual(got.status_code, HTTPStatus.OK)
+
+    # def test_get_request_cgi_file_with_param(self):
+    #     self.skip_test_if_not_suppoeted("nginx")
+    #     got = self.send_get_request("http://localhost:8082/cgi-bin/upload.cgi")
+    #     self.assertEqual(got.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
+
+    def test_no_perm(self):
+        got = self.send_get_request("http://localhost:8080/no_perm.html")
+        self.assertEqual(got.status_code, HTTPStatus.FORBIDDEN)
+
     def test_over_client_max_body_size(self):
         got = self.send_get_request("http://127.0.0.1:8083/1.html", {'Content-Length': '120'})
         self.assertEqual(got.status_code, HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
 
     def test_not_permitted_method(self):
         got = self.send_post_request("http://127.0.0.1:8083/1.html")
-        self.assertEqual(got.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
-
-    def test_not_permitted_method_and_no_such_file(self):
-        got = self.send_post_request("http://127.0.0.1:8083/nosuchfile")
         self.assertEqual(got.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
 
     def test_over_client_max_body_size_and_no_such_file(self):
@@ -160,6 +192,10 @@ class TestRequest(unittest.TestCase):
     def test_not_permitted_method_and_over_client_max_body(self):
         got = self.send_post_request("http://127.0.0.1:8083/nosuchfile")
         self.assertEqual(got.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
+
+    def test_not_permitted_method_and_no_perm_with_post(self):
+        got = self.send_get_request("http://127.0.0.1:8083/no_perm.html", {'Content-Length': '120'})
+        self.assertEqual(got.status_code, HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

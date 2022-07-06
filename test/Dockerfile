@@ -23,5 +23,7 @@ RUN echo "daemon off;" >> /etc/nginx/nginx.conf
 # Change owner of all files in the www directory
 RUN chown -R www-data:www-data /var/www;
 
+RUN chmod 333 /var/www/html/no_perm.html
+
 # Keep running the container
 ENTRYPOINT [ "nginx" ]
