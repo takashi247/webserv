@@ -868,12 +868,14 @@ void HttpResponse::MakeCgiResponse() {
   }
   if (pipe(pipe_child2parent) < 0) {
     PrintErrorMessage("pipe");
+    DeleteCgiEnviron(cgi_environ);
     exit(1);
   }
   if (pipe(pipe_parent2child) < 0) {
     PrintErrorMessage("pipe");
     close(pipe_child2parent[READ]);
     close(pipe_child2parent[WRITE]);
+    DeleteCgiEnviron(cgi_environ);
     exit(1);
   }
   if ((pid = fork()) < 0) {
@@ -882,6 +884,7 @@ void HttpResponse::MakeCgiResponse() {
     close(pipe_child2parent[WRITE]);
     close(pipe_parent2child[READ]);
     close(pipe_parent2child[WRITE]);
+    DeleteCgiEnviron(cgi_environ);
     exit(1);
   }
   if (pid == 0) {
@@ -893,13 +896,17 @@ void HttpResponse::MakeCgiResponse() {
       PrintErrorMessage("execve failed");
       close(pipe_parent2child[READ]);
       close(pipe_child2parent[WRITE]);
+      DeleteCgiEnviron(cgi_environ);
       exit(1);
     }
   } else {
-    int status;
     write(pipe_parent2child[WRITE], http_request_.body_.c_str(),
           http_request_.body_.length());
-    wait(&status);  // TODO: Implement timeout period
+    if (waitpid(pid, NULL, 0) != pid) {
+      close(pipe_child2parent[WRITE]);
+      close(pipe_parent2child[READ]);
+      DeleteCgiEnviron(cgi_environ);
+    }
     while (cgi_status_ != kCloseConnection) {
       char buf[kCgiBufferSize];
       ssize_t read_size = 0;
