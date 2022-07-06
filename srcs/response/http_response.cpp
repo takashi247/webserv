@@ -597,7 +597,8 @@ bool HttpResponse::IsDigitSafe(char ch) {
   return std::isdigit(static_cast< unsigned char >(ch));
 }
 
-// TODO: Check RFC if this logic is compliant with RFC
+// not much is specified regarding syntax of HTTP version (3.1 of RFC2616)
+// validation logic below is mainly based on the behavior of NGINX
 
 void HttpResponse::ValidateVersion() {
   std::string::const_iterator it = http_request_.version_.begin();
