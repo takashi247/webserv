@@ -32,6 +32,14 @@ class TestRequest(unittest.TestCase):
             self.fail()
         return (response)
 
+    def send_delete_request(self, uri: str, header = None) -> requests.Response:
+        try:
+            response = requests.delete(uri, timeout=2.0, allow_redirects=False, headers=header)
+        except Exception as e:
+            # print(e)
+            self.fail()
+        return (response)
+
     def skip_test_if_not_suppoeted(self, not_supported: str):
         if (self.server == not_supported):
             self.skipTest("not supported in " + not_supported)
@@ -109,19 +117,34 @@ class TestRequest(unittest.TestCase):
         self.assertEqual(got.status_code, HTTPStatus.OK)
         self.assertEqual(got.text, "param = hello")
 
-    # OK??
     def test_cgi_post_by_get(self):
         self.skip_test_if_not_suppoeted("nginx")
         got = self.send_get_request("http://localhost:8082/cgi-bin/upload.cgi")
         self.assertEqual(got.status_code, HTTPStatus.OK)
 
-    # [TODO] when sys calls failure in cgi
+    # execve in cgi fails
     # def test_cgi_no_header(self):
     #     got = self.send_request("http://localhost:8082/cgi-bin/no_header_perl.cgi")
     #     self.assertEqual(got.status_code, 500)
     #     self.assertEqual(got.text, "hello")
 
-    # apache only
+    def test_delete(self):
+        got = self.send_delete_request("http://localhost:8080/delete")
+        self.assertEqual(got.status_code, HTTPStatus.NO_CONTENT)
+
+    def test_delete_no_perm(self):
+        got = self.send_delete_request("http://localhost:8080/no_perm.html")
+        self.assertEqual(got.status_code, HTTPStatus.FORBIDDEN)
+
+    def test_delete_no_file(self):
+        got = self.send_delete_request("http://localhost:8080/nosuchfile")
+        self.assertEqual(got.status_code, HTTPStatus.NOT_FOUND)
+
+    def test_delete_dir(self):
+        got = self.send_delete_request("http://localhost:8082/")
+        self.assertEqual(got.status_code, HTTPStatus.FORBIDDEN)
+    ## index ?? 
+
     def test_cgi_index(self):
         self.skip_test_if_not_suppoeted("nginx")
         got = self.send_get_request("http://localhost:8082/cgi-bin/")
@@ -139,16 +162,30 @@ class TestRequest(unittest.TestCase):
         self.assertEqual(got.headers["Location"], "http://localhost:8080//")
 
     def test_rewrite_3(self):
-        got = self.send_get_request("http://localhost:8083/rewrite/")
+        got = self.send_get_request("http://localhost:8083/rewrite1/")
         self.assertEqual(got.status_code, HTTPStatus.FOUND)
-        self.assertEqual(got.headers["Location"], "http://localhost:8081/")
+        self.assertEqual(got.headers["Location"], "http://localhost:8081//rewrite1/")
+
+    def test_rewrite_4(self):
+        got = self.send_get_request("http://localhost:8083/rewrite1/nosuchfile")
+        self.assertEqual(got.status_code, HTTPStatus.FOUND)
+        self.assertEqual(got.headers["Location"], "http://localhost:8081//rewrite1/nosuchfile")
+
+    def test_rewrite_5(self):
+        got = self.send_get_request("http://localhost:8083/rewrite2/")
+        self.assertEqual(got.status_code, HTTPStatus.FOUND)
+        self.assertEqual(got.headers["Location"], "http://localhost:8082//rewrite2/")
+
+    def test_rewrite_6(self):
+        got = self.send_get_request("http://localhost:8083/rewrite2/nosuchfile")
+        self.assertEqual(got.status_code, HTTPStatus.FOUND)
+        self.assertEqual(got.headers["Location"], "http://localhost:8082//rewrite2/nosuchfile")
 
     def test_error_page(self):
         got = self.send_get_request("http://localhost:8080/nosuchfile")
         self.assertEqual(got.status_code, HTTPStatus.NOT_FOUND)
         self.assertEqual(got.text, "2\n")
 
-    # apache only
     def test_invalid_location_1(self):
         self.skip_test_if_not_suppoeted("nginx")
         got = self.send_get_request("http://localhost:8082/")
@@ -158,25 +195,21 @@ class TestRequest(unittest.TestCase):
         got = self.send_get_request("http://localhost:8082/1.html")
         self.assertEqual(got.status_code, HTTPStatus.NOT_FOUND)
 
+    # expect to ~~ not allowd ~~
     def test_post_request_to_normal_file(self):
         got = self.send_post_request("http://localhost:8080/1.html")
         self.assertEqual(got.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
 
-    # [TODO] confirm apache!!
     def test_post_request_to_cgi_file(self):
         self.skip_test_if_not_suppoeted("nginx")
         got = self.send_post_request("http://localhost:8082/cgi-bin/hello.cgi")
         self.assertEqual(got.status_code, HTTPStatus.OK)
 
-    # def test_get_request_cgi_file_with_param(self):
-    #     self.skip_test_if_not_suppoeted("nginx")
-    #     got = self.send_get_request("http://localhost:8082/cgi-bin/upload.cgi")
-    #     self.assertEqual(got.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
-
     def test_no_perm(self):
         got = self.send_get_request("http://localhost:8080/no_perm.html")
         self.assertEqual(got.status_code, HTTPStatus.FORBIDDEN)
 
+    # recv failed and no response
     def test_over_client_max_body_size(self):
         got = self.send_get_request("http://127.0.0.1:8083/1.html", {'Content-Length': '120'})
         self.assertEqual(got.status_code, HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
@@ -185,6 +218,7 @@ class TestRequest(unittest.TestCase):
         got = self.send_post_request("http://127.0.0.1:8083/1.html")
         self.assertEqual(got.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
 
+    # recv failed and no response
     def test_over_client_max_body_size_and_no_such_file(self):
         got = self.send_get_request("http://127.0.0.1:8083/nosuchfile", {'Content-Length': '120'})
         self.assertEqual(got.status_code, HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
@@ -193,12 +227,17 @@ class TestRequest(unittest.TestCase):
         got = self.send_post_request("http://127.0.0.1:8083/nosuchfile")
         self.assertEqual(got.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
 
-    def test_not_permitted_method_and_no_perm_with_post(self):
-        got = self.send_get_request("http://127.0.0.1:8083/no_perm.html", {'Content-Length': '120'})
+    # recv failed and no response
+    def test_over_client_max_body_and_no_perm_with_post(self):
+        got = self.send_post_request("http://127.0.0.1:8083/no_perm.html", {'Content-Length': '120'})
         self.assertEqual(got.status_code, HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         server = sys.argv[1]
         del sys.argv[1:]
+    open('www/delete', 'w')
     unittest.main()
+    f = open('www/1.html', 'w')
+    f.write("\n")
+    f.close()
