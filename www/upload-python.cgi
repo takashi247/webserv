@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+
 import cgi, os
 import cgitb; cgitb.enable()
 
@@ -9,26 +10,33 @@ try: # Windows needs stdio set for binary mode.
 except ImportError:
     pass
 
-form = cgi.FieldStorage()
+if os.environ.get('X_IS_UPLOADABLE') == 'true':
 
-# A nested FieldStorage instance holds the file
-fileitem = form['file']
+    form = cgi.FieldStorage()
 
-# Test if the file was uploaded
-if fileitem.filename:
+    # A nested FieldStorage instance holds the file
+    fileitem = form['file']
 
-    # strip leading path from file name
-    # to avoid directory traversal attacks
-    fn = os.path.basename(fileitem.filename)
-    open('upload/' + fn, 'wb').write(fileitem.file.read())
-    message = 'The file "' + fn + '" was uploaded successfully'
+    # Get folder to upload from environment variable
+    upload_dir = os.environ.get('X_UPLOAD_DIR')
+
+    # Test if the file was uploaded
+    if fileitem.filename:
+
+        # strip leading path from file name
+        # to avoid directory traversal attacks
+        fn = os.path.basename(fileitem.filename)
+        open(upload_dir + '/' + fn, 'wb').write(fileitem.file.read())
+        message = 'The file "' + fn + '" was uploaded successfully'
+
+    else:
+        message = 'No file was uploaded'
+
+    print("Content-Type: text/html\r\n\r\n", end = "")
+    print("<html><body><p>%s</p></body></html>" % message)
 
 else:
-    message = 'No file was uploaded'
+    print("Content-Type: text/html\r\n", end = "")
+    print("Status: 405\r\n\r\n", end = "")
 
-print ("""
-Content-Type: text/html\n
-<html><body>
-<p>%s</p>
-</body></html>
-""" % message)
+print(chr(26), end = '')
