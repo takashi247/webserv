@@ -454,8 +454,10 @@ void HttpResponse::DeleteRequestedFile() {
   }
 }
 
-// Temporary hash function to create ETag from last modified time
-// TODO: need to understand the logic
+// Hash function to create ETag from last modified time
+// Read a last modifed date of the requested file character by character
+// Convert the character into unsigned int and compute the sum of those numbers
+// while applying bit calculation to interim results
 
 void HttpResponse::SetEtag() {
   unsigned int result;
@@ -569,7 +571,7 @@ void HttpResponse::MakeBody200() {
     buffer << requested_file_.rdbuf();
     body_ = buffer.str();
     SetLastModifiedTime(requested_file_path_);
-    SetEtag();  // TODO: Check RFC
+    SetEtag();
   }
   body_len_ = body_.size();
 }
