@@ -39,6 +39,8 @@ void ConfigParser::Tokenize(const char *file_name) {
     line_count++;
     pos = 0;
 
+    if (line_buf[pos] == '#')
+      continue;
     while (pos < line_buf.size()) {
       switch (line_buf[pos]) {
         case ' ':
@@ -176,7 +178,7 @@ void ConfigParser::ParseLocationConfig(
   std::string item = tokens_[index_].second;
 
   if (item == "{" || item == "}" || item == ";") {
-    ParserUtils::MakeUnexpected("unexpected \"" + item + "\", expecting path",
+    ParserUtils::MakeUnexpected("unexpected \"" + item + "\", expecting path name",
                                 tokens_[index_].first);
   }
   lc.location_path_ = item;
