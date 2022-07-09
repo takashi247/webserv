@@ -103,8 +103,6 @@ std::string ServerConfig::UpdateUri(const std::string &uri) const {
   std::string path;
 
   const LocationConfig *lc = SelectLocationConfig(uri);
-  std::string root;
-  // nginx確認
   if (lc->rewrite_.empty()) {
     path = lc->root_ + uri;
   } else {

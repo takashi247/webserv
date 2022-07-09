@@ -37,7 +37,7 @@ void ConfigParser::Tokenize(const char *file_name) {
     std::replace(line_buf.begin(), line_buf.end(), '\t', ' ');
     std::replace(line_buf.begin(), line_buf.end(), '\r', ' ');
     line_count++;
-    pos = 0;
+    pos = line_buf.find_first_not_of(" ");
 
     if (line_buf[pos] == '#')
       continue;
