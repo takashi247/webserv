@@ -7,6 +7,8 @@
 #include <cstdlib>
 // it is like c because cstdint is not supported in c++98
 #include <stdint.h>
+#include <sstream>
+#include "webserv_exception.hpp"
 
 class ParserUtils
 {

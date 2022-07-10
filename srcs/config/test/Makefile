@@ -3,6 +3,7 @@ PARSE_SRCS :=	../config.cpp	\
 				../location_config.cpp	\
 				../parser_utils.cpp		\
 				../server_config.cpp	\
+				../../exception/webserv_exception.cpp	\
 				store.cpp 
 
 SELECT_SRCS :=	../config.cpp	\
@@ -20,7 +21,7 @@ UPDATE_SRCS :=	../config.cpp	\
 				update_uri_test.cpp 
 
 parse: $(PARSE_SRCS)
-	c++ -o parse $^
+	c++ -I../../exception -o parse $^
 
 select: $(SELECT_SRCS)
 	c++ -o select $^

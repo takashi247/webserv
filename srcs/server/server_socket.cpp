@@ -28,8 +28,7 @@ void ServerSocket::Init() { SetSocket(); }
 void ServerSocket::SetListenfd() {
   this->listenfd_ = socket(AF_INET, SOCK_STREAM, 0);
   if (this->listenfd_ == -1) {
-    std::cout << "socket() failed." << std::endl;
-    exit(1);
+    throw WebservException("socket() failed.");
   }
   SetNonBlocking(this->listenfd_);
 }
@@ -62,23 +61,22 @@ int ServerSocket::SetSocket() {
   int optval = 1;
   if (setsockopt(listenfd_, SOL_SOCKET, SO_REUSEADDR, &optval,
                  sizeof(optval)) == -1) {
-    std::cout << "setsockopt() failed." << std::endl;
     close(listenfd_);
-    return -1;
+    throw WebservException("setsockopt() failed.");
   }
 
   ServerSocket::SetSockaddrIn();
   if (bind(this->listenfd_, (struct sockaddr *)&this->serv_addr_,
            sizeof(this->serv_addr_)) == -1) {
-    std::cout << "bind() failed.(" << errno << ")" << std::endl;
+    std::ostringstream oss;
+    oss << "bind() failed.(" << errno << ")";
     close(this->listenfd_);
-    return -1;
+    throw WebservException(oss.str());
   }
 
   if (listen(this->listenfd_, SOMAXCONN) == -1) {
-    std::cout << "listen() failed." << std::endl;
     close(this->listenfd_);
-    return -1;
+    throw WebservException("listen() failed.");
   }
 
   return 0;

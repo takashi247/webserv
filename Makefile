@@ -20,7 +20,8 @@ SRCS	:= main.cpp \
 		config/config.cpp \
 		config/location_config.cpp \
 		config/parser_utils.cpp \
-		config/server_config.cpp
+		config/server_config.cpp \
+		exception/webserv_exception.cpp
 
 OBJS		:= $(addprefix $(OBJSDIR), $(SRCS:.cpp=.o))
 
@@ -28,7 +29,7 @@ DEPS		:= $(OBJS:.o=.d)
 
 SRCS		:= $(addprefix $(SRCSDIR), $(SRCS))
 
-INCLUDE		:= -I$(SRCSDIR)config/ -I$(SRCSDIR)response/ -I$(SRCSDIR)server/
+INCLUDE		:= -I$(SRCSDIR)config/ -I$(SRCSDIR)response/ -I$(SRCSDIR)server/ -I$(SRCSDIR)exception/
 
 RM			:= rm -rf
 

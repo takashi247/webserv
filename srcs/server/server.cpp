@@ -1,4 +1,5 @@
 #include "server.hpp"
+#include "webserv_exception.hpp"
 
 #include <sys/select.h>  //select
 #include <unistd.h>      //close
@@ -36,9 +37,12 @@ Server::Server() : config_("filename") {
   }
 }
 
-Server::Server(const char *conf) : config_(conf) {
+Server::Server(const char *conf) try : config_(conf) {
   sockets_.clear();
   clients_.clear();
+} catch (const WebservException &e) {
+  std::cerr << e.what() << std::endl;
+  std::exit(1);
 }
 
 void Server::CreateServerSockets() {
@@ -56,7 +60,12 @@ void Server::CreateServerSockets() {
     }
     if (multiple_flag) continue;
     sockets_.push_back(ServerSocket(it->port_, it->host_));
-    sockets_.back().Init();
+    try {
+      sockets_.back().Init();
+    } catch (const WebservException &e) {
+      std::cerr << e.what() << std::endl;
+      std::exit(EXIT_FAILURE);
+    }
     std::cout << "ポート " << it->port_ << " を監視します。\n";
   }
 }
