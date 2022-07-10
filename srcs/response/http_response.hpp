@@ -34,6 +34,7 @@ class HttpResponse {
 
   // Other functions
   std::string GetResponse() const;
+  std::string GetConnection() const;
   static std::map< std::string, std::string > CreateMimeTypeMap();
 
  private:
@@ -65,6 +66,8 @@ class HttpResponse {
   static const std::string kStatusDescRequestEntityTooLarge;
   static const std::string kStatusDescInternalServerError;
   static const std::string kStatusDescVersionNotSupported;
+  static const std::string kConnectionKeepAlive;
+  static const std::string kConnectionClose;
   static const std::map< std::string, std::string > kMimeTypeMap;
 
   // Constructor and assignment operators
@@ -176,6 +179,7 @@ class HttpResponse {
   std::string current_time_;
   std::string last_modified_;
   std::string file_type_;
+  std::string connection_;
 };
 
 #endif  // HTTP_RESPONSE_HPP_

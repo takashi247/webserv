@@ -16,6 +16,8 @@ const std::string HttpResponse::kStatusDescInternalServerError =
     "500 Internal Server Error";
 const std::string HttpResponse::kStatusDescVersionNotSupported =
     "505 HTTP Version Not Supported";
+const std::string HttpResponse::kConnectionKeepAlive = "keep-alive";
+const std::string HttpResponse::kConnectionClose = "close";
 const std::map< std::string, std::string > HttpResponse::kMimeTypeMap =
     HttpResponse::CreateMimeTypeMap();
 
@@ -324,6 +326,7 @@ void HttpResponse::MakeHeaderRedirection() {
   header_.push_back(oss_location.str());
   header_.push_back("Connection: keep-alive\r\n");
   header_.push_back("\r\n");
+  connection_ = kConnectionKeepAlive;
 }
 
 void HttpResponse::MakeErrorHeader() {
@@ -349,8 +352,10 @@ void HttpResponse::MakeErrorHeader() {
   if (status_code_ == kStatusCodeBadRequest ||
       status_code_ == kStatusCodeVersionNotSupported) {
     header_.push_back("Connection: close\r\n");
+    connection_ = kConnectionClose;
   } else {
     header_.push_back("Connection: keep-alive\r\n");
+    connection_ = kConnectionKeepAlive;
   }
   if (etag_header_.length() != 0) {
     header_.push_back(etag_header_);
@@ -366,6 +371,7 @@ void HttpResponse::MakeHeader204() {
   header_.push_back(date_header_);
   header_.push_back("Connection: keep-alive\r\n");
   header_.push_back("\r\n");
+  connection_ = kConnectionKeepAlive;
 }
 
 void HttpResponse::MakeHeader200() {
@@ -385,6 +391,7 @@ void HttpResponse::MakeHeader200() {
   header_.push_back(etag_header_);
   header_.push_back("Accept-Ranges: bytes\r\n");
   header_.push_back("\r\n");
+  connection_ = kConnectionKeepAlive;
 }
 
 void HttpResponse::CreateCgiHeader() {
@@ -396,6 +403,7 @@ void HttpResponse::CreateCgiHeader() {
   header_.insert(header_.begin(), "\r\n");
   header_.insert(header_.begin(), status_desc_);
   header_.insert(header_.begin(), "HTTP/1.1 ");
+  connection_ = kConnectionKeepAlive;
 }
 
 void HttpResponse::CreateCustomizedErrorPage(
@@ -993,6 +1001,8 @@ void HttpResponse::MakeResponse() {
 }
 
 std::string HttpResponse::GetResponse() const { return response_; }
+
+std::string HttpResponse::GetConnection() const { return connection_; }
 
 void HttpResponse::PrintErrorMessage(const std::string &msg) const {
   std::cerr << "Error: " << msg << std::endl;
