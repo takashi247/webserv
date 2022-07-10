@@ -118,6 +118,7 @@ class HttpResponse {
   std::string ExtractLocationPath(const std::string &header_value);
   std::string GetFieldValue(const std::string &header_field);
   bool CreateCgiBody(bool has_content_length);
+  void Make500Response();
 
   // Helper functions
   std::string ShortenRequestBody(const std::string &);
