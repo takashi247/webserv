@@ -20,7 +20,7 @@ class ParserUtils
                    std::string& str);
   static void ParseVector(const std::vector<std::pair<int, std::string> >& list,
                    std::vector<std::string>& str);
-  static void AtoSizeT(const char *s, const std::pair<int, std::string> &dir_title, size_t &num);
+  static void AtoSizeT(const char *s, const std::vector<std::pair<int, std::string> > &list, size_t &num);
 };
 
 #endif

@@ -39,8 +39,7 @@ void ConfigParser::Tokenize(const char *file_name) {
     line_count++;
     pos = line_buf.find_first_not_of(" ");
 
-    if (line_buf[pos] == '#')
-      continue;
+    if (line_buf[pos] == '#') continue;
     while (pos < line_buf.size()) {
       switch (line_buf[pos]) {
         case ' ':
@@ -130,8 +129,9 @@ void ConfigParser::SplitIntoList(
   }
   for (; item != ";"; ++index_, item = tokens_[index_].second) {
     if (item == "{" || item == "}") {
-      ParserUtils::MakeUnexpected("unexpected \"" + item + "\", expecting \";\"",
-                                  tokens_[index_].first);
+      ParserUtils::MakeUnexpected(
+          "unexpected \"" + item + "\", expecting \";\"",
+          tokens_[index_].first);
     }
     list.push_back(tokens_[index_]);
   }
@@ -161,8 +161,7 @@ void ConfigParser::ParseServerConfig(
       } else if (item == "client_max_body_size") {
         ParserUtils::ParseInt(list, sc.client_max_body_size_);
       } else {
-        ParserUtils::MakeUnexpected(
-            "unknown directive " + item, i);
+        ParserUtils::MakeUnexpected("unknown directive " + item, i);
       }
     }
     list.clear();
@@ -178,10 +177,11 @@ void ConfigParser::ParseLocationConfig(
   std::string item = tokens_[index_].second;
 
   if (item == "{" || item == "}" || item == ";") {
-    ParserUtils::MakeUnexpected("unexpected \"" + item + "\", expecting path name",
-                                tokens_[index_].first);
+    ParserUtils::MakeUnexpected(
+        "unexpected \"" + item + "\", expecting path name",
+        tokens_[index_].first);
   }
-  lc.location_path_ = item;
+  lc.location_path_ = (item[0] == '/') ? item : "/" + item;
 
   ++index_;
   item = tokens_[index_].second;
@@ -199,6 +199,9 @@ void ConfigParser::ParseLocationConfig(
       ParserUtils::ParseVector(list, lc.vec_accepted_method_);
     } else if (item == "rewrite") {
       ParserUtils::ParseString(list, lc.rewrite_);
+      if (lc.rewrite_[0] != '/' && lc.rewrite_.find("http://") == std::string::npos)
+        ParserUtils::MakeUnexpected("redirect to non-URL in \"rewrite\" directive",
+          tokens_[index_ - list.size() + 1].first);
     } else if (item == "root") {
       ParserUtils::ParseString(list, lc.root_);
     } else if (item == "autoindex") {

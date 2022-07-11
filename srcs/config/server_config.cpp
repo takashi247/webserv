@@ -40,13 +40,13 @@ void ServerConfig::ParseListen(
   delim_pos = set_value.find(':');
   if (delim_pos == std::string::npos) {
     if (set_value.find('.') == std::string::npos) {
-      ParserUtils::AtoSizeT(set_value.c_str(), list[0], port_);
+      ParserUtils::AtoSizeT(set_value.c_str(), list, port_);
     } else {
       host_ = set_value;
     }
   } else {
     host_ = set_value.substr(0, delim_pos);
-    ParserUtils::AtoSizeT(set_value.substr(delim_pos + 1).c_str(), list[0],
+    ParserUtils::AtoSizeT(set_value.substr(delim_pos + 1).c_str(), list,
                           port_);
   }
 }
@@ -65,7 +65,7 @@ void ServerConfig::ParseErrorPagePath(
   }
   ++it;
   while (it != list.end()) {
-    ParserUtils::AtoSizeT(it->second.c_str(), list[0], i);
+    ParserUtils::AtoSizeT(it->second.c_str(), list, i);
     if (i > 505 || i < 100) {
       ParserUtils::MakeUnexpected(
           "invalid http status specified in \"error_page_path\" directive",
