@@ -154,32 +154,32 @@ class TestRequest(unittest.TestCase):
     def test_rewrite_1(self):
         got = self.send_get_request("http://localhost:8083/nosuchfile")
         self.assertEqual(got.status_code, HTTPStatus.FOUND)
-        self.assertEqual(got.headers["Location"], "http://localhost:8080//nosuchfile")
+        self.assertEqual(got.headers["Location"], "http://localhost:8083/new1/nosuchfile")
 
     def test_rewrite_2(self):
         got = self.send_get_request("http://localhost:8083")
         self.assertEqual(got.status_code, HTTPStatus.FOUND)
-        self.assertEqual(got.headers["Location"], "http://localhost:8080//")
+        self.assertEqual(got.headers["Location"], "http://localhost:8083/new1/")
 
     def test_rewrite_3(self):
         got = self.send_get_request("http://localhost:8083/rewrite1/")
         self.assertEqual(got.status_code, HTTPStatus.FOUND)
-        self.assertEqual(got.headers["Location"], "http://localhost:8081//rewrite1/")
+        self.assertEqual(got.headers["Location"], "http://localhost:8083/new2/")
 
     def test_rewrite_4(self):
         got = self.send_get_request("http://localhost:8083/rewrite1/nosuchfile")
         self.assertEqual(got.status_code, HTTPStatus.FOUND)
-        self.assertEqual(got.headers["Location"], "http://localhost:8081//rewrite1/nosuchfile")
+        self.assertEqual(got.headers["Location"], "http://localhost:8083/new2/nosuchfile")
 
     def test_rewrite_5(self):
         got = self.send_get_request("http://localhost:8083/rewrite2/")
         self.assertEqual(got.status_code, HTTPStatus.FOUND)
-        self.assertEqual(got.headers["Location"], "http://localhost:8082//rewrite2/")
+        self.assertEqual(got.headers["Location"], "http://localhost:8082//")
 
     def test_rewrite_6(self):
         got = self.send_get_request("http://localhost:8083/rewrite2/nosuchfile")
         self.assertEqual(got.status_code, HTTPStatus.FOUND)
-        self.assertEqual(got.headers["Location"], "http://localhost:8082//rewrite2/nosuchfile")
+        self.assertEqual(got.headers["Location"], "http://localhost:8082//nosuchfile")
 
     def test_error_page(self):
         got = self.send_get_request("http://localhost:8080/nosuchfile")
@@ -198,7 +198,7 @@ class TestRequest(unittest.TestCase):
     # expect to ~~ not allowd ~~
     def test_post_request_to_normal_file(self):
         got = self.send_post_request("http://localhost:8080/1.html")
-        self.assertEqual(got.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
+        self.assertEqual(got.status_code, HTTPStatus.OK)
 
     def test_post_request_to_cgi_file(self):
         self.skip_test_if_not_suppoeted("nginx")
