@@ -1,11 +1,13 @@
 #include "parser_utils.hpp"
 
 void ParserUtils::MakeUnexpected(const std::string &msg, const int &pos) {
+  std::ostringstream oss;
+
   if (pos > 0) {
-    std::cerr << "line " << pos << ": ";
+    oss << "line " << pos << ": ";
   }
-  std::cerr << msg << std::endl;
-  std::exit(1);
+  oss << msg;
+  throw WebservException(oss.str());
 }
 
 void ParserUtils::ParseInt(
