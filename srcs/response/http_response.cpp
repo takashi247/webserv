@@ -350,7 +350,8 @@ void HttpResponse::MakeErrorHeader() {
     header_.push_back(oss_location.str());
   }
   if (status_code_ == kStatusCodeBadRequest ||
-      status_code_ == kStatusCodeVersionNotSupported) {
+      status_code_ == kStatusCodeVersionNotSupported ||
+      status_code_ == kStatusCodeInternalServerError) {
     header_.push_back("Connection: close\r\n");
     connection_ = kConnectionClose;
   } else {
@@ -457,8 +458,7 @@ void HttpResponse::MakeErrorBody() {
 
 void HttpResponse::DeleteRequestedFile() {
   if (remove(requested_file_path_.c_str()) != 0) {
-    PrintErrorMessage("remove");
-    exit(1);
+    Make500Response();
   }
 }
 
@@ -499,8 +499,7 @@ std::vector< std::string > HttpResponse::GetFileNames() {
     }
     closedir(dir);
   } else {
-    PrintErrorMessage("opendir");
-    exit(EXIT_FAILURE);  // TODO: Confirm if we can use exit
+    status_code_ = kStatusCodeInternalServerError;
   }
   std::sort(dir_names.begin(), dir_names.end());
   std::sort(file_names.begin(), file_names.end());
@@ -563,10 +562,14 @@ void HttpResponse::CreateAutoindexPage() {
   body_ += original_uri_;
   body_ += "</h1><hr><pre><a href=\"../\">../</a>\n";
   std::vector< std::string > vec_file_names = GetFileNames();
-  body_ += CreateFileList(vec_file_names);
-  body_ +=
-      "</pre><hr></body>\n"
-      "</html>\n";
+  if (status_code_ == kStatusCodeOK) {
+    body_ += CreateFileList(vec_file_names);
+    body_ +=
+        "</pre><hr></body>\n"
+        "</html>\n";
+  } else {
+    Make500Response();
+  }
 }
 
 void HttpResponse::MakeBodyRedirection() { CreateDefaultErrorPage(); }
@@ -864,6 +867,13 @@ bool HttpResponse::CreateCgiBody(bool has_content_length) {
   return is_body_completed;
 }
 
+void HttpResponse::Make500Response() {
+  status_code_ = kStatusCodeInternalServerError;
+  header_.clear();
+  body_.clear();
+  MakeResponse();
+}
+
 void HttpResponse::MakeCgiResponse() {
   pid_t pid;
   char *argv[2] = {const_cast< char * >(requested_file_path_.c_str()), NULL};
@@ -874,57 +884,59 @@ void HttpResponse::MakeCgiResponse() {
   const int WRITE = 1;
 
   if ((cgi_environ = CreateCgiEnviron()) == NULL) {
-    PrintErrorMessage("CreateCgiEnviron");
-    exit(1);
+    return Make500Response();
   }
   if (pipe(pipe_child2parent) < 0) {
-    PrintErrorMessage("pipe");
     DeleteCgiEnviron(cgi_environ);
-    exit(1);
+    return Make500Response();
   }
   if (pipe(pipe_parent2child) < 0) {
-    PrintErrorMessage("pipe");
     close(pipe_child2parent[READ]);
     close(pipe_child2parent[WRITE]);
     DeleteCgiEnviron(cgi_environ);
-    exit(1);
+    return Make500Response();
   }
   if ((pid = fork()) < 0) {
-    PrintErrorMessage("fork");
     close(pipe_child2parent[READ]);
     close(pipe_child2parent[WRITE]);
     close(pipe_parent2child[READ]);
     close(pipe_parent2child[WRITE]);
     DeleteCgiEnviron(cgi_environ);
-    exit(1);
+    return Make500Response();
   }
   if (pid == 0) {
-    dup2(pipe_parent2child[READ], STDIN_FILENO);
-    dup2(pipe_child2parent[WRITE], STDOUT_FILENO);
-    close(pipe_parent2child[WRITE]);
-    close(pipe_child2parent[READ]);
-    if (execve(argv[0], argv, cgi_environ) == -1) {
-      PrintErrorMessage("execve failed");
+    if (dup2(pipe_parent2child[READ], STDIN_FILENO) == -1 ||
+        dup2(pipe_child2parent[WRITE], STDOUT_FILENO) == -1 ||
+        close(pipe_parent2child[WRITE]) == -1 ||
+        close(pipe_child2parent[READ]) == -1 ||
+        execve(argv[0], argv, cgi_environ) == -1) {
+      write(pipe_child2parent[WRITE], "Status: 500\r\n\r\n", 15);
       close(pipe_parent2child[READ]);
       close(pipe_child2parent[WRITE]);
       DeleteCgiEnviron(cgi_environ);
-      exit(1);
+      exit(EXIT_FAILURE);
     }
   } else {
-    write(pipe_parent2child[WRITE], http_request_.body_.c_str(),
-          http_request_.body_.length());
-    if (waitpid(pid, NULL, 0) != pid) {
+    DeleteCgiEnviron(cgi_environ);
+    if (write(pipe_parent2child[WRITE], http_request_.body_.c_str(),
+              http_request_.body_.length()) == -1 ||
+        waitpid(pid, NULL, 0) != pid) {
       close(pipe_child2parent[WRITE]);
       close(pipe_parent2child[READ]);
-      DeleteCgiEnviron(cgi_environ);
+      return Make500Response();
     }
     while (cgi_status_ != kCloseConnection) {
       char buf[kCgiBufferSize];
       ssize_t read_size = 0;
       memset(buf, 0, sizeof(buf));
       read_size = read(pipe_child2parent[READ], buf, kCgiBufferSize);
-      std::string buf_string(buf, read_size);
-      body_.append(buf_string);
+      if (read_size == -1) {
+        cgi_status_ = kCloseConnection;
+        status_code_ = kStatusCodeInternalServerError;
+      } else {
+        std::string buf_string(buf, read_size);
+        body_.append(buf_string);
+      }
       if (cgi_status_ == kReadHeader) {
         size_t header_end = body_.find("\r\n\r\n");
         if (header_end != std::string::npos) {
@@ -948,8 +960,10 @@ void HttpResponse::MakeCgiResponse() {
         cgi_status_ = kCloseConnection;
       }
     }
-    close(pipe_child2parent[WRITE]);
-    close(pipe_parent2child[READ]);
+    if (close(pipe_child2parent[WRITE]) == -1 ||
+        close(pipe_parent2child[READ]) == -1) {
+      return Make500Response();
+    }
     if (status_code_ != kStatusCodeOK || is_local_redirection_) {
       header_.clear();
       body_.clear();
@@ -971,14 +985,16 @@ void HttpResponse::MakeResponse() {
     case kStatusCodeOK:
       if (content_type_ != file_type_) {
         MakeBody200();
-        MakeHeader200();
+        if (status_code_ == kStatusCodeOK) {
+          MakeHeader200();
+        }
       } else {
         MakeCgiResponse();
       }
       break;
     case kStatusCodeNoContent:
-      DeleteRequestedFile();
       MakeHeader204();
+      DeleteRequestedFile();
       break;
     case kStatusCodeMovedPermanently:
       MakeBodyRedirection();
