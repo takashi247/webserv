@@ -314,14 +314,7 @@ void HttpResponse::MakeHeaderRedirection() {
         requested_file_path_.substr(location_config_->root_.length());
     oss_location << requested_file_path_short_ << "\r\n";
   } else {
-    if (requested_file_path_.find("http://") != 0) {
-      std::map< std::string, std::string >::const_iterator it_host =
-          http_request_.header_fields_.find("Host");
-      oss_location << "Location: http://" << it_host->second;
-    } else {
-      oss_location << "Location: ";
-    }
-    oss_location << requested_file_path_ << "\r\n";
+    oss_location << "Location: " << requested_file_path_ << "\r\n";
   }
   header_.push_back("HTTP/1.1 ");
   header_.push_back(status_desc_);
