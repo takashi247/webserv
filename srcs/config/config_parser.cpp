@@ -148,7 +148,7 @@ void ConfigParser::ParseServerConfig(
        ++index_, item = tokens_[index_].second) {
     if (item == "location") {
       index_++;
-      ParseLocationConfig(sc.vec_location_config_);
+      ParseLocationConfig(sc.vec_location_config_, sc.default_location_config_);
     } else {
       i = tokens_[index_].first;
       SplitIntoList(list);
@@ -160,11 +160,36 @@ void ConfigParser::ParseServerConfig(
         sc.ParseErrorPagePath(list);
       } else if (item == "client_max_body_size") {
         ParserUtils::ParseInt(list, sc.client_max_body_size_);
+      } else if (item == "http_method") {
+        ParserUtils::ParseVector(
+            list, sc.default_location_config_.vec_accepted_method_);
+      } else if (item == "rewrite") {
+        ParserUtils::ParseString(list, sc.default_location_config_.rewrite_);
+        if (sc.default_location_config_.rewrite_[0] != '/' &&
+            sc.default_location_config_.rewrite_.find("http://") ==
+                std::string::npos)
+          ParserUtils::MakeUnexpected(
+              "redirect to non-URL in \"rewrite\" directive",
+              tokens_[index_ - list.size() + 1].first);
+      } else if (item == "root") {
+        ParserUtils::ParseString(list, sc.default_location_config_.root_);
+      } else if (item == "autoindex") {
+        ParserUtils::ParseBool(list, sc.default_location_config_.autoindex_);
+      } else if (item == "index") {
+        ParserUtils::ParseVector(list, sc.default_location_config_.vec_index_);
+      } else if (item == "add_cgi_handler") {
+        ParserUtils::ParseVector(
+            list, sc.default_location_config_.vec_cgi_file_extension_);
+      } else if (item == "is_uploadable") {
+        ParserUtils::ParseBool(list,
+                               sc.default_location_config_.is_uploadable_);
+      } else if (item == "upload_store") {
+        ParserUtils::ParseString(list, sc.default_location_config_.upload_dir_);
       } else {
         ParserUtils::MakeUnexpected("unknown directive " + item, i);
       }
+      list.clear();
     }
-    list.clear();
   }
   // for debug, delete comment out
   // sc.PrintVal();
@@ -172,8 +197,8 @@ void ConfigParser::ParseServerConfig(
 }
 
 void ConfigParser::ParseLocationConfig(
-    std::vector<LocationConfig> &vec_location_config) {
-  LocationConfig lc;
+    std::vector<LocationConfig> &vec_location_config, const LocationConfig &default_lc) {
+  LocationConfig lc(default_lc);
   std::string item = tokens_[index_].second;
 
   if (item == "{" || item == "}" || item == ";") {
@@ -199,9 +224,11 @@ void ConfigParser::ParseLocationConfig(
       ParserUtils::ParseVector(list, lc.vec_accepted_method_);
     } else if (item == "rewrite") {
       ParserUtils::ParseString(list, lc.rewrite_);
-      if (lc.rewrite_[0] != '/' && lc.rewrite_.find("http://") == std::string::npos)
-        ParserUtils::MakeUnexpected("redirect to non-URL in \"rewrite\" directive",
-          tokens_[index_ - list.size() + 1].first);
+      if (lc.rewrite_[0] != '/' &&
+          lc.rewrite_.find("http://") == std::string::npos)
+        ParserUtils::MakeUnexpected(
+            "redirect to non-URL in \"rewrite\" directive",
+            tokens_[index_ - list.size() + 1].first);
     } else if (item == "root") {
       ParserUtils::ParseString(list, lc.root_);
     } else if (item == "autoindex") {
