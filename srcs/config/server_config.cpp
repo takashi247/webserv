@@ -24,6 +24,7 @@ ServerConfig &ServerConfig::operator=(ServerConfig const &rhs) {
     map_error_page_path_ = rhs.map_error_page_path_;
     client_max_body_size_ = rhs.client_max_body_size_;
     vec_location_config_ = rhs.vec_location_config_;
+    default_location_config_ = rhs.default_location_config_;
   }
   return (*this);
 }
@@ -116,8 +117,11 @@ std::string ServerConfig::UpdateUri(const std::string &uri) const {
   if (*(path.end() - 1) == '/') {
     for (std::vector< std::string >::const_iterator it = lc->vec_index_.begin();
          it != lc->vec_index_.end(); ++it) {
+          std::cout << *it << std::endl;
       if (stat((path + *it).c_str(), &buffer) == 0) {
         return (path + *it);
+      } else {
+        std::cout << path + *it << std::endl;
       }
     }
   }
