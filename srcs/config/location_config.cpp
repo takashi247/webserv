@@ -7,6 +7,7 @@ void LocationConfig::Init() {
   autoindex_ = false;
   vec_index_.push_back("index.html");
   is_uploadable_ = false;
+  client_max_body_size_ = 1024;
 }
 
 LocationConfig::LocationConfig() { Init(); }
@@ -26,8 +27,38 @@ LocationConfig &LocationConfig::operator=(const LocationConfig &rhs) {
     vec_cgi_file_extension_ = rhs.vec_cgi_file_extension_;
     is_uploadable_ = rhs.is_uploadable_;
     upload_dir_ = rhs.upload_dir_;
+    map_error_page_path_ = rhs.map_error_page_path_;
+    client_max_body_size_ = rhs.client_max_body_size_;
   }
   return *this;
+}
+
+void LocationConfig::ParseErrorPagePath(
+    const std::vector< std::pair< int, std::string > > &list) {
+  std::pair< int, std::string > elem;
+  std::vector< std::pair< int, std::string > >::const_iterator it =
+      list.begin();
+  size_t i;
+
+  if (list.size() < 2 || list.size() % 2 != 1) {
+    ParserUtils::MakeUnexpected(
+        "invalid number of args in \"error_page_path\" directive",
+        list[0].first);
+  }
+  ++it;
+  while (it != list.end()) {
+    ParserUtils::AtoSizeT(it->second.c_str(), list, i);
+    if (i > 505 || i < 100) {
+      ParserUtils::MakeUnexpected(
+          "invalid http status specified in \"error_page_path\" directive",
+          list[0].first);
+    }
+    elem.first = i;
+    it++;
+    elem.second = it->second;
+    it++;
+    map_error_page_path_.insert(elem);
+  }
 }
 
 void LocationConfig::PrintVal() {
@@ -63,4 +94,13 @@ void LocationConfig::PrintVal() {
   std::cout << "is_uploadable " << is_uploadable_ << std::endl;
 
   std::cout << "upload_store  " << upload_dir_ << std::endl;
+
+  std::cout << "error_page ";
+  for (std::map< int, std::string >::iterator it = map_error_page_path_.begin();
+       it != map_error_page_path_.end(); ++it) {
+    std::cout << it->first << " " << it->second;
+  }
+  std::cout << std::endl;
+
+  std::cout << "client_max_body_size " << client_max_body_size_ << std::endl;
 }

@@ -6,6 +6,8 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
+#include <map>
+#include "parser_utils.hpp"
 
 class LocationConfig {
  public:
@@ -14,6 +16,7 @@ class LocationConfig {
   LocationConfig(const LocationConfig &rhs);
   LocationConfig &operator=(const LocationConfig &rhs);
 
+  void ParseErrorPagePath(const std::vector< std::pair< int, std::string > > &list);
   void PrintVal();
 
   std::string location_path_;
@@ -25,6 +28,8 @@ class LocationConfig {
   std::vector<std::string> vec_cgi_file_extension_;
   bool is_uploadable_;
   std::string upload_dir_;
+  std::map<int, std::string> map_error_page_path_;
+  size_t client_max_body_size_;
 
  private:
   void Init();

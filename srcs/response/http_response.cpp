@@ -448,8 +448,8 @@ void HttpResponse::CreateDefaultErrorPage() {
 
 void HttpResponse::MakeErrorBody() {
   std::map< int, std::string >::const_iterator it =
-      server_config_.map_error_page_path_.find(status_code_);
-  if (it != server_config_.map_error_page_path_.end()) {
+      location_config_->map_error_page_path_.find(status_code_);
+  if (it != location_config_->map_error_page_path_.end()) {
     CreateCustomizedErrorPage(it->second);
   } else {
     CreateDefaultErrorPage();
@@ -705,7 +705,7 @@ void HttpResponse::SetStatusCode() {
     status_code_ = kStatusCodeForbidden;
   } else if (http_request_.method_ == "DELETE") {
     status_code_ = kStatusCodeNoContent;
-  } else if (server_config_.client_max_body_size_ <
+  } else if (location_config_->client_max_body_size_ <
              http_request_.content_length_) {
     status_code_ = kStatusCodeRequestEntityTooLarge;
   }

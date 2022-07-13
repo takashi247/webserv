@@ -2,7 +2,6 @@
 
 void ServerConfig::Init() {
   port_ = 80;
-  client_max_body_size_ = 1024;
 }
 
 ServerConfig::ServerConfig() { Init(); }
@@ -21,8 +20,6 @@ ServerConfig &ServerConfig::operator=(ServerConfig const &rhs) {
     port_ = rhs.port_;
     host_ = rhs.host_;
     vec_server_names_ = rhs.vec_server_names_;
-    map_error_page_path_ = rhs.map_error_page_path_;
-    client_max_body_size_ = rhs.client_max_body_size_;
     vec_location_config_ = rhs.vec_location_config_;
     default_location_config_ = rhs.default_location_config_;
   }
@@ -52,33 +49,6 @@ void ServerConfig::ParseListen(
   }
 }
 
-void ServerConfig::ParseErrorPagePath(
-    const std::vector< std::pair< int, std::string > > &list) {
-  std::pair< int, std::string > elem;
-  std::vector< std::pair< int, std::string > >::const_iterator it =
-      list.begin();
-  size_t i;
-
-  if (list.size() < 2 || list.size() % 2 != 1) {
-    ParserUtils::MakeUnexpected(
-        "invalid number of args in \"error_page_path\" directive",
-        list[0].first);
-  }
-  ++it;
-  while (it != list.end()) {
-    ParserUtils::AtoSizeT(it->second.c_str(), list, i);
-    if (i > 505 || i < 100) {
-      ParserUtils::MakeUnexpected(
-          "invalid http status specified in \"error_page_path\" directive",
-          list[0].first);
-    }
-    elem.first = i;
-    it++;
-    elem.second = it->second;
-    it++;
-    map_error_page_path_.insert(elem);
-  }
-}
 
 // return locationConfig whose location_path_'s length is longest.
 const LocationConfig *ServerConfig::SelectLocationConfig(
@@ -138,15 +108,6 @@ void ServerConfig::PrintVal() {
     std::cout << *it << " ";
   }
   std::cout << std::endl;
-
-  std::cout << "error_page ";
-  for (std::map< int, std::string >::iterator it = map_error_page_path_.begin();
-       it != map_error_page_path_.end(); ++it) {
-    std::cout << it->first << " " << it->second;
-  }
-  std::cout << std::endl;
-
-  std::cout << "client_max_body_size " << client_max_body_size_ << std::endl;
 
   for (std::vector< LocationConfig >::iterator it =
            vec_location_config_.begin();

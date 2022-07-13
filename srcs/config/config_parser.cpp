@@ -157,9 +157,10 @@ void ConfigParser::ParseServerConfig(
       } else if (item == "server_name") {
         ParserUtils::ParseVector(list, sc.vec_server_names_);
       } else if (item == "error_page") {
-        sc.ParseErrorPagePath(list);
+        sc.default_location_config_.ParseErrorPagePath(list);
       } else if (item == "client_max_body_size") {
-        ParserUtils::ParseInt(list, sc.client_max_body_size_);
+        ParserUtils::ParseInt(
+            list, sc.default_location_config_.client_max_body_size_);
       } else if (item == "http_method") {
         ParserUtils::ParseVector(
             list, sc.default_location_config_.vec_accepted_method_);
@@ -186,7 +187,7 @@ void ConfigParser::ParseServerConfig(
       } else if (item == "upload_store") {
         ParserUtils::ParseString(list, sc.default_location_config_.upload_dir_);
       } else {
-        ParserUtils::MakeUnexpected("unknown directive " + item, i);
+        ParserUtils::MakeUnexpected("unknown directive \"" + item + "\"", i);
       }
       list.clear();
     }
@@ -197,7 +198,8 @@ void ConfigParser::ParseServerConfig(
 }
 
 void ConfigParser::ParseLocationConfig(
-    std::vector<LocationConfig> &vec_location_config, const LocationConfig &default_lc) {
+    std::vector<LocationConfig> &vec_location_config,
+    const LocationConfig &default_lc) {
   LocationConfig lc(default_lc);
   std::string item = tokens_[index_].second;
 
@@ -241,9 +243,13 @@ void ConfigParser::ParseLocationConfig(
       ParserUtils::ParseBool(list, lc.is_uploadable_);
     } else if (item == "upload_store") {
       ParserUtils::ParseString(list, lc.upload_dir_);
+    } else if (item == "error_page") {
+      lc.ParseErrorPagePath(list);
+    } else if (item == "client_max_body_size") {
+      ParserUtils::ParseInt(list, lc.client_max_body_size_);
     } else {
       ParserUtils::MakeUnexpected(
-          "unknown directive " + tokens_[index_ - list.size()].second,
+          "unknown directive \"" + tokens_[index_ - list.size()].second + "\"",
           tokens_[index_ - list.size()].first);
     }
     list.clear();

@@ -27,13 +27,6 @@ int main(int ac, char **av) {
       assert(sc.port_, (size_t)80, "port");
       assert(sc.vec_server_names_.size(), (size_t)1, "size of server_name");
       assert(sc.vec_server_names_[0], std::string("localhost"), "server_name");
-      assert(sc.client_max_body_size_, (size_t)10240, "client_max_body_size");
-      assert(sc.map_error_page_path_.size(), (size_t)2,
-             "size of error_page_path");
-      assert(sc.map_error_page_path_[404], std::string("/error404.html"),
-             "error_page_path");
-      assert(sc.map_error_page_path_[400], std::string("/error400.html"),
-             "error_page_path");
 
       LocationConfig lc = sc.vec_location_config_[0];
       assert(lc.vec_accepted_method_.size(), (size_t)1, "size of http_method");
@@ -53,6 +46,13 @@ int main(int ac, char **av) {
              "add_cgi_handler3");
       assert(lc.is_uploadable_, true, "is_uploadable");
       assert(lc.upload_dir_, std::string("/img"), "upload_store");
+      assert(lc.client_max_body_size_, (size_t)10240, "client_max_body_size");
+      assert(lc.map_error_page_path_.size(), (size_t)2,
+             "size of error_page_path");
+      assert(lc.map_error_page_path_[404], std::string("/error404.html"),
+             "error_page_path");
+      assert(lc.map_error_page_path_[400], std::string("/error400.html"),
+             "error_page_path");
 
       std::cout << "test all items passed :)" << std::endl;
     }
@@ -63,7 +63,6 @@ int main(int ac, char **av) {
       assert(sc.port_, (size_t)88, "port");
       assert(sc.vec_server_names_.size(), (size_t)1, "size of server_name");
       assert(sc.vec_server_names_[0], std::string("localhost"), "server_name");
-      assert(sc.client_max_body_size_, (size_t)1024, "client_max_body_size");
 
       LocationConfig lc = sc.vec_location_config_[0];
       assert(lc.vec_accepted_method_.size(), (size_t)3, "size of http_method");
@@ -77,6 +76,7 @@ int main(int ac, char **av) {
              "size of add_cgi_handler");
       assert(lc.is_uploadable_, false, "is_uploadable");
       assert(lc.upload_dir_, std::string(""), "upload_store");
+      assert(lc.client_max_body_size_, (size_t)1024, "client_max_body_size");
 
       lc = sc.vec_location_config_[1];
       assert(lc.vec_accepted_method_.size(), (size_t)3, "size of http_method");
@@ -100,7 +100,7 @@ int main(int ac, char **av) {
       assert(sc.host_, std::string(""), "host");
       assert(sc.port_, (size_t)80, "port");
       assert(sc.vec_server_names_.size(), (size_t)0, "size of server_name");
-      assert(sc.client_max_body_size_, (size_t)1024, "client_max_body_size");
+      assert(sc.default_location_config_.client_max_body_size_, (size_t)1024, "client_max_body_size");
 
       std::cout << "test no location passed :)" << std::endl;
     }
