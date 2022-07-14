@@ -19,10 +19,7 @@ static ssize_t ReceiveMessage(int fd, std::string &recv_str) {
   char buf[kReadBufferSize];
   memset(buf, 0, sizeof(buf));
   read_size = recv(fd, buf, sizeof(buf) - 1, 0);
-  if (read_size == -1) {
-    std::cout << "recv() failed!!!" << std::endl;
-    std::cout << "ERROR: " << errno << std::endl;
-  } else if (read_size > 0) {
+  if (0 < read_size) {
     std::string buf_string(buf, read_size);
     recv_str.append(buf_string);
   }
@@ -196,8 +193,9 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
         parent_->host_, parent_->port_, request_.host_name_);
     HttpResponse response(request_, *sc, info_);
     server_response_ = response.GetResponse();
-    // TODO:HttpRequestでBadRequestになった場合、sendしてからCloseするのに取得
-    // request_.is_bad_request_ = response.GetBadRequest();
+    if (response.GetConnection() == "close") {
+      request_.is_bad_request_ = true;
+    }
     ChangeStatus(ClientSocket::WAIT_SEND);
   }
   if (status_ == ClientSocket::WAIT_SEND) {

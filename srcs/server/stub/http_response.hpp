@@ -20,7 +20,7 @@ class HttpResponse {
       : request_(http_request), sc_(server_config), info_(info) {}
   ~HttpResponse() {}
 
-  std::string GetResponse() {
+  std::string GetResponse() const {
     std::string server_response;
     std::vector< std::string > header;
     header.push_back("HTTP/1.1 200 OK\r\n");
@@ -35,6 +35,7 @@ class HttpResponse {
     }
     return server_response;
   }
+  std::string GetConnection() const { return "keep-alive"; }
 };
 
 #endif
