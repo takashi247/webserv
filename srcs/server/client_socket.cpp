@@ -45,8 +45,33 @@ static int GetChunkSize(std::string::const_iterator *it) {
   return size;
 }
 
-static int ReceiveChunkedMessage(int fd, std::string &recv_msg,
-                                 size_t start_pos) {
+static int ReceiveMessageBody(int fd, std::string &recv_msg,
+                              size_t content_length, std::string &body) {
+  size_t header_end_pos = recv_msg.find("\r\n\r\n");
+  size_t body_start_pos = header_end_pos + HttpRequestParser::kSeparatorSize;
+  ssize_t remain_length = content_length - (recv_msg.length() - body_start_pos);
+  ssize_t read_size = 0;
+  if (remain_length) {
+    if (-1 == (read_size = ReceiveMessage(fd, recv_msg))) {
+      return -1;
+    }
+    remain_length -= read_size;
+  }
+  if (remain_length < 0) {
+    std::cout << "Read Error over Content-Length\n";
+    return -1;
+  } else if (remain_length == 0) {
+    body.assign(recv_msg.begin() + body_start_pos, recv_msg.end());
+    return 0;
+  }
+  return remain_length;
+}
+
+static int ReceiveChunkedBody(int fd, std::string &recv_msg,
+                              std::string &body) {
+  std::cout << "Read Chunked Body\n";
+  size_t header_end_pos = recv_msg.find("\r\n\r\n");
+  size_t start_pos = header_end_pos + HttpRequestParser::kSeparatorSize;
   // body読み込み済み\r\nがあるかチェック
   if (std::string::npos == recv_msg.find("\r\n", start_pos)) {
     std::cout << "ReceiveMsg.Chunk!!!\t";
@@ -84,7 +109,7 @@ ClientSocket::ClientSocket(int fd, const ServerSocket *parent,
   info_.hostname_.assign(peer_host->h_name);
   info_.ipaddr_.assign(inet_ntoa(sin.sin_addr));
   info_.port_ = ntohs(sin.sin_port);
-
+  Init();
   std::cout << "接続: " << info_.hostname_ << "(" << info_.ipaddr_ << ")ポート "
             << info_.port_ << " ディスクリプタ " << fd << " 番\n";
 }
@@ -128,32 +153,18 @@ int ClientSocket::ReceiveHeader() {
 }
 
 int ClientSocket::ReceiveBody() {
-  size_t header_end_pos = recv_str_.find("\r\n\r\n");
-  size_t body_start_pos = header_end_pos + HttpRequestParser::kSeparatorSize;
-  if (request_.is_chunked_) {
-    std::cout << "Read Chunked Message\n";
-    if (-1 == ReceiveChunkedMessage(fd_, recv_str_, body_start_pos)) {
-      return 1;
-    }
-  } else if (request_.content_length_ != 0) {
-    ssize_t remain_length =
-        request_.content_length_ - (recv_str_.length() - body_start_pos);
-    ssize_t read_size = 0;
-    // TODO
-    // telnetからのPOSTなど、bodyが断片的にくる場合は分割して受け取れるようにしないと
-    while (remain_length) {
-      if (-1 == (read_size = ReceiveMessage(fd_, recv_str_))) {
-        return 1;
-      }
-      if (remain_length < read_size) {
-        std::cout << "Read Error over Content-Length\n";
-        return 1;
-      }
-      remain_length -= read_size;
-    }
-    request_.body_.assign(recv_str_.begin() + body_start_pos, recv_str_.end());
+  ssize_t remain_len = 0;
+  if (request_.content_length_ != 0) {
+    remain_len = ReceiveMessageBody(fd_, recv_str_, request_.content_length_,
+                                    request_.body_);
+  } else if (request_.is_chunked_) {
+    remain_len = ReceiveChunkedBody(fd_, recv_str_, request_.body_);
   }
-  ChangeStatus(ClientSocket::CREATE_RESPONSE);
+  if (remain_len < 0) {
+    return 1;  // Read Error で切断
+  } else if (remain_len == 0) {
+    ChangeStatus(ClientSocket::CREATE_RESPONSE);
+  }
   return 0;
 }
 
@@ -177,7 +188,9 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     std::cout << "***** receive message *****\n";
     std::cout << recv_str_ << std::endl;
     std::cout << "***** receive message finished *****\n";
-    if ((request_.content_length_ != 0) || (request_.is_chunked_)) {
+    if (request_.content_length_ != 0) {
+      ChangeStatus(ClientSocket::WAIT_BODY);
+    } else if (request_.is_chunked_) {
       ChangeStatus(ClientSocket::WAIT_BODY);
     } else {
       ChangeStatus(ClientSocket::CREATE_RESPONSE);
