@@ -10,7 +10,6 @@
 #include "http_response.hpp"
 
 static const int kReadBufferSize = 1024;
-static const int kCRLFSize = 2;
 /*
  * fdから読み込み、recv_strに格納する。
  */
@@ -39,7 +38,7 @@ static int GetChunkSize(std::string::const_iterator *it) {
   }
   if (*cur != '\r' || *(cur + 1) != '\n') {
     std::cout << "Unexpected Separator" << std::endl;
-    return 0;
+    return -1;
   }
   *it = cur + 2;  // kCRLFSize;
   return size;
@@ -65,35 +64,6 @@ static int ReceiveMessageBody(int fd, std::string &recv_msg,
     return 0;
   }
   return remain_length;
-}
-
-static int ReceiveChunkedBody(int fd, std::string &recv_msg,
-                              std::string &body) {
-  std::cout << "Read Chunked Body\n";
-  size_t header_end_pos = recv_msg.find("\r\n\r\n");
-  size_t start_pos = header_end_pos + HttpRequestParser::kSeparatorSize;
-  // body読み込み済み\r\nがあるかチェック
-  if (std::string::npos == recv_msg.find("\r\n", start_pos)) {
-    std::cout << "ReceiveMsg.Chunk!!!\t";
-    if (-1 == ReceiveMessage(fd, recv_msg)) {
-      return -1;
-    }
-  }
-  std::string::const_iterator it = recv_msg.begin() + start_pos;
-  int size = GetChunkSize(&it);
-  if (size == 0) {  //これでも読めないならエラー
-    return -1;
-  }
-  while (0 < size) {
-    it += size;
-    if (*it != '\r' || *(it + 1) != '\n') {
-      std::cout << "Unexpected Separator" << std::endl;
-      break;
-    }
-    it += kCRLFSize;
-    size = GetChunkSize(&it);
-  }
-  return 0;
 }
 
 ClientSocket::ClientSocket(int fd, const ServerSocket *parent,
@@ -125,6 +95,8 @@ ClientSocket &ClientSocket::operator=(const ClientSocket &other) {
   request_ = other.request_;
   server_response_ = other.server_response_;
   last_access_ = other.last_access_;
+  parsed_pos_ = other.parsed_pos_;
+  chunked_remain_size_ = other.chunked_remain_size_;
   return *this;
 }
 
@@ -134,6 +106,8 @@ void ClientSocket::Init() {
   request_.Init();
   server_response_.clear();
   time(&last_access_);
+  parsed_pos_ = 0;
+  chunked_remain_size_ = 0;
 }
 
 int ClientSocket::ReceiveHeader() {
@@ -148,8 +122,49 @@ int ClientSocket::ReceiveHeader() {
   header_end_pos = recv_str_.find("\r\n\r\n");
   if (header_end_pos != std::string::npos) {
     ChangeStatus(ClientSocket::PARSE_HEADER);
+    parsed_pos_ = header_end_pos + HttpRequestParser::kSeparatorSize;
+    chunked_remain_size_ = 0;
   }
   return 0;
+}
+
+/*
+ * -1: エラー切断
+ * 0 : parse完了
+ * 1 : まだ読み込む
+ */
+int ClientSocket::ParseChunkedBody() {
+  // parsed_pos_ から続きを読み始める。
+  if (chunked_remain_size_ == 0) {
+    if (std::string::npos == recv_str_.find("\r\n", parsed_pos_)) {
+      return 1;  // サイズが無いのに、終端が見つからなければ、次を読む
+    }
+    std::string::const_iterator it = recv_str_.begin() + parsed_pos_;
+    int chunk_size = GetChunkSize(&it);
+    parsed_pos_ =
+        recv_str_.find("\r\n", parsed_pos_) + HttpRequestParser::kCRLFSize;
+    if (chunk_size == -1) {  //これでも読めないならエラー
+      return 1;
+    } else if (chunk_size == 0) {
+      std::cout << "Completed Body[[" << request_.body_ << "]]\n";
+      return 0;
+    }
+    chunked_remain_size_ = chunk_size + HttpRequestParser::kCRLFSize;
+    // chunked bodyの先頭を指す。
+  }
+  // parsed_pos_から、chunked_remain_size_分を読み込もうとする！！！
+  size_t remain_size = recv_str_.size() - parsed_pos_;
+  if (remain_size <= chunked_remain_size_) {
+    request_.body_.append(recv_str_, parsed_pos_, remain_size);
+    parsed_pos_ += remain_size;
+    chunked_remain_size_ -= remain_size;
+  } else {
+    request_.body_.append(recv_str_, parsed_pos_, chunked_remain_size_);
+    parsed_pos_ += (chunked_remain_size_ + HttpRequestParser::kCRLFSize);
+    chunked_remain_size_ = 0;
+    return ParseChunkedBody();
+  }
+  return 1;
 }
 
 int ClientSocket::ReceiveBody() {
@@ -157,13 +172,21 @@ int ClientSocket::ReceiveBody() {
   if (request_.content_length_ != 0) {
     remain_len = ReceiveMessageBody(fd_, recv_str_, request_.content_length_,
                                     request_.body_);
+    if (remain_len < 0) {
+      return 1;  // Read Error で切断
+    } else if (remain_len == 0) {
+      ChangeStatus(ClientSocket::CREATE_RESPONSE);
+    }
   } else if (request_.is_chunked_) {
-    remain_len = ReceiveChunkedBody(fd_, recv_str_, request_.body_);
-  }
-  if (remain_len < 0) {
-    return 1;  // Read Error で切断
-  } else if (remain_len == 0) {
-    ChangeStatus(ClientSocket::CREATE_RESPONSE);
+    remain_len = ReceiveMessage(fd_, recv_str_);
+    if (-1 == remain_len) {
+      return 1;
+    }
+    int res = ParseChunkedBody();
+    if (res == -1)  //エラー
+      return 1;
+    else if (res == 0)  //読み込み完了
+      ChangeStatus(ClientSocket::CREATE_RESPONSE);
   }
   return 0;
 }
@@ -191,7 +214,14 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     if (request_.content_length_ != 0) {
       ChangeStatus(ClientSocket::WAIT_BODY);
     } else if (request_.is_chunked_) {
-      ChangeStatus(ClientSocket::WAIT_BODY);
+      std::cout << "First ParseChunkedBody!!!\n";
+      int parse_res = ParseChunkedBody();
+      if (parse_res == -1)
+        ChangeStatus(ClientSocket::WAIT_CLOSE);
+      else if (parse_res == 0)
+        ChangeStatus(ClientSocket::CREATE_RESPONSE);
+      else
+        ChangeStatus(ClientSocket::WAIT_BODY);
     } else {
       ChangeStatus(ClientSocket::CREATE_RESPONSE);
     }
