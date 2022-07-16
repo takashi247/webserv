@@ -117,7 +117,7 @@ class HttpResponse {
   void SetStatusDescription();
   std::string ExtractLocationPath(const std::string &header_value);
   std::string GetFieldValue(const std::string &header_field);
-  bool CreateCgiBody(bool has_content_length);
+  bool CreateCgiBody(bool has_content_length, bool is_read_finish);
   void Make500Response();
 
   // Helper functions

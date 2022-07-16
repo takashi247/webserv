@@ -853,11 +853,10 @@ void HttpResponse::ParseCgiHeader() {
   }
 }
 
-bool HttpResponse::CreateCgiBody(bool has_content_length) {
+bool HttpResponse::CreateCgiBody(bool has_content_length, bool is_read_finish) {
   bool is_body_completed = false;
   if (!has_content_length) {
-    if (body_[body_.length() - 1] == kAsciiCodeForEOF) {
-      body_.erase(body_.length() - 1);
+    if (is_read_finish) {
       body_len_ = body_.size();
       is_body_completed = true;
     }
@@ -918,6 +917,9 @@ void HttpResponse::MakeCgiResponse() {
     }
   } else {
     DeleteCgiEnviron(cgi_environ);
+    if (close(pipe_child2parent[WRITE]) == -1) {
+      return Make500Response();
+    }
     if (write(pipe_parent2child[WRITE], http_request_.body_.c_str(),
               http_request_.body_.length()) == -1 ||
         waitpid(pid, NULL, 0) != pid) {
@@ -926,16 +928,18 @@ void HttpResponse::MakeCgiResponse() {
       return Make500Response();
     }
     while (cgi_status_ != kCloseConnection) {
-      char buf[kCgiBufferSize];
-      ssize_t read_size = 0;
-      memset(buf, 0, sizeof(buf));
-      read_size = read(pipe_child2parent[READ], buf, kCgiBufferSize);
-      if (read_size == -1) {
-        cgi_status_ = kCloseConnection;
-        status_code_ = kStatusCodeInternalServerError;
-      } else {
-        std::string buf_string(buf, read_size);
-        body_.append(buf_string);
+      ssize_t read_size = kCgiBufferSize;
+      if (read_size != 0) {
+        char buf[kCgiBufferSize];
+        memset(buf, 0, sizeof(buf));
+        read_size = read(pipe_child2parent[READ], buf, kCgiBufferSize);
+        if (read_size == -1) {
+          cgi_status_ = kCloseConnection;
+          status_code_ = kStatusCodeInternalServerError;
+        } else {
+          std::string buf_string(buf, read_size);
+          body_.append(buf_string);
+        }
       }
       if (cgi_status_ == kReadHeader) {
         size_t header_end = body_.find("\r\n\r\n");
@@ -948,7 +952,7 @@ void HttpResponse::MakeCgiResponse() {
         if (is_local_redirection_ &&
             ((header_.size() != 2) ||
              (has_content_length_header_ && !body_.empty()) ||
-             (!has_content_length_header_ && body_[0] != kAsciiCodeForEOF))) {
+             (!has_content_length_header_ && read_size == 0))) {
           status_code_ = kStatusCodeInternalServerError;
         }
         cgi_status_ = (status_code_ == kStatusCodeOK && !is_local_redirection_)
@@ -956,12 +960,11 @@ void HttpResponse::MakeCgiResponse() {
                           : kCloseConnection;
       }
       if (cgi_status_ == kCreateBody &&
-          CreateCgiBody(has_content_length_header_)) {
+          CreateCgiBody(has_content_length_header_, read_size == 0)) {
         cgi_status_ = kCloseConnection;
       }
     }
-    if (close(pipe_child2parent[WRITE]) == -1 ||
-        close(pipe_parent2child[READ]) == -1) {
+    if (close(pipe_parent2child[READ]) == -1) {
       return Make500Response();
     }
     if (status_code_ != kStatusCodeOK || is_local_redirection_) {
