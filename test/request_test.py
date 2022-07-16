@@ -113,13 +113,23 @@ class TestRequest(unittest.TestCase):
 
     def test_cgi_post(self):
         self.skip_test_if_not_suppoeted("nginx")
-        got = self.send_post_request("http://localhost:8082/cgi-bin/upload.cgi", data={'param': 'hello'})
+        got = self.send_post_request("http://localhost:8082/cgi-bin/post.cgi", data={'param': 'hello'})
         self.assertEqual(got.status_code, HTTPStatus.OK)
         self.assertEqual(got.text, "param = hello")
 
+    def test_cgi_post(self):
+        self.skip_test_if_not_suppoeted("nginx")
+        got = self.send_post_request("http://localhost:8082/cgi-bin/compile-error.cgi")
+        self.assertEqual(got.status_code, HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    # def test_cgi_no_header(self):
+    #     self.skip_test_if_not_suppoeted("nginx")
+    #     got = self.send_post_request("http://localhost:8082/cgi-bin/no_header_perl.cgi")
+    #     self.assertEqual(got.status_code, HTTPStatus.INTERNAL_SERVER_ERROR)
+
     def test_cgi_post_by_get(self):
         self.skip_test_if_not_suppoeted("nginx")
-        got = self.send_get_request("http://localhost:8082/cgi-bin/upload.cgi")
+        got = self.send_get_request("http://localhost:8082/cgi-bin/post.cgi")
         self.assertEqual(got.status_code, HTTPStatus.OK)
 
     # execve in cgi fails
@@ -128,9 +138,26 @@ class TestRequest(unittest.TestCase):
     #     self.assertEqual(got.status_code, 500)
     #     self.assertEqual(got.text, "hello")
 
-    def test_delete(self):
-        got = self.send_delete_request("http://localhost:8080/delete")
+    def test_delete_readable(self):
+        f = open('www/delete_r', 'w')
+        os.chmod('www/delete_r', 0o444)
+        got = self.send_delete_request("http://localhost:8080/delete_r")
         self.assertEqual(got.status_code, HTTPStatus.NO_CONTENT)
+        f.close()
+
+    def test_delete_writable(self):
+        f = open('www/delete_w', 'w')
+        os.chmod('www/delete_w', 0o222)
+        got = self.send_delete_request("http://localhost:8080/delete_w")
+        f.close()
+        self.assertEqual(got.status_code, HTTPStatus.FORBIDDEN)
+
+    def test_delete_executanle(self):
+        f = open('www/delete_x', 'w')
+        os.chmod('www/delete_x', 0o111)
+        got = self.send_delete_request("http://localhost:8080/delete_x")
+        self.assertEqual(got.status_code, HTTPStatus.FORBIDDEN)
+        f.close()
 
     def test_delete_no_perm(self):
         got = self.send_delete_request("http://localhost:8080/no_perm.html")
@@ -202,7 +229,7 @@ class TestRequest(unittest.TestCase):
     # expect to ~~ not allowd ~~
     def test_post_request_to_normal_file(self):
         got = self.send_post_request("http://localhost:8080/1.html")
-        self.assertEqual(got.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
+        self.assertEqual(got.status_code, HTTPStatus.OK)
 
     def test_post_request_to_cgi_file(self):
         self.skip_test_if_not_suppoeted("nginx")
@@ -240,6 +267,4 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         server = sys.argv[1]
         del sys.argv[1:]
-    open('www/delete', 'w')
     unittest.main()
-

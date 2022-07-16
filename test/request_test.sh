@@ -14,3 +14,6 @@ if [ $? == 0 ]; then
 	python3 request_test.py
 	killall webserv
 fi
+
+rm -f www/delete_w
+rm -f www/delete_x
