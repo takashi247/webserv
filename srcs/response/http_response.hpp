@@ -123,6 +123,7 @@ class HttpResponse {
   bool CreateCgiBody(bool has_content_length, bool is_read_finish);
   void Make500Response();
   void Make504Response();
+  bool IsRequestConnectionClose() const;
 
   // Helper functions
   std::string ShortenRequestBody(const std::string &);

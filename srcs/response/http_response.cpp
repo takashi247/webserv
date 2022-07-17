@@ -304,6 +304,17 @@ void HttpResponse::SetLastModifiedTime(const std::string &path) {
   }
 }
 
+bool HttpResponse::IsRequestConnectionClose() const {
+  std::map< std::string, std::string >::const_iterator it_connection =
+      http_request_.header_fields_.find("Connection");
+  if (it_connection != http_request_.header_fields_.end() &&
+      it_connection->second == "close") {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 void HttpResponse::MakeHeaderRedirection() {
   std::ostringstream oss_content_length, oss_content_type, oss_location;
   oss_content_type << "Content-Type: text/html\r\n";
@@ -315,9 +326,7 @@ void HttpResponse::MakeHeaderRedirection() {
     oss_location << requested_file_path_short_ << "\r\n";
   } else {
     if (requested_file_path_.find("http://") != 0) {
-      std::map< std::string, std::string >::const_iterator it_host =
-          http_request_.header_fields_.find("Host");
-      oss_location << "Location: http://" << it_host->second;
+      oss_location << "Location: http://" << client_info_.hostname_;
     } else {
       oss_location << "Location: ";
     }
@@ -331,9 +340,14 @@ void HttpResponse::MakeHeaderRedirection() {
   header_.push_back(oss_content_type.str());
   header_.push_back(oss_content_length.str());
   header_.push_back(oss_location.str());
-  header_.push_back("Connection: keep-alive\r\n");
+  if (IsRequestConnectionClose()) {
+    header_.push_back("Connection: close\r\n");
+    connection_ = kConnectionClose;
+  } else {
+    header_.push_back("Connection: keep-alive\r\n");
+    connection_ = kConnectionKeepAlive;
+  }
   header_.push_back("\r\n");
-  connection_ = kConnectionKeepAlive;
 }
 
 void HttpResponse::MakeErrorHeader() {
@@ -358,7 +372,8 @@ void HttpResponse::MakeErrorHeader() {
   }
   if (status_code_ == kStatusCodeBadRequest ||
       status_code_ == kStatusCodeVersionNotSupported ||
-      status_code_ == kStatusCodeInternalServerError) {
+      status_code_ == kStatusCodeInternalServerError ||
+      IsRequestConnectionClose()) {
     header_.push_back("Connection: close\r\n");
     connection_ = kConnectionClose;
   } else {
@@ -377,9 +392,14 @@ void HttpResponse::MakeHeader204() {
   header_.push_back("\r\n");
   header_.push_back(server_header_);
   header_.push_back(date_header_);
-  header_.push_back("Connection: keep-alive\r\n");
+  if (IsRequestConnectionClose()) {
+    header_.push_back("Connection: close\r\n");
+    connection_ = kConnectionClose;
+  } else {
+    header_.push_back("Connection: keep-alive\r\n");
+    connection_ = kConnectionKeepAlive;
+  }
   header_.push_back("\r\n");
-  connection_ = kConnectionKeepAlive;
 }
 
 void HttpResponse::MakeHeader200() {
@@ -395,11 +415,16 @@ void HttpResponse::MakeHeader200() {
   header_.push_back(oss_content_type.str());
   header_.push_back(oss_content_length.str());
   header_.push_back(oss_last_modified.str());
-  header_.push_back("Connection: keep-alive\r\n");
+  if (IsRequestConnectionClose()) {
+    header_.push_back("Connection: close\r\n");
+    connection_ = kConnectionClose;
+  } else {
+    header_.push_back("Connection: keep-alive\r\n");
+    connection_ = kConnectionKeepAlive;
+  }
   header_.push_back(etag_header_);
   header_.push_back("Accept-Ranges: bytes\r\n");
   header_.push_back("\r\n");
-  connection_ = kConnectionKeepAlive;
 }
 
 void HttpResponse::CreateCgiHeader() {
@@ -411,7 +436,11 @@ void HttpResponse::CreateCgiHeader() {
   header_.insert(header_.begin(), "\r\n");
   header_.insert(header_.begin(), status_desc_);
   header_.insert(header_.begin(), "HTTP/1.1 ");
-  connection_ = kConnectionKeepAlive;
+  if (IsRequestConnectionClose()) {
+    connection_ = kConnectionClose;
+  } else {
+    connection_ = kConnectionKeepAlive;
+  }
 }
 
 void HttpResponse::CreateCustomizedErrorPage(
