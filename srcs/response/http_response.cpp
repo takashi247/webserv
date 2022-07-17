@@ -14,6 +14,8 @@ const std::string HttpResponse::kStatusDescRequestEntityTooLarge =
     "413 Request Entity Too Large";
 const std::string HttpResponse::kStatusDescInternalServerError =
     "500 Internal Server Error";
+const std::string HttpResponse::kStatusDescGatewayTimeout =
+    "504 Gateway Timeout";
 const std::string HttpResponse::kStatusDescVersionNotSupported =
     "505 HTTP Version Not Supported";
 const std::string HttpResponse::kConnectionKeepAlive = "keep-alive";
@@ -878,6 +880,13 @@ void HttpResponse::Make500Response() {
   MakeResponse();
 }
 
+void HttpResponse::Make504Response() {
+  status_code_ = kStatusCodeGatewayTimeout;
+  header_.clear();
+  body_.clear();
+  MakeResponse();
+}
+
 void HttpResponse::MakeCgiResponse() {
   pid_t pid;
   char *argv[2] = {const_cast< char * >(requested_file_path_.c_str()), NULL};
@@ -909,6 +918,7 @@ void HttpResponse::MakeCgiResponse() {
     return Make500Response();
   }
   if (pid == 0) {
+    alarm(kCgiTimeout);
     if (dup2(pipe_parent2child[READ], STDIN_FILENO) == -1 ||
         dup2(pipe_child2parent[WRITE], STDOUT_FILENO) == -1 ||
         close(pipe_parent2child[WRITE]) == -1 ||
@@ -925,11 +935,17 @@ void HttpResponse::MakeCgiResponse() {
     if (close(pipe_child2parent[WRITE]) == -1) {
       return Make500Response();
     }
+    int wstatus;
     if (write(pipe_parent2child[WRITE], http_request_.body_.c_str(),
               http_request_.body_.length()) == -1 ||
-        waitpid(pid, NULL, 0) != pid) {
+        waitpid(pid, &wstatus, 0) != pid) {
       close(pipe_parent2child[READ]);
       return Make500Response();
+    }
+    if (WIFSIGNALED(wstatus) && WTERMSIG(wstatus) == SIGALRM) {
+      close(pipe_child2parent[WRITE]);
+      close(pipe_parent2child[READ]);
+      return Make504Response();
     }
     while (cgi_status_ != kCloseConnection) {
       ssize_t read_size = kCgiBufferSize;
@@ -949,6 +965,9 @@ void HttpResponse::MakeCgiResponse() {
         size_t header_end = body_.find("\r\n\r\n");
         if (header_end != std::string::npos) {
           cgi_status_ = kParseHeader;
+        } else if (header_end == std::string::npos && read_size == 0) {
+          status_code_ = kStatusCodeInternalServerError;
+          cgi_status_ = kCloseConnection;
         }
       }
       if (cgi_status_ == kParseHeader) {

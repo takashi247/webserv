@@ -49,6 +49,7 @@ class HttpResponse {
   static const int kStatusCodeMethodNotAllowed = 405;
   static const int kStatusCodeRequestEntityTooLarge = 413;
   static const int kStatusCodeInternalServerError = 500;
+  static const int kStatusCodeGatewayTimeout = 504;
   static const int kStatusCodeVersionNotSupported = 505;
   static const int kCgiBufferSize = 500;
   static const int kAsciiCodeForEOF = 26;
@@ -65,10 +66,12 @@ class HttpResponse {
   static const std::string kStatusDescMethodNotAllowed;
   static const std::string kStatusDescRequestEntityTooLarge;
   static const std::string kStatusDescInternalServerError;
+  static const std::string kStatusDescGatewayTimeout;
   static const std::string kStatusDescVersionNotSupported;
   static const std::string kConnectionKeepAlive;
   static const std::string kConnectionClose;
   static const std::map< std::string, std::string > kMimeTypeMap;
+  static const unsigned int kCgiTimeout = 60;
 
   // Constructor and assignment operators
   HttpResponse();
@@ -119,6 +122,7 @@ class HttpResponse {
   std::string GetFieldValue(const std::string &header_field);
   bool CreateCgiBody(bool has_content_length, bool is_read_finish);
   void Make500Response();
+  void Make504Response();
 
   // Helper functions
   std::string ShortenRequestBody(const std::string &);
