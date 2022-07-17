@@ -307,14 +307,19 @@ void HttpResponse::MakeHeaderRedirection() {
   oss_content_type << "Content-Type: text/html\r\n";
   oss_content_length << "Content-Length: " << body_len_ << "\r\n";
   if (status_code_ == kStatusCodeMovedPermanently) {
-    std::map< std::string, std::string >::const_iterator it_host =
-        http_request_.header_fields_.find("Host");
-    oss_location << "Location: http://" << it_host->second;
+    oss_location << "Location: http://" << client_info_.hostname_;
     std::string requested_file_path_short_ =
         requested_file_path_.substr(location_config_->root_.length());
     oss_location << requested_file_path_short_ << "\r\n";
   } else {
-    oss_location << "Location: " << requested_file_path_ << "\r\n";
+    if (requested_file_path_.find("http://") != 0) {
+      std::map< std::string, std::string >::const_iterator it_host =
+          http_request_.header_fields_.find("Host");
+      oss_location << "Location: http://" << it_host->second;
+    } else {
+      oss_location << "Location: ";
+    }
+    oss_location << requested_file_path_ << "\r\n";
   }
   header_.push_back("HTTP/1.1 ");
   header_.push_back(status_desc_);
@@ -923,7 +928,6 @@ void HttpResponse::MakeCgiResponse() {
     if (write(pipe_parent2child[WRITE], http_request_.body_.c_str(),
               http_request_.body_.length()) == -1 ||
         waitpid(pid, NULL, 0) != pid) {
-      close(pipe_child2parent[WRITE]);
       close(pipe_parent2child[READ]);
       return Make500Response();
     }
