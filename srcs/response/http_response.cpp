@@ -313,9 +313,7 @@ void HttpResponse::MakeHeaderRedirection() {
     oss_location << requested_file_path_short_ << "\r\n";
   } else {
     if (requested_file_path_.find("http://") != 0) {
-      std::map< std::string, std::string >::const_iterator it_host =
-          http_request_.header_fields_.find("Host");
-      oss_location << "Location: http://" << it_host->second;
+      oss_location << "Location: http://" << client_info_.hostname_;
     } else {
       oss_location << "Location: ";
     }
