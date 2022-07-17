@@ -943,7 +943,6 @@ void HttpResponse::MakeCgiResponse() {
       return Make500Response();
     }
     if (WIFSIGNALED(wstatus) && WTERMSIG(wstatus) == SIGALRM) {
-      close(pipe_child2parent[WRITE]);
       close(pipe_parent2child[READ]);
       return Make504Response();
     }
