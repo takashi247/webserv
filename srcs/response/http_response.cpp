@@ -683,6 +683,9 @@ void HttpResponse::SetStatusDescription() {
     case kStatusCodeInternalServerError:
       status_desc_ = kStatusDescInternalServerError;
       break;
+    case kStatusCodeGatewayTimeout:
+      status_desc_ = kStatusDescGatewayTimeout;
+      break;
     case kStatusCodeVersionNotSupported:
       status_desc_ = kStatusDescVersionNotSupported;
       break;
