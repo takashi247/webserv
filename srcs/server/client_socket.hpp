@@ -43,7 +43,6 @@ class ClientSocket {
   int ReceiveHeader();
   int ParseChunkedBody();
   int ReceiveBody();
-  int SendMessage();
 
  public:
   void Init();
