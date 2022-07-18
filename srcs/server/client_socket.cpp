@@ -15,9 +15,9 @@ static const int kReadBufferSize = 1024;
  */
 static ssize_t ReceiveMessage(int fd, std::string &recv_str) {
   ssize_t read_size = 0;
-  char buf[kReadBufferSize];
+  char buf[kReadBufferSize + 1];
   memset(buf, 0, sizeof(buf));
-  read_size = recv(fd, buf, sizeof(buf) - 1, 0);
+  read_size = recv(fd, buf, kReadBufferSize, 0);
   if (0 < read_size) {
     std::string buf_string(buf, read_size);
     recv_str.append(buf_string);
@@ -141,27 +141,34 @@ int ClientSocket::ParseChunkedBody() {
     }
     std::string::const_iterator it = recv_str_.begin() + parsed_pos_;
     int chunk_size = GetChunkSize(&it);
+    // chunked bodyの先頭を指す。
     parsed_pos_ =
         recv_str_.find("\r\n", parsed_pos_) + HttpRequestParser::kCRLFSize;
     if (chunk_size == -1) {  //これでも読めないならエラー
       return 1;
     } else if (chunk_size == 0) {
-      std::cout << "Completed Body[[" << request_.body_ << "]]\n";
-      return 0;
+      // std::cout << "Completed Body[" << request_.body_ << "]\n";
+      return 0;  //正常終了
     }
+    // chunk_sizeと終端の\r\nを含んだ数だけ読み込む
     chunked_remain_size_ = chunk_size + HttpRequestParser::kCRLFSize;
-    // chunked bodyの先頭を指す。
   }
-  // parsed_pos_から、chunked_remain_size_分を読み込もうとする！！！
+  // parsed_pos_の位置から、chunked_remain_size_分を読み込みたい
   size_t remain_size = recv_str_.size() - parsed_pos_;
-  if (remain_size <= chunked_remain_size_) {
-    request_.body_.append(recv_str_, parsed_pos_, remain_size);
-    parsed_pos_ += remain_size;
-    chunked_remain_size_ -= remain_size;
-  } else {
-    request_.body_.append(recv_str_, parsed_pos_, chunked_remain_size_);
-    parsed_pos_ += (chunked_remain_size_ + HttpRequestParser::kCRLFSize);
-    chunked_remain_size_ = 0;
+  // 読み込みたいchunk_sizeと、読み込み済み残りサイズの小さい方をbodyに追加する
+  size_t append_size =
+      (remain_size < chunked_remain_size_) ? remain_size : chunked_remain_size_;
+  request_.body_.append(recv_str_, parsed_pos_, append_size);
+  // chunk最後の\r\nも追加されてるため、削除する
+  size_t rfind_res = request_.body_.rfind("\r\n");
+  if (rfind_res != std::string::npos &&
+      rfind_res == request_.body_.size() - 2) {
+    request_.body_.erase(rfind_res);
+  }
+  parsed_pos_ += append_size;
+  chunked_remain_size_ -= append_size;
+  //まだ読み込んだ分が残っていて、次のchunkをパースするため、再帰呼び出し
+  if (chunked_remain_size_ == 0) {
     return ParseChunkedBody();
   }
   return 1;
@@ -214,7 +221,6 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     if (request_.content_length_ != 0) {
       ChangeStatus(ClientSocket::WAIT_BODY);
     } else if (request_.is_chunked_) {
-      std::cout << "First ParseChunkedBody!!!\n";
       int parse_res = ParseChunkedBody();
       if (parse_res == -1)
         ChangeStatus(ClientSocket::WAIT_CLOSE);
