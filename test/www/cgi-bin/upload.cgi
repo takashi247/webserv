@@ -10,10 +10,9 @@ if ($is_uploadable eq "true") {
 
 $upload_dir = $ENV{'X_UPLOAD_DIR'};
 
-$filename = $query->param("photo");
-$email_address = $query->param("email_address");
+$filename = $query->param("file");
 $filename =~ s/.*[\/\\](.*)/$1/;
-$upload_filehandle = $query->upload("photo");
+$upload_filehandle = $query->upload("file");
 
 open UPLOADFILE, ">$upload_dir/$filename";
 
@@ -31,15 +30,6 @@ print <<END_HTML;
 <HEAD>
 <TITLE>Thanks!</TITLE>
 </HEAD>
-
-<BODY>
-
-<h1>Thanks for uploading your photo!</h1>
-<P>Your email address: $email_address</P>
-<P>Your photo:</P>
-<img src="/upload/$filename" border="0">
-
-</BODY>
 </HTML>
 
 END_HTML

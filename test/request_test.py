@@ -122,21 +122,22 @@ class TestRequest(unittest.TestCase):
         got = self.send_post_request("http://localhost:8082/cgi-bin/compile-error.cgi")
         self.assertEqual(got.status_code, HTTPStatus.INTERNAL_SERVER_ERROR)
 
-    # def test_cgi_no_header(self):
+    def test_cgi_no_header(self):
+        self.skip_test_if_not_suppoeted("nginx")
+        got = self.send_post_request("http://localhost:8082/cgi-bin/no_header.cgi")
+        self.assertEqual(got.status_code, HTTPStatus.INTERNAL_SERVER_ERROR)
+
+
+    # plese test by hand
+    # def test_cgi_timeout(self):
     #     self.skip_test_if_not_suppoeted("nginx")
-    #     got = self.send_post_request("http://localhost:8082/cgi-bin/no_header_perl.cgi")
-    #     self.assertEqual(got.status_code, HTTPStatus.INTERNAL_SERVER_ERROR)
+    #     got = self.send_post_request("http://localhost:8082/cgi-bin/timeout.cgi")
+    #     self.assertEqual(got.status_code, HTTPStatus.GATEWAY_TIMEOUT)
 
     def test_cgi_post_by_get(self):
         self.skip_test_if_not_suppoeted("nginx")
         got = self.send_get_request("http://localhost:8082/cgi-bin/post.cgi")
         self.assertEqual(got.status_code, HTTPStatus.OK)
-
-    # execve in cgi fails
-    # def test_cgi_no_header(self):
-    #     got = self.send_request("http://localhost:8082/cgi-bin/no_header_perl.cgi")
-    #     self.assertEqual(got.status_code, 500)
-    #     self.assertEqual(got.text, "hello")
 
     def test_delete_readable(self):
         f = open('www/delete_r', 'w')

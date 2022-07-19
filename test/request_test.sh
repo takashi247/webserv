@@ -17,3 +17,4 @@ fi
 
 rm -f www/delete_w
 rm -f www/delete_x
+rm -f www/delete_r
