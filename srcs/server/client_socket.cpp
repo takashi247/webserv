@@ -256,8 +256,7 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
         else
           ChangeStatus(ClientSocket::WAIT_BODY);
       } else {
-        std::cout << "Unexpected Header" << std::endl;
-        ChangeStatus(ClientSocket::WAIT_CLOSE);
+        ChangeStatus(ClientSocket::CREATE_RESPONSE);
       }
     } else {
       ChangeStatus(ClientSocket::CREATE_RESPONSE);
