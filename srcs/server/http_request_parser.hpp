@@ -27,10 +27,6 @@ class HttpRequestParser {
  private:
   static bool SplitRequestLine(const std::string& recv_msg,
                                std::vector< std::string >& v);
-  static std::string GetFieldValue(const char* field_name,
-                                   const std::string& recv_msg);
-  static size_t GetFieldValueSize(const char* field_name,
-                                  const std::string& recv_msg);
   static int GetHeaderFields(const std::string& recv_msg,
                              std::map< std::string, std::string >* fields);
 

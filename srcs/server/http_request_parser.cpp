@@ -6,6 +6,50 @@
 #include <utility>
 #include <vector>
 
+static bool IsToken(const char c) {
+  if ('0' <= c && c <= '9') return true;
+  if ('A' <= c && c <= 'Z') return true;
+  if ('a' <= c && c <= 'z') return true;
+  if (c == '!' || c == '#' || c == '$' || c == '%' || c == '&' || c == '\'' ||
+      c == '*' || c == '+' || c == '-' || c == '.' || c == '^' || c == '_' ||
+      c == '`' || c == '|' || c == '~')
+    return true;
+  return false;
+}
+
+static std::string ChangeLowerCase(const std::string& str) {
+  std::string ret;
+  std::string::const_iterator it = str.begin();
+
+  while (it != str.end()) {
+    if (!IsToken(*it)) return "";
+    if ('A' <= *it && *it <= 'Z') {
+      ret.push_back(*it + 32);
+    } else {
+      ret.push_back(*it);
+    }
+    it++;
+  }
+  return ret;
+}
+
+static bool IsValidFieldContent(const std::string& str) {
+  std::string::const_iterator it = str.begin();
+  bool isOWS = false;
+  while (it != str.end()) {
+    if (*it < 0x21 && 0x7e < *it) return false;
+    if (*it == ' ' || *it == '\t') {
+      if (isOWS)
+        return false;
+      else
+        isOWS = true;
+    } else
+      isOWS = false;
+    it++;
+  }
+  return true;
+}
+
 bool HttpRequestParser::SplitRequestLine(const std::string& recv_msg,
                                          std::vector< std::string >& v) {
   size_t pos = recv_msg.find("\r\n");
@@ -36,32 +80,10 @@ bool HttpRequestParser::SplitRequestLine(const std::string& recv_msg,
   return true;
 }
 
-std::string HttpRequestParser::GetFieldValue(const char* field_name,
-                                             const std::string& recv_msg) {
-  std::string search_name(CRLF);
-  search_name.append(field_name);  // "\r\n"field の文字列を生成
-  size_t pos = recv_msg.find(search_name, 0);  // 探す
-  if (std::string::npos == pos) return "";  // field_nameがみつから無ければ終了
-  pos += (kCRLFSize + strlen(field_name));
-  if (recv_msg[pos] != ':') return "";  // field_nameの直後に : でなければ終了
-  pos++;                                // : の直後を指す
-  pos = recv_msg.find_first_not_of(' ', pos);  // スペース読み飛ばす
-  //  std::cout << "pos=" << pos << std::endl;
-  if (0 == recv_msg.find(CRLF, pos)) return "";  // field_name:  \r\nなら終了
-  //この時点でposは値の先頭
-  //  std::cout << "find CRLF OK" << std::endl;
-  size_t value_end_pos = recv_msg.find("\r\n", pos);
-  std::string value(recv_msg.begin() + pos, recv_msg.begin() + value_end_pos);
-  return value;
-}
-
-size_t HttpRequestParser::GetFieldValueSize(const char* field_name,
-                                            const std::string& recv_msg) {
-  std::string value = GetFieldValue(field_name, recv_msg);
-  int num = atoi(value.c_str());
-  return num;
-}
-
+/*
+ * 0: 解析エラー、bad request
+ * other: 読み込み終わった位置
+ */
 int HttpRequestParser::GetHeaderFields(
     const std::string& recv_msg, std::map< std::string, std::string >* fields) {
   size_t cur = recv_msg.find("\r\n") + 2;
@@ -69,13 +91,27 @@ int HttpRequestParser::GetHeaderFields(
 
   while (start != recv_msg.find("\r\n", start)) {
     cur = recv_msg.find(":", start);
-    cur = recv_msg.find_first_not_of(' ', cur);
     std::string key = recv_msg.substr(start, cur - start);
-    start = cur + 2;
+    key = ChangeLowerCase(key);
+    if (key.empty()) return 0;
+    cur++;
+    while (recv_msg[cur] == ' ' || recv_msg[cur] == '\t') cur++;
+    start = cur;
     cur = recv_msg.find("\r\n", start);
+    while (recv_msg[cur - 1] == ' ' || recv_msg[cur - 1] == '\t') cur--;
+    // ' ' か '\t'じゃない文字まで戻る
     std::string value = recv_msg.substr(start, cur - start);
-    start = cur + 2;
+    if (!IsValidFieldContent(value)) {
+      std::cout << "is not valid field content\n";
+      return 0;
+    }
+    while (recv_msg[cur] == ' ' || recv_msg[cur] == '\t') cur++;
+    if (recv_msg.find("\r\n", cur) != cur) {
+      std::cout << "unexpected header field\n";
+      return 0;
+    }
     fields->insert(std::make_pair(key, value));
+    start = cur + 2;
   }
   return start + 2;  // bodyの先頭を指す
 }
@@ -101,7 +137,13 @@ int HttpRequestParser::ParseHeader(const std::string& recv_msg,
   req->version_ = req_line[kReqLineHttpVersion];
 
   size_t pos;
-  std::string host = GetFieldValue("Host", recv_msg);
+  pos = GetHeaderFields(recv_msg, &req->header_fields_);
+  if (pos == 0) {
+    req->is_bad_request_ = true;
+    return 1;
+  }
+
+  std::string host = req->header_fields_["host"];
   if (host.empty()) {
     req->is_bad_request_ = true;
   } else {  // separate host -> name:port
@@ -111,22 +153,12 @@ int HttpRequestParser::ParseHeader(const std::string& recv_msg,
     else
       req->host_name_ = host.substr(0, pos);
   }
-  req->content_type_ = GetFieldValue("Content-Type", recv_msg);
-  req->content_length_ = GetFieldValueSize("Content-Length", recv_msg);
+  req->content_type_ = req->header_fields_["content-type"];
+  std::stringstream sstream(req->header_fields_["content-length"]);
+  sstream >> req->content_length_;
   {  // judge encoding
-    std::string encoding = GetFieldValue("Transfer-Encoding", recv_msg);
+    std::string encoding = req->header_fields_["Transfer-Encoding"];
     req->is_chunked_ = (encoding == "chunked");
-  }
-  pos = GetHeaderFields(recv_msg, &req->header_fields_);
-
-  if (0) {
-    std::cout << req->method_ << std::endl;
-    std::cout << req->uri_ << std::endl;
-    std::cout << req->version_ << std::endl;
-    std::cout << req->host_name_ << std::endl;
-    std::cout << req->content_type_ << std::endl;
-    std::cout << req->content_length_ << std::endl;
-    std::cout << req->body_ << std::endl;
   }
   return 0;
 }

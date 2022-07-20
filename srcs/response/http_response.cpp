@@ -306,7 +306,7 @@ void HttpResponse::SetLastModifiedTime(const std::string &path) {
 
 bool HttpResponse::IsRequestConnectionClose() const {
   std::map< std::string, std::string >::const_iterator it_connection =
-      http_request_.header_fields_.find("Connection");
+      http_request_.header_fields_.find("connection");
   if (it_connection != http_request_.header_fields_.end() &&
       it_connection->second == "close") {
     return true;
@@ -363,7 +363,7 @@ void HttpResponse::MakeErrorHeader() {
   if (status_code_ == kStatusCodeMovedPermanently) {
     std::ostringstream oss_location;
     std::map< std::string, std::string >::const_iterator it_host =
-        http_request_.header_fields_.find("Host");
+        http_request_.header_fields_.find("host");
     oss_location << "Location: http://" << it_host->second;
     std::string requested_file_path_short_ =
         requested_file_path_.substr(location_config_->root_.length());
@@ -771,9 +771,9 @@ std::string HttpResponse::GetHeaderValue(const std::string &header_name) {
 
 char **HttpResponse::CreateCgiEnviron() {
   std::map< std::string, std::string > map_env;
-  map_env["AUTH_TYPE"] = GetHeaderValue("Authorization");
-  map_env["CONTENT_LENGTH"] = GetHeaderValue("Content-Length");
-  map_env["CONTENT_TYPE"] = GetHeaderValue("Content-Type");
+  map_env["AUTH_TYPE"] = GetHeaderValue("authorization");
+  map_env["CONTENT_LENGTH"] = GetHeaderValue("content-length");
+  map_env["CONTENT_TYPE"] = GetHeaderValue("content-type");
   map_env["GATEWAY_INTERFACE"] = "CGI/1.1";
   map_env["PATH_INFO"] = path_info_;
   map_env["PATH_TRANSLATED"] = path_translated_;
@@ -790,11 +790,11 @@ char **HttpResponse::CreateCgiEnviron() {
   map_env["SERVER_PORT"] = IntegerToString< size_t >(server_config_.port_);
   map_env["SERVER_PROTOCOL"] = "HTTP/1.1";
   map_env["SERVER_SOFTWARE"] = kServerVersion;
-  map_env["HTTP_ACCEPT"] = GetHeaderValue("Accept");
-  map_env["HTTP_FORWARDED"] = GetHeaderValue("Forwarded");
-  map_env["HTTP_REFERER"] = GetHeaderValue("Referer");
-  map_env["HTTP_USER_AGENT"] = GetHeaderValue("User-Agent");
-  map_env["HTTP_X_FORWARDED_FOR"] = GetHeaderValue("X-Forwarded-For");
+  map_env["HTTP_ACCEPT"] = GetHeaderValue("accept");
+  map_env["HTTP_FORWARDED"] = GetHeaderValue("forwarded");
+  map_env["HTTP_REFERER"] = GetHeaderValue("referer");
+  map_env["HTTP_USER_AGENT"] = GetHeaderValue("user-agent");
+  map_env["HTTP_X_FORWARDED_FOR"] = GetHeaderValue("x-forwarded-for");
   map_env["X_UPLOAD_DIR"] = location_config_->upload_dir_;
   map_env["X_IS_UPLOADABLE"] =
       location_config_->is_uploadable_ ? "true" : "false";
