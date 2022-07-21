@@ -12,7 +12,7 @@
 static const int kReadBufferSize = 1024;
 /*
  * -1: 読み込みエラー
- * other: 送信済み文字数
+ * other: 読み込み済み文字数
  */
 static ssize_t ReceiveMessage(int fd, std::string &recv_str) {
   ssize_t read_size = 0;
@@ -27,16 +27,15 @@ static ssize_t ReceiveMessage(int fd, std::string &recv_str) {
 }
 
 /*
- * -1: 読み込みエラー
+ * -1: 送信エラー
  * other: 送信済み文字数
  */
 static int SendMessage(int fd, const char *str, size_t len) {
-  ssize_t send_res = send(fd, str, len, 0);
-  // server_response_.c_str(), server_response_.length(), 0);
-  if (send_res == -1) {
+  ssize_t send_size = send(fd, str, len, 0);
+  if (send_size == -1) {
     std::cout << "send() failed." << std::endl;
   }
-  return send_res;
+  return send_size;
 }
 
 /*
@@ -209,18 +208,16 @@ int ClientSocket::ParseChunkedBody() {
  * 1 : Body読み込みエラー → 切断
  */
 int ClientSocket::ReceiveBody() {
-  ssize_t remain_len = 0;
   if (request_.content_length_ != 0) {
-    remain_len = ReceiveNoChunkedBody(fd_, recv_str_, request_.content_length_,
-                                      request_.body_);
+    ssize_t remain_len = ReceiveNoChunkedBody(
+        fd_, recv_str_, request_.content_length_, request_.body_);
     if (remain_len < 0) {
       return 1;  // Read Error で切断
     } else if (remain_len == 0) {
       ChangeStatus(ClientSocket::CREATE_RESPONSE);
     }
   } else if (request_.is_chunked_) {
-    remain_len = ReceiveMessage(fd_, recv_str_);
-    if (-1 == remain_len) {
+    if (-1 == ReceiveMessage(fd_, recv_str_)) {
       return 1;
     }
     int res = ParseChunkedBody();
@@ -278,12 +275,14 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     ChangeStatus(ClientSocket::WAIT_SEND);
   }
   if (status_ == ClientSocket::WAIT_SEND) {
-    if ((is_writable && (SendMessage(fd_, server_response_.c_str(),
-                                     server_response_.length()) < 0)) ||
-        request_.is_bad_request_) {
-      ChangeStatus(ClientSocket::WAIT_CLOSE);
-    } else {
-      Init();
+    if (is_writable) {
+      if ((SendMessage(fd_, server_response_.c_str(),
+                       server_response_.length()) < 0) ||
+          request_.is_bad_request_) {
+        ChangeStatus(ClientSocket::WAIT_CLOSE);
+      } else {
+        Init();
+      }
     }
   }
   // timeout
