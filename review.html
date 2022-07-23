@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+    <title>webserv レビュー用ページ</title>
+</head>
+<body>
+    <header>
+    <h1 class="headline">
+		webserv review page
+    </h1>
+	Member: fyuta, skohraku, tnishina
+	<h2>Configuration</h2>
+	<li class="nav-list-item">
+		異なるポートを持つ複数のサーバー
+	</li>
+	<p>% ./webserv confs/multiple_servers_different_port.conf</p>
+	<p><a href="http://localhost:8080/">http://localhost:8080/</a><br>
+	<a href="http://localhost:4242/">http://localhost:4242/</a></p>
+	<li>
+		複数のサーバーを異なるホスト名で設定
+	</li>
+	<p>% ./webserv confs/multiple_servers_different_hostname.conf</p>
+	<p>curl http://localhost:8080/<br>
+	curl --resolve hoge.com:8080:127.0.0.1 http://hoge.com:8080/</p>
+	<li>
+		デフォルトのエラーページ表示 → 404
+	</li>
+	<p>% ./webserv confs/error_page.conf</p>
+	<p><a href="http://localhost:8080/hoge.html">http://localhost:8080/hoge.html</a></p>
+	<li>
+		ボディサイズの制限 → 413
+	</li>
+	<p>% ./webserv confs/upload_with_limit.conf</p>
+	<p>curl -X POST -H "Content-Type: plain/text" --data "BODY IS HERE write something shorter or longer than body limit"  http://localhost:8080</p>
+	<li>
+		???異なるディレクトリへのルートを設定
+	</li>
+	<p>./webserv confs/redirect.conf<br>
+	<a href=http://localhost:8080/redirect/>http://localhost:8080/redirect/</a></p>
+
+	<li>
+		ディレクトリを指定してオートインデックスを表示
+	</li>
+	<p>./webserv confs/autoindex_test.conf<br>
+	<a href=http://localhost:8080/dir_on/>http://localhost:8080/dir_on/</a><br>
+	<a href=http://localhost:8080/dir_off/>http://localhost:8080/dir_off/</a></p>
+
+	<li>
+		受け入れられるメソッドのリストを設定。権限があるものとないものを削除しようとする → 405<br>
+	</li>
+	<p>./webserv confs/no_delete.conf<br>
+	% curl -X DELETE http://localhost:8080/hoge.html</p>
+	<p>./webserv confs/test.conf<br>
+	% curl -X DELETE http://localhost:8080/hoge.html</p>
+
+	<h2>Basic Checks</h2>
+	<li>GETリクエスト → 200</li>
+	<p>./webserv confs/test.conf<br>
+	% curl -v http://localhost:8080</p>
+	<li>???POSTリクエスト</li>
+	<p>./webserv confs/test.conf<br>
+	% curl -X POST -H "Content-Type: plain/text" --data "BODY IS HERE write something shorter or longer than body limit"  http://localhost:8080</p>
+
+	<li>DELETEリクエスト → 204</li>
+	<p>./webserv confs/test.conf<br>
+	% curl -v -X DELETE  http://localhost:8080/hoge.html</p>
+
+	<li>UNKNOWNリクエスト → 405</li>
+	<p>./webserv confs/test.conf<br>
+	% curl -v -X UNKNOWN  http://localhost:8080/</p>
+
+	<li>???サーバーへのアップロードしてそれを取得</li>
+	<p>./webserv confs/upload_test.conf<br>
+	<a href=http://localhost:8080/index-upload.html>http://localhost:8080/index-upload.html</a></p>
+
+
+	<h2>Status Code</h2>
+	<li>301 Moved Permanently</li>
+	<li>302 Found</li>
+
+	<li>400 Bad Request</li>
+	<p>% telnet localhost 8080<br>
+	> GET <br>
+	><br>
+	></p>
+
+	<li>403 Forbidden</li>
+
+	<li>404 NotFound</li>
+	<p><a href="http://localhost:8080/not_exist.html">http://localhost:8080/not_exist.html</a></p>
+
+	<li>500 Internal Server Error</li>
+	<li>504 Gateway Timeout</li>
+
+	<li>505 HTTP Version Not Supported</li>
+	<p>% telnet localhost 8080<br>
+	> GET / HTTP/2.0<br>
+	> Host: localhost<br>
+	><br>
+	></p>
+
+</body>
+</html>
