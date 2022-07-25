@@ -35,10 +35,11 @@
 	<p>% ./webserv confs/upload_with_limit.conf</p>
 	<p>curl -X POST -H "Content-Type: plain/text" --data "BODY IS HERE write something shorter or longer than body limit"  http://localhost:8080</p>
 	<li>
-		???異なるディレクトリへのルートを設定
+		異なるディレクトリへのルートを設定
 	</li>
-	<p>./webserv confs/redirect.conf<br>
-	<a href=http://localhost:8080/redirect/>http://localhost:8080/redirect/</a></p>
+	<p>./webserv confs/route.conf<br>
+	<a href=http://localhost:8080/>http://localhost:8080/</a><br>
+	<a href=http://localhost:8080/www/>http://localhost:8080/www/</a></p>
 
 	<li>
 		ディレクトリを指定してオートインデックスを表示
