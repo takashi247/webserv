@@ -8,5 +8,3 @@ print $query->header();
 for my $param_name ($query->param) {
     print $param_name . ' = ' . $query->param($param_name);
 }
-
-print chr(26);

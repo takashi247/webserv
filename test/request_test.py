@@ -117,7 +117,7 @@ class TestRequest(unittest.TestCase):
         self.assertEqual(got.status_code, HTTPStatus.OK)
         self.assertEqual(got.text, "param = hello")
 
-    def test_cgi_post(self):
+    def test_cgi_compile_error(self):
         self.skip_test_if_not_suppoeted("nginx")
         got = self.send_post_request("http://localhost:8082/cgi-bin/compile-error.cgi")
         self.assertEqual(got.status_code, HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -126,7 +126,6 @@ class TestRequest(unittest.TestCase):
         self.skip_test_if_not_suppoeted("nginx")
         got = self.send_post_request("http://localhost:8082/cgi-bin/no_header.cgi")
         self.assertEqual(got.status_code, HTTPStatus.INTERNAL_SERVER_ERROR)
-
 
     # plese test by hand
     # def test_cgi_timeout(self):
@@ -196,22 +195,22 @@ class TestRequest(unittest.TestCase):
     def test_rewrite_3(self):
         got = self.send_get_request("http://localhost:8083/rewrite1/")
         self.assertEqual(got.status_code, HTTPStatus.FOUND)
-        self.assertEqual(got.headers["Location"], "http://localhost:8081//rewrite1/")
+        self.assertEqual(got.headers["Location"], "http://localhost:8081/")
 
     def test_rewrite_4(self):
         got = self.send_get_request("http://localhost:8083/rewrite1/nosuchfile")
         self.assertEqual(got.status_code, HTTPStatus.FOUND)
-        self.assertEqual(got.headers["Location"], "http://localhost:8081//rewrite1/nosuchfile")
+        self.assertEqual(got.headers["Location"], "http://localhost:8081/nosuchfile")
 
     def test_rewrite_5(self):
         got = self.send_get_request("http://localhost:8083/rewrite2/")
         self.assertEqual(got.status_code, HTTPStatus.FOUND)
-        self.assertEqual(got.headers["Location"], "http://localhost:8082//rewrite2/")
+        self.assertEqual(got.headers["Location"], "http://localhost:8082//")
 
     def test_rewrite_6(self):
         got = self.send_get_request("http://localhost:8083/rewrite2/nosuchfile")
         self.assertEqual(got.status_code, HTTPStatus.FOUND)
-        self.assertEqual(got.headers["Location"], "http://localhost:8082//rewrite2/nosuchfile")
+        self.assertEqual(got.headers["Location"], "http://localhost:8082//nosuchfile")
 
     def test_error_page(self):
         got = self.send_get_request("http://localhost:8080/nosuchfile")
@@ -227,7 +226,6 @@ class TestRequest(unittest.TestCase):
         got = self.send_get_request("http://localhost:8082/1.html")
         self.assertEqual(got.status_code, HTTPStatus.OK)
 
-    # expect to ~~ not allowd ~~
     def test_post_request_to_normal_file(self):
         got = self.send_post_request("http://localhost:8080/1.html")
         self.assertEqual(got.status_code, HTTPStatus.OK)
@@ -250,19 +248,19 @@ class TestRequest(unittest.TestCase):
         got = self.send_post_request("http://127.0.0.1:8083/1.html")
         self.assertEqual(got.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
 
-    # recv failed and no response
-    def test_over_client_max_body_size_and_no_such_file(self):
-        got = self.send_get_request("http://127.0.0.1:8083/nosuchfile", {'Content-Length': '120'})
-        self.assertEqual(got.status_code, HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
+    # Content-Length is invalid, so ignore
+    # def test_over_client_max_body_size_and_no_such_file(self):
+    #     got = self.send_get_request("http://127.0.0.1:8083/nosuchfile", {'Content-Length': '120'})
+    #     self.assertEqual(got.status_code, HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
 
     def test_not_permitted_method_and_over_client_max_body(self):
         got = self.send_post_request("http://127.0.0.1:8083/nosuchfile")
         self.assertEqual(got.status_code, HTTPStatus.METHOD_NOT_ALLOWED)
 
-    # recv failed and no response
-    def test_over_client_max_body_and_no_perm_with_post(self):
-        got = self.send_post_request("http://127.0.0.1:8083/no_perm.html", {'Content-Length': '120'})
-        self.assertEqual(got.status_code, HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
+    # Content-Length is invalid, so ignore
+    # def test_over_client_max_body_and_no_perm_with_post(self):
+    #     got = self.send_post_request("http://127.0.0.1:8083/no_perm.html", {'Content-Length': '120'})
+    #     self.assertEqual(got.status_code, HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
