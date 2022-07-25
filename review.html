@@ -45,23 +45,22 @@
 	</li>
 	<p>./webserv confs/autoindex_test.conf<br>
 	<a href=http://localhost:8080/dir_on/>http://localhost:8080/dir_on/</a><br>
-	<a href=http://localhost:8080/dir_off/>http://localhost:8080/dir_off/</a></p>
 
 	<li>
-		受け入れられるメソッドのリストを設定。権限があるものとないものを削除しようとする → 405<br>
+		受け入れられるメソッドのリストを設定。→ 405, 204<br>
 	</li>
 	<p>./webserv confs/no_delete.conf<br>
-	% curl -X DELETE http://localhost:8080/hoge.html</p>
+	% curl -v -X DELETE http://localhost:8080/hoge.html</p>
 	<p>./webserv confs/test.conf<br>
-	% curl -X DELETE http://localhost:8080/hoge.html</p>
+	% curl -v -X DELETE http://localhost:8080/hoge.html</p>
 
 	<h2>Basic Checks</h2>
 	<li>GETリクエスト → 200</li>
 	<p>./webserv confs/test.conf<br>
 	% curl -v http://localhost:8080</p>
-	<li>???POSTリクエスト</li>
-	<p>./webserv confs/test.conf<br>
-	% curl -X POST -H "Content-Type: plain/text" --data "BODY IS HERE write something shorter or longer than body limit"  http://localhost:8080</p>
+	<li>POSTリクエスト</li>
+	<p>./webserv confs/cgi_test.conf<br>
+	% curl -v -X POST localhost:8080/post_test.cgi -d "photo=hello&email_address=world"</p>
 
 	<li>DELETEリクエスト → 204</li>
 	<p>./webserv confs/test.conf<br>
