@@ -73,11 +73,16 @@
 	<li>???サーバーへのアップロードしてそれを取得</li>
 	<p>./webserv confs/upload_test.conf<br>
 	<a href=http://localhost:8080/index-upload.html>http://localhost:8080/index-upload.html</a></p>
-
-
+	
 	<h2>Status Code</h2>
+	
 	<li>301 Moved Permanently</li>
+	<p>./webserv confs/test.conf<br>
+		% curl -v http://localhost:8080/dir_on</p>
+		
 	<li>302 Found</li>
+	<p>./webserv confs/redirect.conf<br>
+		% curl -v http://localhost:8080/redirect/</p>
 
 	<li>400 Bad Request</li>
 	<p>% telnet localhost 8080<br>
@@ -86,12 +91,20 @@
 	></p>
 
 	<li>403 Forbidden</li>
+	<p>./webserv confs/test.conf<br>
+	<a href="http://localhost:8080/dir_on/">http://localhost:8080/dir_on/</a></p>
 
 	<li>404 NotFound</li>
-	<p><a href="http://localhost:8080/not_exist.html">http://localhost:8080/not_exist.html</a></p>
-
+	<p>./webserv confs/test.conf<br>
+	<a href="http://localhost:8080/not_exist.html">http://localhost:8080/not_exist.html</a></p>
+	
 	<li>500 Internal Server Error</li>
+	<p>./webserv confs/cgi_test.conf<br>
+	<a href="http://localhost:8080/no_header.cgi">http://localhost:8080/no_header.cgi</a></p>
+	
 	<li>504 Gateway Timeout</li>
+	<p>./webserv confs/cgi_test.conf<br>
+	<a href="http://localhost:8080/timeout.cgi">http://localhost:8080/timeout.cgi</a></p>
 
 	<li>505 HTTP Version Not Supported</li>
 	<p>% telnet localhost 8080<br>
@@ -100,5 +113,8 @@
 	><br>
 	></p>
 
+	<h2>Siege Test</h2>
+	ひとりのユーザがインターバルを置かずに1024回リクエストを送る
+	<p>siege -r 1024 -c 1 -b 1 127.0.0.1:8080</p>
 </body>
 </html>
