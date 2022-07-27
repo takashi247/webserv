@@ -168,7 +168,7 @@ void ConfigParser::ParseServerConfig(
         ParserUtils::ParseString(list, sc.default_location_config_.rewrite_);
         if (sc.default_location_config_.rewrite_[0] != '/' &&
             (sc.default_location_config_.rewrite_.find("http://") ==
-                 std::string::npos ||
+                 std::string::npos &&
              sc.default_location_config_.rewrite_.find("https://") ==
                  std::string::npos))
           ParserUtils::MakeUnexpected(
@@ -229,7 +229,7 @@ void ConfigParser::ParseLocationConfig(
     } else if (item == "rewrite") {
       ParserUtils::ParseString(list, lc.rewrite_);
       if (lc.rewrite_[0] != '/' &&
-          (lc.rewrite_.find("http://") == std::string::npos ||
+          (lc.rewrite_.find("http://") == std::string::npos &&
            lc.rewrite_.find("https://") == std::string::npos))
         ParserUtils::MakeUnexpected(
             "redirect to non-URL in \"rewrite\" directive",
