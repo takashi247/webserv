@@ -114,6 +114,11 @@
 		</tr>
 		<tr>
 			<td>302 Found</td>
+			<td>% ./webserv confs/redirect.conf</td>
+			<td>% curl -v http://localhost:8080/redirect/</td>
+		</tr>
+		<tr>
+			<td>400 Bad Request</td>
 			<td>% ./webserv confs/test.conf</td>
 			<td>% telnet localhost 8080<br>> GET <br>
 				><br>
