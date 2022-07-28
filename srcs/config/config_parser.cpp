@@ -167,14 +167,6 @@ void ConfigParser::ParseServerConfig(
         ParserUtils::ValidateHttpMethod(list);
       } else if (item == "rewrite") {
         ParserUtils::ParseString(list, sc.default_location_config_.rewrite_);
-        // if (sc.default_location_config_.rewrite_[0] != '/' &&
-        //     (sc.default_location_config_.rewrite_.find("http://") ==
-        //          std::string::npos &&
-        //      sc.default_location_config_.rewrite_.find("https://") ==
-        //          std::string::npos))
-        //   ParserUtils::MakeUnexpected(
-        //       "redirect to non-URL in \"rewrite\" directive",
-        //       tokens_[index_ - list.size() + 1].first);
         ParserUtils::ValidateRewrite(list);
       } else if (item == "root") {
         ParserUtils::ParseString(list, sc.default_location_config_.root_);
@@ -231,12 +223,6 @@ void ConfigParser::ParseLocationConfig(
       ParserUtils::ValidateHttpMethod(list);
     } else if (item == "rewrite") {
       ParserUtils::ParseString(list, lc.rewrite_);
-      // if (lc.rewrite_[0] != '/' &&
-      //     (lc.rewrite_.find("http://") == std::string::npos &&
-      //      lc.rewrite_.find("https://") == std::string::npos))
-      //   ParserUtils::MakeUnexpected(
-      //       "redirect to non-URL in \"rewrite\" directive",
-      //       list[1].first);
       ParserUtils::ValidateRewrite(list);
     } else if (item == "root") {
       ParserUtils::ParseString(list, lc.root_);
