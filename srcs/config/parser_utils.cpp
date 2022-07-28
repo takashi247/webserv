@@ -64,9 +64,9 @@ void ParserUtils::ParseVector(
   }
 }
 
-void ParserUtils::AtoSizeT(const char *s,
-                           const std::vector<std::pair<int, std::string> > &list,
-                           size_t &num) {
+void ParserUtils::AtoSizeT(
+    const char *s, const std::vector<std::pair<int, std::string> > &list,
+    size_t &num) {
   size_t i = 0;
   num = 0;
   const size_t size_max_mod_10 = SIZE_MAX % 10;
@@ -86,4 +86,24 @@ void ParserUtils::AtoSizeT(const char *s,
         "invalid number specified in \"" + list[0].second + "\" directive",
         list[1].first);
   }
+}
+
+void ParserUtils::ValidateHttpMethod(
+    const std::vector<std::pair<int, std::string> > &list) {
+  for (size_t i = 1; i < list.size(); ++i) {
+    if (list[i].second == "GET" || list[i].second == "POST" ||
+        list[i].second == "DELETE")
+      continue;
+    MakeUnexpected("invalid method in \"http_method\" directive",
+                   list[i].first);
+  }
+}
+
+void ParserUtils::ValidateRewrite(
+    const std::vector<std::pair<int, std::string> > &list) {
+  std::string rewrite = list[1].second;
+  if (rewrite[0] != '/' && (rewrite.find("http://") == std::string::npos &&
+                            rewrite.find("https://") == std::string::npos))
+    ParserUtils::MakeUnexpected("redirect to non-URL in \"rewrite\" directive",
+                                list[1].first);
 }

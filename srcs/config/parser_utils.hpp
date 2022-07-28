@@ -23,6 +23,8 @@ class ParserUtils
   static void ParseVector(const std::vector<std::pair<int, std::string> >& list,
                    std::vector<std::string>& str);
   static void AtoSizeT(const char *s, const std::vector<std::pair<int, std::string> > &list, size_t &num);
+  static void ValidateHttpMethod(const std::vector< std::pair< int, std::string > > &list);
+  static void ValidateRewrite(const std::vector< std::pair< int, std::string > > &list);
 };
 
 #endif
