@@ -51,9 +51,6 @@ void ServerSocket::SetSockaddrIn() {
     this->serv_addr_.sin_addr.s_addr = htonl(INADDR_ANY);
   }
   this->serv_addr_.sin_port = htons(this->port_);
-
-  std::cout << "result of inet_ntoa -> " << inet_ntoa(serv_addr_.sin_addr)
-            << std::endl;
 }
 
 int ServerSocket::SetSocket() {

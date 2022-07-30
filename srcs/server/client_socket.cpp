@@ -238,9 +238,9 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
   }
   if (status_ == ClientSocket::PARSE_HEADER) {
     HttpRequestParser::ParseHeader(recv_str_, &request_);
-    std::cout << "***** receive message *****\n";
-    std::cout << recv_str_ << std::endl;
-    std::cout << "***** receive message finished *****\n";
+    // std::cout << "***** receive message *****\n";
+    // std::cout << recv_str_ << std::endl;
+    // std::cout << "***** receive message finished *****\n";
     if (request_.method_ == "POST") {
       if (request_.content_length_ != 0) {
         ChangeStatus(ClientSocket::WAIT_BODY);
