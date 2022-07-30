@@ -32,7 +32,7 @@ static ssize_t ReceiveMessage(int fd, std::string &recv_str) {
  */
 static int SendMessage(int fd, const char *str, size_t len) {
   ssize_t send_size = send(fd, str, len, 0);
-  if (send_size == -1) {
+  if (0 >= send_size) {
     std::cout << "send() failed." << std::endl;
   }
   return send_size;
@@ -73,7 +73,7 @@ static int ReceiveNoChunkedBody(int fd, std::string &recv_msg,
   ssize_t remain_length = content_length - (recv_msg.length() - body_start_pos);
   ssize_t read_size = 0;
   if (remain_length) {
-    if (-1 == (read_size = ReceiveMessage(fd, recv_msg))) {
+    if (0 >= (read_size = ReceiveMessage(fd, recv_msg))) {
       return -1;
     }
     remain_length -= read_size;
@@ -139,7 +139,7 @@ void ClientSocket::Init() {
  */
 int ClientSocket::ReceiveHeader() {
   size_t header_end_pos;
-  if (-1 == ReceiveMessage(fd_, recv_str_)) {
+  if (0 >= ReceiveMessage(fd_, recv_str_)) {
     return 1;
   }
   // 先頭の改行は削除
@@ -217,7 +217,7 @@ int ClientSocket::ReceiveBody() {
       ChangeStatus(ClientSocket::CREATE_RESPONSE);
     }
   } else if (request_.is_chunked_) {
-    if (-1 == ReceiveMessage(fd_, recv_str_)) {
+    if (0 >= ReceiveMessage(fd_, recv_str_)) {
       return 1;
     }
     int res = ParseChunkedBody();
@@ -276,8 +276,8 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
   }
   if (status_ == ClientSocket::WAIT_SEND) {
     if (is_writable) {
-      if ((SendMessage(fd_, server_response_.c_str(),
-                       server_response_.length()) < 0) ||
+      if ((0 >= SendMessage(fd_, server_response_.c_str(),
+                            server_response_.length())) ||
           request_.is_bad_request_) {
         ChangeStatus(ClientSocket::WAIT_CLOSE);
       } else {
