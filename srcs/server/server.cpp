@@ -67,7 +67,7 @@ void Server::CreateServerSockets() {
       std::cerr << e.what() << std::endl;
       std::exit(EXIT_FAILURE);
     }
-    std::cout << "ポート " << it->port_ << " を監視します。\n";
+    std::cout << "Monitor port:" << it->port_ << ".\n";
   }
 }
 

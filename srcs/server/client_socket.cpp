@@ -102,8 +102,8 @@ ClientSocket::ClientSocket(int fd, const ServerSocket *parent,
   info_.ipaddr_.assign(inet_ntoa(sin.sin_addr));
   info_.port_ = ntohs(sin.sin_port);
   Init();
-  std::cout << "接続: " << info_.hostname_ << "(" << info_.ipaddr_ << ")ポート "
-            << info_.port_ << " ディスクリプタ " << fd << " 番\n";
+  std::cout << "Connection to " << info_.hostname_ << "(" << info_.ipaddr_
+            << ") port:" << info_.port_ << " descriptor:" << fd << ".\n";
 }
 
 ClientSocket::ClientSocket(const ClientSocket &other) { *this = other; }
@@ -287,9 +287,10 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
   }
   // timeout
   if (time(NULL) - kDisconnectSec > last_access_) {
-    std::cout << info_.hostname_ << " (" << info_.ipaddr_ << ") ポート "
-              << info_.port_ << " ディスクリプタ " << fd_ << "番から"
-              << kDisconnectSec << "秒以上アクセスがないので切断します。\n";
+    std::cout << "No access from " << info_.hostname_ << "(" << info_.ipaddr_
+              << ") port:" << info_.port_ << " descriptor:" << fd_
+              << " for more than " << kDisconnectSec
+              << " second, so it disconnects.\n";
     ChangeStatus(ClientSocket::WAIT_CLOSE);
   }
   if (status_ == ClientSocket::WAIT_CLOSE) {
