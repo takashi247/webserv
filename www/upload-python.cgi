@@ -38,5 +38,3 @@ if os.environ.get('X_IS_UPLOADABLE') == 'true':
 else:
     print("Content-Type: text/html\r\n", end = "")
     print("Status: 405\r\n\r\n", end = "")
-
-print(chr(26), end = '')

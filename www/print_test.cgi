@@ -22,5 +22,3 @@ Hey look I just created a virtual (yep, virtual) HTML document!
 </HTML>
 
 END_HTML
-
-print chr(26);

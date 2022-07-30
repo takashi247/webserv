@@ -49,5 +49,3 @@ END_HTML
 print $query->header(-status => '405')
 
 }
-
-print chr(26);

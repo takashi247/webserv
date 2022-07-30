@@ -25,5 +25,3 @@ print <<END_HTML;
 </HTML>
 
 END_HTML
-
-print chr(26);
