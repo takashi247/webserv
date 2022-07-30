@@ -969,7 +969,7 @@ void HttpResponse::MakeCgiResponse() {
     }
     int wstatus;
     if (write(pipe_parent2child[WRITE], http_request_.body_.c_str(),
-              http_request_.body_.length()) == -1 ||
+              http_request_.body_.length()) <= 0 ||
         waitpid(pid, &wstatus, 0) != pid) {
       close(pipe_parent2child[READ]);
       return Make500Response();
