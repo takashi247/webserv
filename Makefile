@@ -43,7 +43,7 @@ $(NAME):	$(OBJS)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) $^ -o $@
 
 $(OBJSDIR)%.o: %.cpp
-	mkdir -p $(OBJSDIR)/$(*D)
+	mkdir -p $(OBJSDIR)$(*D)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
 
 clean:
@@ -60,7 +60,7 @@ debug:		CXXFLAGS += $(DEBUG)
 debug:		re
 
 leaks:		CXXFLAGS += $(LEAKS)
-leaks:		test
+leaks:		re
 
 -include $(DEPS)
 

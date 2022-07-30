@@ -1,5 +1,4 @@
 #include "server.hpp"
-#include "webserv_exception.hpp"
 
 #include <sys/select.h>  //select
 #include <unistd.h>      //close
@@ -7,6 +6,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+
+#include "webserv_exception.hpp"
 
 Server::Server() : config_("filename") {
   std::cout << "[Debug] Server Construct!" << std::endl;
@@ -112,11 +113,23 @@ int Server::AcceptNewClient(const fd_set &fds) {
   return 0;
 }
 
+#ifdef LEAKS
+static bool b_exit = false;
+void abort_handler(int sig) {
+  (void)sig;
+  b_exit = true;
+}
+#endif
 void Server::Run() {
   int width;
   fd_set r_fds;
   fd_set w_fds;
   struct timeval waitval;
+#ifdef LEAKS
+  if (signal(SIGINT, abort_handler) == SIG_ERR) {
+    std::exit(EXIT_FAILURE);
+  }
+#endif
   /***
    * サーバーソケットを生成
    */
@@ -156,9 +169,11 @@ void Server::Run() {
       }
       ++it;
     }
+#ifdef LEAKS
+    if (b_exit) break;
+#endif
   }
 
-  // TODO:  後処理自体はメモリリークしないことだけ確認したい
   std::vector< ClientSocket >::iterator cit;
   for (cit = clients_.begin(); cit != clients_.end(); ++cit) {
     close(cit->GetFd());
@@ -167,5 +182,6 @@ void Server::Run() {
   for (sit = sockets_.begin(); sit != sockets_.end(); ++sit) {
     close(sit->GetListenFd());
   }
+  system("leaks webserv");
   return;
 }
