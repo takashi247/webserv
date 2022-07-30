@@ -57,7 +57,7 @@
 		</tr>
 		<tr>
 			<td>ディレクトリを指定したときに検索するデフォルトのファイルを設定</td>
-			<td>% /webserv confs/test.conf</td>
+			<td>% ./webserv confs/different_index.conf</td>
 			<td>% curl localhost:8080</td>
 		</tr>
 		<tr>
@@ -155,124 +155,43 @@
 		</tr>
 	</table>
 
-	<h2>Siege Test</h2>
+	<h2>Check with a browser</h2>
 	<table>
-		<tr><th>テスト項目</th><th>サーバー起動</th><th>確認方法</th></tr>
+		<tr><th>テスト項目</th><th>ショートカット</th><th>確認方法</th></tr>
+		<tr>
+			<td>リクエストヘッダとレスポンスヘッダを見る</td>
+			<td>ディベロッパーツールを開く<br>Mac -> Command + Option + I<br>
+			Windows -> Ctrl + Shift + I</td>
+			<td>ネットワーク→名前欄に表示されるlocalhostをクリック</td>
+		</tr>
+	</table>
+
+
+	<h2>Siege & stress test</h2>
+	<table>
+		<tr><th>テスト項目</th><th>サーバー起動</th><th>別ターミナル操作</th></tr>
 		<tr>
 			<td>ひとりのユーザがインターバルを置かずに<br>1024回リクエストを送る</td>
 			<td>% ./webserv confs/test.conf</td>
 			<td>% siege -r 1024 -c 1 -b 127.0.0.1:8080</td>
 		</tr>
+		<tr>
+			<td>メモリリークがないか確認する</td>
+			<td>% ./webserv confs/test.conf</td>
+			<td>% ps aux | grep webserv<br>
+				% top -pid [PID]</td>
+		</tr>
 	</table>
 
+	<h2>Bonus Part CGI</h2>
+	<table>
+		<tr><th>テスト項目</th><th>サーバー起動</th><th>確認方法</th></tr>
+		<tr>
+			<td>複数のCGIシステムがある</td>
+			<td>% ./webserv confs/upload_test.conf</td>
+			<td><a href=http://localhost:8080/index-upload-python.html>http://localhost:8080/index-upload-python.html</a></td>
+		</tr>
+	</table>
 
-	<!-- <br><br><br>
-	<li class="nav-list-item">
-		異なるポートを持つ複数のサーバー
-	</li>
-	<p>% ./webserv confs/multiple_servers_different_port.conf</p>
-	<p>ターミナルから<br>
-		% curl localhost:8080<br>
-		% curl localhost:4242
-	</p>
-	<li>
-		複数のサーバーを異なるホスト名で設定
-	</li>
-	<p>% ./webserv confs/multiple_servers_different_hostname.conf</p>
-	<p>curl http://localhost:8080/<br>
-	curl --resolve hoge.com:8080:127.0.0.1 http://hoge.com:8080/</p>
-	<li>
-		デフォルトのエラーページ表示 → 404
-	</li>
-	<p>% ./webserv confs/error_page.conf</p>
-	<p><a href="http://localhost:8080/hoge.html">http://localhost:8080/hoge.html</a></p>
-	<li>
-		ボディサイズの制限 → 413
-	</li>
-	<p>% ./webserv confs/upload_with_limit.conf</p>
-	<p>curl -X POST -H "Content-Type: plain/text" --data "BODY IS HERE write something shorter or longer than body limit"  http://localhost:8080</p>
-	<li>
-		異なるディレクトリへのルートを設定
-	</li>
-	<p>./webserv confs/route.conf<br>
-	<a href=http://localhost:8080/>http://localhost:8080/</a><br>
-	<a href=http://localhost:8080/www/>http://localhost:8080/www/</a></p>
-
-	<li>
-		ディレクトリを指定してオートインデックスを表示
-	</li>
-	<p>./webserv confs/autoindex_test.conf<br>
-	<a href=http://localhost:8080/dir_on/>http://localhost:8080/dir_on/</a><br>
-
-	<li>
-		受け入れられるメソッドのリストを設定。→ 405, 204<br>
-	</li>
-	<p>./webserv confs/no_delete.conf<br>
-	% curl -v -X DELETE http://localhost:8080/hoge.html</p>
-	<p>./webserv confs/test.conf<br>
-	% curl -v -X DELETE http://localhost:8080/hoge.html</p>
-
-	<h2>Basic Checks</h2>
-	<li>GETリクエスト → 200</li>
-	<p>./webserv confs/test.conf<br>
-	% curl -v http://localhost:8080</p>
-	<li>POSTリクエスト</li>
-	<p>./webserv confs/cgi_test.conf<br>
-	% curl -v -X POST localhost:8080/post_test.cgi -d "photo=hello&email_address=world"</p>
-
-	<li>DELETEリクエスト → 204</li>
-	<p>./webserv confs/test.conf<br>
-	% curl -v -X DELETE  http://localhost:8080/hoge.html</p>
-
-	<li>UNKNOWNリクエスト → 405</li>
-	<p>./webserv confs/test.conf<br>
-	% curl -v -X UNKNOWN  http://localhost:8080/</p>
-
-	<li>???サーバーへのアップロードしてそれを取得</li>
-	<p>./webserv confs/upload_test.conf<br>
-	<a href=http://localhost:8080/index-upload.html>http://localhost:8080/index-upload.html</a></p>
-
-	<h2>Status Code</h2>
-
-	<li>301 Moved Permanently</li>
-	<p>./webserv confs/test.conf<br>
-		% curl -v http://localhost:8080/dir_on</p>
-
-	<li>302 Found</li>
-	<p>./webserv confs/redirect.conf<br>
-		% curl -v http://localhost:8080/redirect/</p>
-
-	<li>400 Bad Request</li>
-	<p>% telnet localhost 8080<br>
-	> GET <br>
-	><br>
-	></p>
-
-	<li>403 Forbidden</li>
-	<p>./webserv confs/test.conf<br>
-	<a href="http://localhost:8080/dir_on/">http://localhost:8080/dir_on/</a></p>
-
-	<li>404 NotFound</li>
-	<p>./webserv confs/test.conf<br>
-	<a href="http://localhost:8080/not_exist.html">http://localhost:8080/not_exist.html</a></p>
-
-	<li>500 Internal Server Error</li>
-	<p>./webserv confs/cgi_test.conf<br>
-	<a href="http://localhost:8080/no_header.cgi">http://localhost:8080/no_header.cgi</a></p>
-
-	<li>504 Gateway Timeout</li>
-	<p>./webserv confs/cgi_test.conf<br>
-	<a href="http://localhost:8080/timeout.cgi">http://localhost:8080/timeout.cgi</a></p>
-
-	<li>505 HTTP Version Not Supported</li>
-	<p>% telnet localhost 8080<br>
-	> GET / HTTP/2.0<br>
-	> Host: localhost<br>
-	><br>
-	></p>
-
-	<h2>Siege Test</h2>
-	ひとりのユーザがインターバルを置かずに1024回リクエストを送る
-	<p>siege -r 1024 -c 1 -b 1 127.0.0.1:8080</p> -->
 </body>
 </html>
