@@ -504,7 +504,7 @@ void HttpResponse::DeleteRequestedFile() {
 // while applying bit calculation to interim results
 
 void HttpResponse::SetEtag() {
-  unsigned int result;
+  unsigned int result = 0;
   for (std::string::iterator it = last_modified_.begin(),
                              end = last_modified_.end();
        it != end; ++it) {
@@ -753,7 +753,7 @@ void HttpResponse::SetStatusCode() {
 void HttpResponse::DeleteCgiEnviron(char **cgi_env) {
   char **head = cgi_env;
   while (*cgi_env) {
-    delete *cgi_env;
+    free(*cgi_env);
     ++cgi_env;
   }
   delete[] head;
@@ -980,10 +980,14 @@ void HttpResponse::MakeCgiResponse() {
     if (SendRequestBody(pipe_parent2child[WRITE], http_request_) == 0 ||
         waitpid(pid, &wstatus, 0) != pid) {
       close(pipe_parent2child[READ]);
+      close(pipe_parent2child[WRITE]);
+      close(pipe_child2parent[READ]);
       return Make500Response();
     }
     if (WIFSIGNALED(wstatus) && WTERMSIG(wstatus) == SIGALRM) {
       close(pipe_parent2child[READ]);
+      close(pipe_parent2child[WRITE]);
+      close(pipe_child2parent[READ]);
       return Make504Response();
     }
     while (cgi_status_ != kCloseConnection) {
@@ -1026,7 +1030,9 @@ void HttpResponse::MakeCgiResponse() {
         cgi_status_ = kCloseConnection;
       }
     }
-    if (close(pipe_parent2child[READ]) == -1) {
+    if (close(pipe_parent2child[READ]) == -1 ||
+        close(pipe_parent2child[WRITE]) == -1 ||
+        close(pipe_child2parent[READ]) == -1) {
       return Make500Response();
     }
     if (status_code_ != kStatusCodeOK || is_local_redirection_) {
