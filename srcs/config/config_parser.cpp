@@ -39,7 +39,6 @@ void ConfigParser::Tokenize(const char *file_name) {
     line_count++;
     pos = line_buf.find_first_not_of(" ");
 
-    if (line_buf[pos] == '#') continue;
     while (pos < line_buf.size()) {
       switch (line_buf[pos]) {
         case ' ':

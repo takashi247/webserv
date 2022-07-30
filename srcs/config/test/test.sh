@@ -8,6 +8,6 @@ make
 
 for filepath in $FILE; do
   echo $filepath
-  ./$PROGRAM $filepath
+  valgrind ./$PROGRAM $filepath
   echo ""
 done

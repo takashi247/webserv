@@ -21,7 +21,7 @@ UPDATE_SRCS :=	../config.cpp	\
 				update_uri_test.cpp 
 
 parse: $(PARSE_SRCS)
-	c++ -I../../exception -o parse $^
+	c++ -I../../exception -g -o parse $^
 
 select: $(SELECT_SRCS)
 	c++ -o select $^
