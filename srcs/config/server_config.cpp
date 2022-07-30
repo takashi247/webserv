@@ -87,11 +87,8 @@ std::string ServerConfig::UpdateUri(const std::string &uri) const {
   if (*(path.end() - 1) == '/') {
     for (std::vector< std::string >::const_iterator it = lc->vec_index_.begin();
          it != lc->vec_index_.end(); ++it) {
-          std::cout << *it << std::endl;
       if (stat((path + *it).c_str(), &buffer) == 0) {
         return (path + *it);
-      } else {
-        std::cout << path + *it << std::endl;
       }
     }
   }
