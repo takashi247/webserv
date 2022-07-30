@@ -124,6 +124,7 @@ class HttpResponse {
   void Make500Response();
   void Make504Response();
   bool IsRequestConnectionClose() const;
+  int SendRequestBody(int fd, const HttpRequest &http_request) const;
 
   // Helper functions
   std::string ShortenRequestBody(const std::string &);

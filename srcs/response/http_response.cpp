@@ -919,6 +919,15 @@ void HttpResponse::Make504Response() {
   MakeResponse();
 }
 
+int HttpResponse::SendRequestBody(int fd,
+                                  const HttpRequest &http_request) const {
+  if (http_request.body_.length() != 0 &&
+      write(fd, http_request.body_.c_str(), http_request.body_.length()) <= 0) {
+    return 0;
+  }
+  return 1;
+}
+
 void HttpResponse::MakeCgiResponse() {
   pid_t pid;
   char *argv[2] = {const_cast< char * >(requested_file_path_.c_str()), NULL};
@@ -968,8 +977,7 @@ void HttpResponse::MakeCgiResponse() {
       return Make500Response();
     }
     int wstatus;
-    if (write(pipe_parent2child[WRITE], http_request_.body_.c_str(),
-              http_request_.body_.length()) <= 0 ||
+    if (SendRequestBody(pipe_parent2child[WRITE], http_request_) == 0 ||
         waitpid(pid, &wstatus, 0) != pid) {
       close(pipe_parent2child[READ]);
       return Make500Response();
