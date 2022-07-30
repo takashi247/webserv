@@ -56,9 +56,9 @@
 				<a href=http://localhost:8080/www/>http://localhost:8080/www/</a></td>
 		</tr>
 		<tr>
-			<td>ディレクトリを指定してオートインデックスを表示</td>
-			<td>% ./webserv confs/autoindex_test.conf</td>
-			<td><a href=http://localhost:8080/dir_on/>http://localhost:8080/dir_on/</a></td>
+			<td>ディレクトリを指定したときに検索するデフォルトのファイルを設定</td>
+			<td>% /webserv confs/test.conf</td>
+			<td>% curl localhost:8080</td>
 		</tr>
 		<tr>
 			<td>受け入れられるメソッドのリストを設定。→ 405, 204</td>
@@ -161,7 +161,7 @@
 		<tr>
 			<td>ひとりのユーザがインターバルを置かずに<br>1024回リクエストを送る</td>
 			<td>% ./webserv confs/test.conf</td>
-			<td>% siege -r 1024 -c 1 -b 1 127.0.0.1:8080</td>
+			<td>% siege -r 1024 -c 1 -b 127.0.0.1:8080</td>
 		</tr>
 	</table>
 
