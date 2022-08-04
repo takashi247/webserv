@@ -320,13 +320,15 @@ void HttpResponse::MakeHeaderRedirection() {
   oss_content_type << "Content-Type: text/html\r\n";
   oss_content_length << "Content-Length: " << body_len_ << "\r\n";
   if (status_code_ == kStatusCodeMovedPermanently) {
-    oss_location << "Location: http://" << client_info_.hostname_;
+    oss_location << "Location: http://" << client_info_.hostname_ << ":"
+                 << http_request_.host_port_;
     std::string requested_file_path_short_ =
         requested_file_path_.substr(location_config_->root_.length());
     oss_location << requested_file_path_short_ << "\r\n";
   } else {
     if (requested_file_path_.find("http://") != 0) {
-      oss_location << "Location: http://" << client_info_.hostname_;
+      oss_location << "Location: http://" << client_info_.hostname_ << ":"
+                   << http_request_.host_port_;
     } else {
       oss_location << "Location: ";
     }

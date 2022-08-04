@@ -42,6 +42,7 @@ class HttpRequest {
   std::string query_string_;
   std::string version_;    // 0以外の数字から始まる文字列
   std::string host_name_;  // Host: からポート番号を取り除いたもの
+  std::string host_port_;  // Host: で指定されたポート番号
   std::string content_type_;
   size_t content_length_;
   std::string body_;

@@ -148,10 +148,13 @@ int HttpRequestParser::ParseHeader(const std::string& recv_msg,
     req->is_bad_request_ = true;
   } else {  // separate host -> name:port
     pos = host.find(":");
-    if (pos == std::string::npos)
+    if (pos == std::string::npos) {
       req->host_name_ = host;
-    else
+      req->host_port_ = "80";
+    } else {
       req->host_name_ = host.substr(0, pos);
+      req->host_port_ = host.substr(pos + 1);
+    }
   }
   req->content_type_ = req->header_fields_["content-type"];
   std::stringstream sstream(req->header_fields_["content-length"]);
