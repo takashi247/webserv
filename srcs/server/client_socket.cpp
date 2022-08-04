@@ -10,6 +10,13 @@
 #include "http_response.hpp"
 
 static const int kReadBufferSize = 1024;
+
+static std::string SizeToStr(size_t size) {
+  std::stringstream ss;
+  ss << size;
+  return ss.str();
+}
+
 /*
  * -1: 読み込みエラー
  * other: 読み込み済み文字数
@@ -45,12 +52,15 @@ static int SendMessage(int fd, const char *str, size_t len) {
 static int GetChunkSize(std::string::const_iterator *it) {
   std::string::const_iterator cur = *it;
   int size = 0;
-  while (('0' <= *cur && *cur <= '9') || ('A' <= *cur && *cur <= 'F')) {
+  while (('0' <= *cur && *cur <= '9') || ('A' <= *cur && *cur <= 'F') ||
+         ('a' <= *cur && *cur <= 'f')) {
     size *= 16;
     if ('0' <= *cur && *cur <= '9')
       size += *cur - '0';
     else if ('A' <= *cur && *cur <= 'F')
       size += *cur - 'A' + 10;
+    else if ('a' <= *cur && *cur <= 'f')
+      size += *cur - 'a' + 10;
     ++cur;
   }
   if (*cur != '\r' || *(cur + 1) != '\n') {
@@ -223,8 +233,11 @@ int ClientSocket::ReceiveBody() {
     int res = ParseChunkedBody();
     if (res == -1)  //エラー
       return 1;
-    else if (res == 0)  //読み込み完了
+    else if (res == 0) {  //読み込み完了
+      request_.header_fields_["content-length"] =
+          SizeToStr(request_.body_.size());
       ChangeStatus(ClientSocket::CREATE_RESPONSE);
+    }
   }
   return 0;
 }
@@ -248,9 +261,11 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
         int parse_res = ParseChunkedBody();
         if (parse_res == -1)
           ChangeStatus(ClientSocket::WAIT_CLOSE);
-        else if (parse_res == 0)
+        else if (parse_res == 0) {
+          request_.header_fields_["content-length"] =
+              SizeToStr(request_.body_.size());
           ChangeStatus(ClientSocket::CREATE_RESPONSE);
-        else
+        } else
           ChangeStatus(ClientSocket::WAIT_BODY);
       } else {
         ChangeStatus(ClientSocket::CREATE_RESPONSE);

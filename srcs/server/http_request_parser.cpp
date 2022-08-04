@@ -157,7 +157,7 @@ int HttpRequestParser::ParseHeader(const std::string& recv_msg,
   std::stringstream sstream(req->header_fields_["content-length"]);
   sstream >> req->content_length_;
   {  // judge encoding
-    std::string encoding = req->header_fields_["Transfer-Encoding"];
+    std::string encoding = req->header_fields_["transfer-encoding"];
     req->is_chunked_ = (encoding == "chunked");
   }
   return 0;

@@ -78,9 +78,16 @@
 			<td>% curl -v http://localhost:8080</td>
 		</tr>
 		<tr>
-			<td>POSTリクエスト</td>
+			<td>POSTリクエスト → 200</td>
 			<td>% ./webserv confs/cgi_test.conf</td>
 			<td>% curl -v -X POST localhost:8080/post_test.cgi -d "photo=hello&email_address=world"</td>
+		</tr>
+		<tr>
+			<td>POSTリクエスト(chunked) → 200</td>
+			<td>% ./webserv confs/cgi_test.conf</td>
+			<td>% curl -v -X POST -H "Transfer-Encoding: chunked" localhost:8080/post_test.cgi -d "photo=hello&email_address=world"<br>
+			curl -v --trace-ascii - -X POST -H "Transfer-Encoding: chunked" localhost:8080/post_test.cgi -d "photo=hello&email_address=world"
+			</td>
 		</tr>
 		<tr>
 			<td>DELETEリクエスト → 204</td>
