@@ -37,7 +37,7 @@ static ssize_t ReceiveMessage(int fd, std::string &recv_str) {
  * -1: 送信エラー
  * other: 送信済み文字数
  */
-static int SendMessage(int fd, const char *str, size_t len) {
+static ssize_t SendMessage(int fd, const char *str, size_t len) {
   ssize_t send_size = send(fd, str, len, 0);
   if (0 >= send_size) {
     std::cout << "send() failed." << std::endl;
@@ -290,15 +290,19 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     if (response.GetConnection() == "close") {
       request_.is_bad_request_ = true;
     }
+    remain_size_ = server_response_.length();
     ChangeStatus(ClientSocket::WAIT_SEND);
   }
   if (status_ == ClientSocket::WAIT_SEND) {
     if (is_writable) {
-      if ((0 >= SendMessage(fd_, server_response_.c_str(),
-                            server_response_.length())) ||
-          request_.is_bad_request_) {
+      ssize_t start_pos = server_response_.length() - remain_size_;
+      ssize_t send_size =
+          SendMessage(fd_, server_response_.c_str() + start_pos, remain_size_);
+      if ((0 >= send_size) || request_.is_bad_request_) {
         ChangeStatus(ClientSocket::WAIT_CLOSE);
-      } else {
+      }
+      remain_size_ -= send_size;
+      if (remain_size_ == 0) {
         Init();
       }
     }
