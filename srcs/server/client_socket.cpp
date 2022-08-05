@@ -45,6 +45,11 @@ static int SendMessage(int fd, const char *str, size_t len) {
   return send_size;
 }
 
+static size_t SizeMin(size_t a, size_t b) {
+  if (a < b) return a;
+  return b;
+}
+
 /*
  * -1 : 読み込みエラー
  * other : Chunkサイズ
@@ -72,30 +77,65 @@ static int GetChunkSize(std::string::const_iterator *it) {
 }
 
 /*
- * -1 : Body読み込みエラー
- * 0 : Body読み込み完了（続きを読むかはStatusで判断）
- * other : 残り読み込みサイズ
+ * -1 : エラー切断
+ * 0 : 読み込み完了
+ * 1 : まだ読み込む
  */
-static int ReceiveNoChunkedBody(int fd, std::string &recv_msg,
-                                size_t content_length, std::string &body) {
-  size_t header_end_pos = recv_msg.find("\r\n\r\n");
-  size_t body_start_pos = header_end_pos + HttpRequestParser::kSeparatorSize;
-  ssize_t remain_length = content_length - (recv_msg.length() - body_start_pos);
-  ssize_t read_size = 0;
-  if (remain_length) {
-    if (0 >= (read_size = ReceiveMessage(fd, recv_msg))) {
-      return -1;
-    }
-    remain_length -= read_size;
-  }
-  if (remain_length < 0) {
+static int ParseNormalBody(size_t &remain_size, std::string &in, size_t &pos,
+                           std::string &out) {
+  size_t read_size = in.size() - pos;
+  if (remain_size < read_size) {
     std::cout << "Read Error over Content-Length\n";
     return -1;
-  } else if (remain_length == 0) {
-    body.assign(recv_msg.begin() + body_start_pos, recv_msg.end());
-    return 0;
   }
-  return remain_length;
+  out.append(in, pos, read_size);
+  pos += read_size;
+  remain_size -= read_size;
+  if (remain_size == 0) return 0;
+  return 1;
+}
+
+/*
+ * すでに読み込んだメッセージからChunkedされた部分をパースする
+ * -1: エラー切断
+ * 0 : parse完了
+ * 1 : まだ読み込む
+ */
+static int ParseChunkedBody(size_t &remain_size, std::string &in, size_t &pos,
+                            std::string &out) {
+  // pos から続きを読み始める。
+  if (remain_size == 0) {
+    if (std::string::npos == in.find("\r\n", pos)) {
+      return 1;  // サイズが無いのに、終端が見つからなければ、次を読む
+    }
+    std::string::const_iterator it = in.begin() + pos;
+    int chunk_size = GetChunkSize(&it);
+    // chunked bodyの先頭を指す。
+    pos = in.find("\r\n", pos) + HttpRequestParser::kCRLFSize;
+    if (chunk_size == -1) {  //これでも読めないならエラー
+      return 1;
+    } else if (chunk_size == 0) {
+      return 0;  //正常終了
+    }
+    // chunk_sizeと終端の\r\nを含んだ数だけ読み込む
+    remain_size = chunk_size + HttpRequestParser::kCRLFSize;
+  }
+  // posの位置から、remain_size分を読み込みたい
+  // 読み込みたいchunk_sizeと、読み込み済み残りサイズの小さい方をbodyに追加する
+  size_t append_size = SizeMin(remain_size, in.size() - pos);
+  out.append(in, pos, append_size);
+  // chunk最後の\r\nも追加されてるため、削除する
+  size_t rfind_res = out.rfind("\r\n");
+  if (rfind_res != std::string::npos && rfind_res == out.size() - 2) {
+    out.erase(rfind_res);
+  }
+  pos += append_size;
+  remain_size -= append_size;
+  //まだ読み込んだ分が残っていて、次のchunkをパースするため、再帰呼び出し
+  if (remain_size == 0) {
+    return ParseChunkedBody(remain_size, in, pos, out);
+  }
+  return 1;
 }
 
 ClientSocket::ClientSocket(int fd, const ServerSocket *parent,
@@ -128,7 +168,7 @@ ClientSocket &ClientSocket::operator=(const ClientSocket &other) {
   server_response_ = other.server_response_;
   last_access_ = other.last_access_;
   parsed_pos_ = other.parsed_pos_;
-  chunked_remain_size_ = other.chunked_remain_size_;
+  remain_size_ = other.remain_size_;
   return *this;
 }
 
@@ -139,7 +179,7 @@ void ClientSocket::Init() {
   server_response_.clear();
   time(&last_access_);
   parsed_pos_ = 0;
-  chunked_remain_size_ = 0;
+  remain_size_ = 0;
 }
 
 /*
@@ -160,56 +200,9 @@ int ClientSocket::ReceiveHeader() {
   if (header_end_pos != std::string::npos) {
     ChangeStatus(ClientSocket::PARSE_HEADER);
     parsed_pos_ = header_end_pos + HttpRequestParser::kSeparatorSize;
-    chunked_remain_size_ = 0;
+    remain_size_ = 0;
   }
   return 0;
-}
-
-/*
- * すでに読み込んだメッセージからChunkedされた部分をパースする
- * -1: エラー切断
- * 0 : parse完了
- * 1 : まだ読み込む
- */
-int ClientSocket::ParseChunkedBody() {
-  // parsed_pos_ から続きを読み始める。
-  if (chunked_remain_size_ == 0) {
-    if (std::string::npos == recv_str_.find("\r\n", parsed_pos_)) {
-      return 1;  // サイズが無いのに、終端が見つからなければ、次を読む
-    }
-    std::string::const_iterator it = recv_str_.begin() + parsed_pos_;
-    int chunk_size = GetChunkSize(&it);
-    // chunked bodyの先頭を指す。
-    parsed_pos_ =
-        recv_str_.find("\r\n", parsed_pos_) + HttpRequestParser::kCRLFSize;
-    if (chunk_size == -1) {  //これでも読めないならエラー
-      return 1;
-    } else if (chunk_size == 0) {
-      // std::cout << "Completed Body[" << request_.body_ << "]\n";
-      return 0;  //正常終了
-    }
-    // chunk_sizeと終端の\r\nを含んだ数だけ読み込む
-    chunked_remain_size_ = chunk_size + HttpRequestParser::kCRLFSize;
-  }
-  // parsed_pos_の位置から、chunked_remain_size_分を読み込みたい
-  size_t remain_size = recv_str_.size() - parsed_pos_;
-  // 読み込みたいchunk_sizeと、読み込み済み残りサイズの小さい方をbodyに追加する
-  size_t append_size =
-      (remain_size < chunked_remain_size_) ? remain_size : chunked_remain_size_;
-  request_.body_.append(recv_str_, parsed_pos_, append_size);
-  // chunk最後の\r\nも追加されてるため、削除する
-  size_t rfind_res = request_.body_.rfind("\r\n");
-  if (rfind_res != std::string::npos &&
-      rfind_res == request_.body_.size() - 2) {
-    request_.body_.erase(rfind_res);
-  }
-  parsed_pos_ += append_size;
-  chunked_remain_size_ -= append_size;
-  //まだ読み込んだ分が残っていて、次のchunkをパースするため、再帰呼び出し
-  if (chunked_remain_size_ == 0) {
-    return ParseChunkedBody();
-  }
-  return 1;
 }
 
 /*
@@ -218,20 +211,21 @@ int ClientSocket::ParseChunkedBody() {
  * 1 : Body読み込みエラー → 切断
  */
 int ClientSocket::ReceiveBody() {
+  if (0 >= ReceiveMessage(fd_, recv_str_)) {
+    return 1;
+  }
   if (request_.content_length_ != 0) {
-    ssize_t remain_len = ReceiveNoChunkedBody(
-        fd_, recv_str_, request_.content_length_, request_.body_);
-    if (remain_len < 0) {
-      return 1;  // Read Error で切断
-    } else if (remain_len == 0) {
+    int res =
+        ParseNormalBody(remain_size_, recv_str_, parsed_pos_, request_.body_);
+    if (res < 0)
+      return 1;
+    else if (res == 0) {
       ChangeStatus(ClientSocket::CREATE_RESPONSE);
     }
   } else if (request_.is_chunked_) {
-    if (0 >= ReceiveMessage(fd_, recv_str_)) {
-      return 1;
-    }
-    int res = ParseChunkedBody();
-    if (res == -1)  //エラー
+    int res =
+        ParseChunkedBody(remain_size_, recv_str_, parsed_pos_, request_.body_);
+    if (res < 0)
       return 1;
     else if (res == 0) {  //読み込み完了
       request_.header_fields_["content-length"] =
@@ -256,9 +250,18 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     // std::cout << "***** receive message finished *****\n";
     if (request_.method_ == "POST") {
       if (request_.content_length_ != 0) {
-        ChangeStatus(ClientSocket::WAIT_BODY);
+        remain_size_ = request_.content_length_;
+        int res = ParseNormalBody(remain_size_, recv_str_, parsed_pos_,
+                                  request_.body_);
+        if (res == -1)
+          ChangeStatus(ClientSocket::WAIT_CLOSE);
+        else if (res == 0)
+          ChangeStatus(ClientSocket::CREATE_RESPONSE);
+        else
+          ChangeStatus(ClientSocket::WAIT_BODY);
       } else if (request_.is_chunked_) {
-        int parse_res = ParseChunkedBody();
+        int parse_res = ParseChunkedBody(remain_size_, recv_str_, parsed_pos_,
+                                         request_.body_);
         if (parse_res == -1)
           ChangeStatus(ClientSocket::WAIT_CLOSE);
         else if (parse_res == 0) {

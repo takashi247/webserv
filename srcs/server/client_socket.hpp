@@ -30,7 +30,7 @@ class ClientSocket {
   std::string server_response_;
   time_t last_access_;
   size_t parsed_pos_;
-  size_t chunked_remain_size_;
+  size_t remain_size_;
 
  public:
   ClientSocket(int fd, const ServerSocket *parent, struct sockaddr_in &sin);
@@ -41,7 +41,6 @@ class ClientSocket {
  private:
   void ChangeStatus(t_status st) { status_ = st; }
   int ReceiveHeader();
-  int ParseChunkedBody();
   int ReceiveBody();
 
  public:
