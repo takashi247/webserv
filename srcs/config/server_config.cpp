@@ -1,8 +1,6 @@
 #include "server_config.hpp"
 
-void ServerConfig::Init() {
-  port_ = 80;
-}
+void ServerConfig::Init() { port_ = 80; }
 
 ServerConfig::ServerConfig() { Init(); }
 
@@ -29,6 +27,7 @@ ServerConfig &ServerConfig::operator=(ServerConfig const &rhs) {
 void ServerConfig::ParseListen(
     const std::vector< std::pair< int, std::string > > &list) {
   std::string::size_type delim_pos;
+  static const size_t port_max = (1 << 16) - 1;  
 
   if (list.size() != 2) {
     ParserUtils::MakeUnexpected(
@@ -36,19 +35,25 @@ void ServerConfig::ParseListen(
   }
   std::string set_value = list[1].second;
   delim_pos = set_value.find(':');
-  if (delim_pos == std::string::npos) {
-    if (set_value.find('.') == std::string::npos) {
-      ParserUtils::AtoSizeT(set_value.c_str(), list, port_);
+  // make error message again(number => port)
+  try {
+    if (delim_pos == std::string::npos) {
+      if (set_value.find('.') == std::string::npos) {
+        ParserUtils::AtoSizeT(set_value.c_str(), list, port_);
+      } else {
+        host_ = set_value;
+      }
     } else {
-      host_ = set_value;
+      host_ = set_value.substr(0, delim_pos);
+      ParserUtils::AtoSizeT(set_value.substr(delim_pos + 1).c_str(), list, port_);
     }
-  } else {
-    host_ = set_value.substr(0, delim_pos);
-    ParserUtils::AtoSizeT(set_value.substr(delim_pos + 1).c_str(), list,
-                          port_);
+  } catch (const WebservException &e) {
+    ParserUtils::MakeUnexpected("invalid port specified in \"" + list[0].second + "\" directive", list[1].first);
+  }
+  if (port_ == 0 || port_ > port_max) {
+    ParserUtils::MakeUnexpected("invalid port specified in \"" + list[0].second + "\" directive", list[1].first);
   }
 }
-
 
 // return locationConfig whose location_path_'s length is longest.
 const LocationConfig *ServerConfig::SelectLocationConfig(

@@ -69,9 +69,14 @@ void ParserUtils::AtoSizeT(
     size_t &num) {
   size_t i = 0;
   num = 0;
-  const size_t size_max_mod_10 = SIZE_MAX % 10;
-  const size_t size_max_div_10 = SIZE_MAX / 10;
+  static const size_t size_max_mod_10 = SIZE_MAX % 10;
+  static const size_t size_max_div_10 = SIZE_MAX / 10;
 
+  if (!s[i]) {
+      MakeUnexpected(
+          "invalid number specified in \"" + list[0].second + "\" directive",
+          list[0].first);
+  }
   while (isdigit(s[i])) {
     if (num > size_max_div_10 ||
         (num == size_max_div_10 && (size_t)(s[i] - '0') > size_max_mod_10))
