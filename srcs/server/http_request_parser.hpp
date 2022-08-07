@@ -14,8 +14,6 @@
 class HttpRequestParser {
  public:
   static const int kProtocolVersionPos = 5;
-  static const int kSeparatorSize = 4;
-  static const int kCRLFSize = 2;
 
   enum e_req_line {
     kReqLineMethod = 0,

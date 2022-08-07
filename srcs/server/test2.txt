@@ -1,0 +1,41 @@
+POST /resource/test HTTP/1.1
+User-Agent: curl/7.28.0
+Host: localhost:8888
+Content-type: text/plain
+Transfer-Encoding: chunked
+Connection: Keep-Alive
+Expect: 100-continue
+Reference: https://nuke.hateblo.jp/entry/2013/07/08/144327
+
+14
+hogehoge1
+fugafuga1
+14
+hogehoge2
+fugafuga2
+14
+hogehoge3
+fugafuga3
+14
+hogehoge4
+fugafuga4
+14
+hogehoge5
+fugafuga5
+14
+hogehoge6
+fugafuga6
+14
+hogehoge7
+fugafuga7
+14
+hogehoge8
+fugafuga8
+14
+hogehoge9
+fugafuga9
+16
+hogehoge10
+fugafuga10
+0
+

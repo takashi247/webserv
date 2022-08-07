@@ -4,6 +4,9 @@ SRCS	= main.cpp \
 		server_socket.cpp \
 		http_request_parser.cpp
 
+SRCS	= main.cpp \
+		receive_body.cpp
+
 CXX		= c++
 CXXFLAGS	= -Wall -Wextra -Werror -std=c++98
 NAME	= webserv

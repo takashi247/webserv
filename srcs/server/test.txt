@@ -1,0 +1,34 @@
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=Shift_JIS
+Date: Fri, 08 Jun 2001 05:52:11 GMT
+Transfer-Encoding: chunked
+Server: Apache Tomcat/4.0-b5 (HTTP/1.1 Connector)
+Reference: http://www.cresc.co.jp/tech/java/Servlet_Tutorial/Lesson_38.htm
+
+6
+<HTML>
+2
+
+
+27
+<HEAD><TITLE>Hello World</TITLE></HEAD>
+2
+
+
+6
+<BODY>
+2
+
+
+27
+<BIG>Hello World from(kabu)kures </BIG>
+2
+
+
+e
+</BODY></HTML>
+2
+
+
+0
+
