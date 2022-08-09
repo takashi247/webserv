@@ -14,6 +14,8 @@ const std::string HttpResponse::kStatusDescRequestEntityTooLarge =
     "413 Request Entity Too Large";
 const std::string HttpResponse::kStatusDescInternalServerError =
     "500 Internal Server Error";
+const std::string HttpResponse::kStatusDescMethodNotImplemented =
+    "501 Not Implemented";
 const std::string HttpResponse::kStatusDescGatewayTimeout =
     "504 Gateway Timeout";
 const std::string HttpResponse::kStatusDescVersionNotSupported =
@@ -714,6 +716,9 @@ void HttpResponse::SetStatusDescription() {
     case kStatusCodeInternalServerError:
       status_desc_ = kStatusDescInternalServerError;
       break;
+    case kStatusCodeMethodNotImplemented:
+      status_desc_ = kStatusDescMethodNotImplemented;
+      break;
     case kStatusCodeGatewayTimeout:
       status_desc_ = kStatusDescGatewayTimeout;
       break;
@@ -726,6 +731,15 @@ void HttpResponse::SetStatusDescription() {
   }
 }
 
+bool HttpResponse::IsImplementedMethod() const {
+  if (http_request_.method_ == "GET" || http_request_.method_ == "POST" ||
+      http_request_.method_ == "DELETE") {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 void HttpResponse::SetStatusCode() {
   if (!is_bad_request_) {
     ValidateVersion();
@@ -734,6 +748,8 @@ void HttpResponse::SetStatusCode() {
     status_code_ = kStatusCodeBadRequest;
   } else if (!is_supported_version_) {
     status_code_ = kStatusCodeVersionNotSupported;
+  } else if (!IsImplementedMethod()) {
+    status_code_ = kStatusCodeMethodNotImplemented;
   } else if (!IsValidMethod()) {
     status_code_ = kStatusCodeMethodNotAllowed;
   } else if (!is_path_exists_ || !is_file_exists_) {
