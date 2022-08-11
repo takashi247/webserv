@@ -38,7 +38,7 @@ void ServerConfig::ParseListen(
   // make error message again(number => port)
   try {
     if (delim_pos == std::string::npos) {
-      if (set_value.find('.') == std::string::npos) {
+      if (set_value.find('.') == std::string::npos && std::isdigit(set_value[0])) {
         ParserUtils::AtoSizeT(set_value.c_str(), list, port_);
       } else {
         host_ = set_value;
