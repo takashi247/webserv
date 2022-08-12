@@ -89,6 +89,25 @@ void ConfigParser::BalanceBraces() {
   }
 }
 
+void ConfigParser::ValidateServerDuplication(const std::vector<ServerConfig> &vec_server_config) {
+  for (std::vector<ServerConfig>::const_iterator it_front = vec_server_config.begin();
+   it_front != vec_server_config.end(); ++it_front) {
+    for (std::vector<ServerConfig>::const_iterator it_back = it_front; it_back !=
+     vec_server_config.end(); it_back++) {
+      if (it_front->host_ == it_back->host_ && it_front->port_ == it_back->port_) {
+        for (std::vector<std::string>::const_iterator sev = it_front->vec_server_names_.begin(); sev !=  it_front->vec_server_names_.end(); ++sev) {
+          if (std::find(it_back->vec_server_names_.begin(), it_back->vec_server_names_.end(), *sev) != it_back->vec_server_names_.end()) {
+            std::stringstream ss;
+
+            ss << "conflicting server name \"" + *sev + " on " + it_back->host_ + ":" << it_back->port_;
+            ParserUtils::MakeUnexpected(ss.str(), 0);
+          }
+        }
+      }
+    }
+  }
+}
+
 void ConfigParser::Parse(std::vector<ServerConfig> &vec_server_config) {
   for (; index_ + 1 < tokens_.size(); ++index_) {
     if (tokens_[index_].second == "server" &&
@@ -135,6 +154,7 @@ void ConfigParser::SplitIntoList(
     list.push_back(tokens_[index_]);
   }
 }
+
 
 void ConfigParser::ParseServerConfig(
     std::vector<ServerConfig> &vec_server_config) {

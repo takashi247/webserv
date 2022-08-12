@@ -25,6 +25,7 @@ class ConfigParser {
   void Tokenize(const char *file_name);
   void Parse(std::vector<ServerConfig> &vec_server_config);
   void BalanceBraces();
+  void ValidateServerDuplication(const std::vector<ServerConfig> &vec_server_config);
   void SplitIntoList(std::vector<std::pair<int, std::string> > &list);
   void ParseServerConfig(std::vector<ServerConfig> &vec_server_config);
   void ParseLocationConfig(std::vector<LocationConfig> &vec_location_config,
