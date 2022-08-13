@@ -41,10 +41,10 @@ void ServerConfig::ParseListen(
       if (set_value.find('.') == std::string::npos && std::isdigit(set_value[0])) {
         ParserUtils::AtoSizeT(set_value.c_str(), list, port_);
       } else {
-        host_ = set_value;
+        host_ = hostToIp(set_value);
       }
     } else {
-      host_ = set_value.substr(0, delim_pos);
+      host_ = hostToIp(set_value.substr(0, delim_pos));
       ParserUtils::AtoSizeT(set_value.substr(delim_pos + 1).c_str(), list, port_);
     }
   } catch (const WebservException &e) {
@@ -52,6 +52,48 @@ void ServerConfig::ParseListen(
   }
   if (port_ == 0 || port_ > port_max) {
     ParserUtils::MakeUnexpected("invalid port specified in \"" + list[0].second + "\" directive", list[1].first);
+  }
+}
+
+in_addr_t ServerConfig::hostToIp(const std::string &str) {
+  in_addr_t ip;
+
+  ip = inet_addr(str.c_str());
+  if (ip == 0xffffffff) {
+    struct hostent *host;
+    host = gethostbyname(str.c_str());
+    if (host == NULL) {
+      ParserUtils::MakeUnexpected("host not found in \"" + str + "\" in \"listen\" directive", 0);
+    }
+    ip = *(unsigned int *)host->h_addr_list[0];
+  }
+  return (ip);
+}
+
+void ServerConfig::ValidateServerDuplication(
+    const std::vector< ServerConfig > &vec_sc) {
+  for (std::vector< ServerConfig >::const_iterator it = vec_sc.begin();
+       it != vec_sc.end(); ++it) {
+    if (it->host_ == host_ && it->port_ == port_) {
+      if (it->vec_server_names_.empty() && vec_server_names_.empty()) {
+        std::stringstream ss;
+
+        ss << "conflicting server name \"\" on " << host_ << ":" << port_;
+        ParserUtils::MakeUnexpected(ss.str(), 0);
+      }
+      for (std::vector< std::string >::const_iterator serv_it =
+               it->vec_server_names_.begin();
+           serv_it != it->vec_server_names_.end(); ++serv_it) {
+        if (std::find(vec_server_names_.begin(), vec_server_names_.end(),
+                      *serv_it) != vec_server_names_.end()) {
+          std::stringstream ss;
+          ss << "conflicting server name \"" + *serv_it + "\" on " << host_ <<
+                    ":"
+             << port_;
+          ParserUtils::MakeUnexpected(ss.str(), 0);
+        }
+      }
+    }
   }
 }
 

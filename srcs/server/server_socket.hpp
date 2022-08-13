@@ -12,11 +12,11 @@ class ServerSocket {
  public:
   int listenfd_;
   size_t port_;
-  std::string host_;
+  in_addr_t host_;
   struct sockaddr_in serv_addr_;
 
  public:
-  ServerSocket(int port, std::string host);
+  ServerSocket(int port, in_addr_t host);
   ServerSocket(const ServerSocket &other);
   ~ServerSocket() { close(listenfd_); }
   ServerSocket &operator=(const ServerSocket &other);
