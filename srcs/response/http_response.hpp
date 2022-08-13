@@ -1,11 +1,11 @@
 #ifndef HTTP_RESPONSE_HPP_
 #define HTTP_RESPONSE_HPP_
 
-#include <dirent.h>    // for opendir, readdir
+#include <dirent.h>    // for opendir, readdir, closedir
+#include <stdlib.h>    // for free
 #include <string.h>    // for strdup
 #include <sys/stat.h>  // for stat
-#include <sys/wait.h>
-#include <unistd.h>
+#include <unistd.h>    // for alarm
 
 #include <algorithm>  // for sort
 #include <cctype>     // for isdigit

@@ -1,6 +1,7 @@
 #ifndef WRAPPER_HPP
 #define WRAPPER_HPP
 
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <iostream>

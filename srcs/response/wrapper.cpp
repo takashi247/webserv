@@ -20,7 +20,7 @@ ssize_t Wrapper::Write(int fildes, const void *buf, size_t nbyte) {
 
 ssize_t Wrapper::Read(int fildes, void *buf, size_t nbyte) {
   ssize_t res = read(fildes, buf, nbyte);
-  if (res < 0) PrintError("read");
+  if (res == -1) PrintError("read");
   return res;
 }
 
