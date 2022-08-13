@@ -1,6 +1,9 @@
 #include "server_config.hpp"
 
-void ServerConfig::Init() { port_ = 80; }
+void ServerConfig::Init() {
+  port_ = 80;
+  host_ = hostToIp("0.0.0.0", 0);
+}
 
 ServerConfig::ServerConfig() { Init(); }
 
@@ -36,26 +39,38 @@ void ServerConfig::ParseListen(
   std::string set_value = list[1].second;
   delim_pos = set_value.find(':');
   // make error message again(number => port)
-  try {
-    if (delim_pos == std::string::npos) {
-      if (set_value.find('.') == std::string::npos && std::isdigit(set_value[0])) {
+  if (delim_pos == std::string::npos) {
+    if (set_value.find('.') == std::string::npos &&
+        std::isdigit(set_value[0])) {
+      try {
         ParserUtils::AtoSizeT(set_value.c_str(), list, port_);
-      } else {
-        host_ = hostToIp(set_value);
+      } catch (const WebservException &e) {
+        ParserUtils::MakeUnexpected(
+            "invalid port specified in \"" + list[0].second + "\" directive",
+            list[1].first);
       }
     } else {
-      host_ = hostToIp(set_value.substr(0, delim_pos));
-      ParserUtils::AtoSizeT(set_value.substr(delim_pos + 1).c_str(), list, port_);
+      host_ = hostToIp(set_value, list[1].first);
     }
-  } catch (const WebservException &e) {
-    ParserUtils::MakeUnexpected("invalid port specified in \"" + list[0].second + "\" directive", list[1].first);
+  } else {
+    host_ = hostToIp(set_value.substr(0, delim_pos), list[1].first);
+    try {
+      ParserUtils::AtoSizeT(set_value.substr(delim_pos + 1).c_str(), list,
+                            port_);
+    } catch (const WebservException &e) {
+      ParserUtils::MakeUnexpected(
+          "invalid port specified in \"" + list[0].second + "\" directive",
+          list[1].first);
+    }
   }
   if (port_ == 0 || port_ > port_max) {
-    ParserUtils::MakeUnexpected("invalid port specified in \"" + list[0].second + "\" directive", list[1].first);
+    ParserUtils::MakeUnexpected(
+        "invalid port specified in \"" + list[0].second + "\" directive",
+        list[1].first);
   }
 }
 
-in_addr_t ServerConfig::hostToIp(const std::string &str) {
+in_addr_t ServerConfig::hostToIp(const std::string &str, int pos) {
   in_addr_t ip;
 
   ip = inet_addr(str.c_str());
@@ -63,11 +78,19 @@ in_addr_t ServerConfig::hostToIp(const std::string &str) {
     struct hostent *host;
     host = gethostbyname(str.c_str());
     if (host == NULL) {
-      ParserUtils::MakeUnexpected("host not found in \"" + str + "\" in \"listen\" directive", 0);
+      ParserUtils::MakeUnexpected(
+          "host not found in \"" + str + "\" in \"listen\" directive", pos);
     }
     ip = *(unsigned int *)host->h_addr_list[0];
   }
   return (ip);
+}
+
+std::string ServerConfig::addrToStr(in_addr_t addr) {
+  struct in_addr inaddr;
+  inaddr.s_addr = addr;
+
+  return (inet_ntoa(inaddr));
 }
 
 void ServerConfig::ValidateServerDuplication(
@@ -87,8 +110,8 @@ void ServerConfig::ValidateServerDuplication(
         if (std::find(vec_server_names_.begin(), vec_server_names_.end(),
                       *serv_it) != vec_server_names_.end()) {
           std::stringstream ss;
-          ss << "conflicting server name \"" + *serv_it + "\" on " << host_ <<
-                    ":"
+          ss << "conflicting server name \"" + *serv_it + "\" on " +
+                    addrToStr(host_) + ":"
              << port_;
           ParserUtils::MakeUnexpected(ss.str(), 0);
         }

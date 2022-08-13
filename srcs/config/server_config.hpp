@@ -40,7 +40,8 @@ class ServerConfig {
   LocationConfig default_location_config_;
 
  private:
-  in_addr_t hostToIp(const std::string &host);
+  in_addr_t hostToIp(const std::string &host, int pos);
+  std::string addrToStr(in_addr_t addr);
   void Init();
 };
 
