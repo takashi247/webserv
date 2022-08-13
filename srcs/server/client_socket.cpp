@@ -10,6 +10,9 @@
 #include "http_response.hpp"
 #include "receive_body.hpp"
 
+#define COLOR_RED "\033[31m"
+#define COLOR_OFF "\033[m"
+
 static const int kReadBufferSize = 1024;
 static const int kSeparatorSize = 4;
 
@@ -31,6 +34,9 @@ static ssize_t ReceiveMessage(int fd, std::string &recv_str) {
   if (0 < read_size) {
     std::string buf_string(buf, read_size);
     recv_str.append(buf_string);
+  } else {
+    std::cerr << COLOR_RED "[system error] " COLOR_OFF << "recv error"
+              << std::endl;
   }
   return read_size;
 }
@@ -42,7 +48,8 @@ static ssize_t ReceiveMessage(int fd, std::string &recv_str) {
 static ssize_t SendMessage(int fd, const char *str, size_t len) {
   ssize_t send_size = send(fd, str, len, 0);
   if (0 >= send_size) {
-    std::cout << "send() failed." << std::endl;
+    std::cerr << COLOR_RED "[system error] " COLOR_OFF << "send error"
+              << std::endl;
   }
   return send_size;
 }
@@ -207,12 +214,16 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
       ssize_t start_pos = server_response_.length() - remain_size_;
       ssize_t send_size =
           SendMessage(fd_, server_response_.c_str() + start_pos, remain_size_);
-      if ((0 >= send_size) || request_.is_bad_request_) {
+      if (0 >= send_size) {
         ChangeStatus(ClientSocket::WAIT_CLOSE);
-      }
-      remain_size_ -= send_size;
-      if (remain_size_ == 0) {
-        Init();
+      } else {
+        remain_size_ -= send_size;
+        if (remain_size_ == 0) {  // 送り切ったら切断・もしくは初期化
+          if (request_.is_bad_request_) {
+            ChangeStatus(ClientSocket::WAIT_CLOSE);
+          } else
+            Init();
+        }
       }
     }
   }
@@ -225,6 +236,7 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     ChangeStatus(ClientSocket::WAIT_CLOSE);
   }
   if (status_ == ClientSocket::WAIT_CLOSE) {
+    std::cout << "Disconnect descriptor:" << fd_ << ".\n";
     close(fd_);
     return 1;
   }

@@ -165,9 +165,10 @@ void Server::Run() {
       if (it->EventHandler(FD_ISSET(it->GetFd(), &r_fds),
                            FD_ISSET(it->GetFd(), &w_fds), config_)) {
         it = clients_.erase(it);
-        continue;
+      } else {
+        ++it;
       }
-      ++it;
+      usleep(500);
     }
 #ifdef LEAKS
     if (b_exit) break;
