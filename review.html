@@ -180,7 +180,7 @@
 		<tr>
 			<td>ひとりのユーザがインターバルを置かずに<br>1024回リクエストを送る</td>
 			<td>% ./webserv confs/test.conf</td>
-			<td>% siege -r 1024 -c 1 -b 127.0.0.1:8080</td>
+			<td>% siege -r 1024 -c 1 -b 127.0.0.1:8080/empty.html</td>
 		</tr>
 		<tr>
 			<td>メモリリークがないか確認する</td>
