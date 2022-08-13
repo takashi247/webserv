@@ -20,7 +20,7 @@ Config &Config::operator=(Config const &rhs) {
   return *this;
 }
 
-const ServerConfig *Config::SelectServerConfig(const std::string &host,
+const ServerConfig *Config::SelectServerConfig(const in_addr_t &host,
                                          const size_t &port, const std::string &server_name) {
   // check if port and host match the config 
   for (std::vector<ServerConfig>::iterator it = vec_server_config_.begin();

@@ -14,7 +14,7 @@ void SetNonBlocking(int fd) {
   }
 }
 
-ServerSocket::ServerSocket(int port, std::string host)
+ServerSocket::ServerSocket(int port, in_addr_t host)
     : port_(port), host_(host) {}
 ServerSocket::ServerSocket(const ServerSocket &other) { *this = other; }
 
@@ -37,16 +37,7 @@ void ServerSocket::SetSockaddrIn() {
   memset(&this->serv_addr_, 0, sizeof(this->serv_addr_));
   this->serv_addr_.sin_family = AF_INET;
   if (1) {
-    // TODO hostがlocalhostでも127.0.0.1でも問題ないか？;
-    this->serv_addr_.sin_addr.s_addr = inet_addr(host_.c_str());
-    if (serv_addr_.sin_addr.s_addr == 0xffffffff) {
-      struct hostent *host;
-      host = gethostbyname(host_.c_str());
-      if (host == NULL) {
-        return;
-      }
-      serv_addr_.sin_addr.s_addr = *(unsigned int *)host->h_addr_list[0];
-    }
+    this->serv_addr_.sin_addr.s_addr = host_;
   } else {
     this->serv_addr_.sin_addr.s_addr = htonl(INADDR_ANY);
   }

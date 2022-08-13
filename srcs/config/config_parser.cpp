@@ -136,6 +136,7 @@ void ConfigParser::SplitIntoList(
   }
 }
 
+
 void ConfigParser::ParseServerConfig(
     std::vector<ServerConfig> &vec_server_config) {
   ServerConfig sc;
@@ -187,6 +188,7 @@ void ConfigParser::ParseServerConfig(
       list.clear();
     }
   }
+  sc.ValidateServerDuplication(vec_server_config);
   // for debug, delete comment out
   // sc.PrintVal();
   vec_server_config.push_back(sc);
