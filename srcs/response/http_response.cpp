@@ -940,7 +940,8 @@ void HttpResponse::Make504Response() {
 int HttpResponse::SendRequestBody(int fd,
                                   const HttpRequest &http_request) const {
   if (http_request.body_.length() != 0 &&
-      write(fd, http_request.body_.c_str(), http_request.body_.length()) <= 0) {
+      Wrapper::Write(fd, http_request.body_.c_str(),
+                     http_request.body_.length()) <= 0) {
     return 0;
   }
   return 1;
@@ -958,54 +959,54 @@ void HttpResponse::MakeCgiResponse() {
   if ((cgi_environ = CreateCgiEnviron()) == NULL) {
     return Make500Response();
   }
-  if (pipe(pipe_child2parent) < 0) {
+  if (Wrapper::Pipe(pipe_child2parent) < 0) {
     DeleteCgiEnviron(cgi_environ);
     return Make500Response();
   }
-  if (pipe(pipe_parent2child) < 0) {
-    close(pipe_child2parent[READ]);
-    close(pipe_child2parent[WRITE]);
+  if (Wrapper::Pipe(pipe_parent2child) < 0) {
+    Wrapper::Close(pipe_child2parent[READ]);
+    Wrapper::Close(pipe_child2parent[WRITE]);
     DeleteCgiEnviron(cgi_environ);
     return Make500Response();
   }
-  if ((pid = fork()) < 0) {
-    close(pipe_child2parent[READ]);
-    close(pipe_child2parent[WRITE]);
-    close(pipe_parent2child[READ]);
-    close(pipe_parent2child[WRITE]);
+  if ((pid = Wrapper::Fork()) < 0) {
+    Wrapper::Close(pipe_child2parent[READ]);
+    Wrapper::Close(pipe_child2parent[WRITE]);
+    Wrapper::Close(pipe_parent2child[READ]);
+    Wrapper::Close(pipe_parent2child[WRITE]);
     DeleteCgiEnviron(cgi_environ);
     return Make500Response();
   }
   if (pid == 0) {
     alarm(kCgiTimeout);
-    if (dup2(pipe_parent2child[READ], STDIN_FILENO) == -1 ||
-        dup2(pipe_child2parent[WRITE], STDOUT_FILENO) == -1 ||
-        close(pipe_parent2child[WRITE]) == -1 ||
-        close(pipe_child2parent[READ]) == -1 ||
-        execve(argv[0], argv, cgi_environ) == -1) {
-      write(pipe_child2parent[WRITE], "Status: 500\r\n\r\n", 15);
-      close(pipe_parent2child[READ]);
-      close(pipe_child2parent[WRITE]);
+    if (Wrapper::Dup2(pipe_parent2child[READ], STDIN_FILENO) == -1 ||
+        Wrapper::Dup2(pipe_child2parent[WRITE], STDOUT_FILENO) == -1 ||
+        Wrapper::Close(pipe_parent2child[WRITE]) == -1 ||
+        Wrapper::Close(pipe_child2parent[READ]) == -1 ||
+        Wrapper::Execve(argv[0], argv, cgi_environ) == -1) {
+      Wrapper::Write(pipe_child2parent[WRITE], "Status: 500\r\n\r\n", 15);
+      Wrapper::Close(pipe_parent2child[READ]);
+      Wrapper::Close(pipe_child2parent[WRITE]);
       DeleteCgiEnviron(cgi_environ);
       exit(EXIT_FAILURE);
     }
   } else {
     DeleteCgiEnviron(cgi_environ);
-    if (close(pipe_child2parent[WRITE]) == -1) {
+    if (Wrapper::Close(pipe_child2parent[WRITE]) == -1) {
       return Make500Response();
     }
     int wstatus;
     if (SendRequestBody(pipe_parent2child[WRITE], http_request_) == 0 ||
-        waitpid(pid, &wstatus, 0) != pid) {
-      close(pipe_parent2child[READ]);
-      close(pipe_parent2child[WRITE]);
-      close(pipe_child2parent[READ]);
+        Wrapper::Waitpid(pid, &wstatus, 0) != pid) {
+      Wrapper::Close(pipe_parent2child[READ]);
+      Wrapper::Close(pipe_parent2child[WRITE]);
+      Wrapper::Close(pipe_child2parent[READ]);
       return Make500Response();
     }
     if (WIFSIGNALED(wstatus) && WTERMSIG(wstatus) == SIGALRM) {
-      close(pipe_parent2child[READ]);
-      close(pipe_parent2child[WRITE]);
-      close(pipe_child2parent[READ]);
+      Wrapper::Close(pipe_parent2child[READ]);
+      Wrapper::Close(pipe_parent2child[WRITE]);
+      Wrapper::Close(pipe_child2parent[READ]);
       return Make504Response();
     }
     while (cgi_status_ != kCloseConnection) {
@@ -1013,7 +1014,7 @@ void HttpResponse::MakeCgiResponse() {
       if (read_size != 0) {
         char buf[kCgiBufferSize];
         memset(buf, 0, sizeof(buf));
-        read_size = read(pipe_child2parent[READ], buf, kCgiBufferSize);
+        read_size = Wrapper::Read(pipe_child2parent[READ], buf, kCgiBufferSize);
         if (read_size == -1) {
           cgi_status_ = kCloseConnection;
           status_code_ = kStatusCodeInternalServerError;
@@ -1048,9 +1049,9 @@ void HttpResponse::MakeCgiResponse() {
         cgi_status_ = kCloseConnection;
       }
     }
-    if (close(pipe_parent2child[READ]) == -1 ||
-        close(pipe_parent2child[WRITE]) == -1 ||
-        close(pipe_child2parent[READ]) == -1) {
+    if (Wrapper::Close(pipe_parent2child[READ]) == -1 ||
+        Wrapper::Close(pipe_parent2child[WRITE]) == -1 ||
+        Wrapper::Close(pipe_child2parent[READ]) == -1) {
       return Make500Response();
     }
     if (status_code_ != kStatusCodeOK || is_local_redirection_) {

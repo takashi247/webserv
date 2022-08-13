@@ -21,6 +21,7 @@
 #include "client_info.hpp"
 #include "http_request.hpp"
 #include "server_config.hpp"
+#include "wrapper.hpp"
 
 class HttpResponse {
  public:

@@ -17,6 +17,7 @@ SRCS	:= main.cpp \
 		server/http_request_parser.cpp \
 		server/receive_body.cpp \
 		response/http_response.cpp \
+		response/wrapper.cpp \
 		config/config_parser.cpp \
 		config/config.cpp \
 		config/location_config.cpp \
