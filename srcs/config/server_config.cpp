@@ -101,7 +101,7 @@ void ServerConfig::ValidateServerDuplication(
       if (it->vec_server_names_.empty() && vec_server_names_.empty()) {
         std::stringstream ss;
 
-        ss << "conflicting server name \"\" on " << host_ << ":" << port_;
+        ss << "conflicting server name \"\" on " + addrToStr(host_) + ":" << port_;
         ParserUtils::MakeUnexpected(ss.str(), 0);
       }
       for (std::vector< std::string >::const_iterator serv_it =
