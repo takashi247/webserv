@@ -34,7 +34,7 @@ static ssize_t ReceiveMessage(int fd, std::string &recv_str) {
   if (0 < read_size) {
     std::string buf_string(buf, read_size);
     recv_str.append(buf_string);
-  } else {
+  } else if (read_size < 0) {
     std::cerr << COLOR_RED "[system error] " COLOR_OFF << "recv error"
               << std::endl;
   }
