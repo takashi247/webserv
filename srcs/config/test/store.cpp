@@ -23,7 +23,7 @@ int main(int ac, char **av) {
       ServerConfig sc = config.vec_server_config_[0];
       assert(sc.vec_location_config_.size(), (size_t)1, "size of location");
 
-      assert(sc.host_, std::string("127.0.0.1"), "host");
+      assert(sc.host_, inet_addr("127.0.0.1"), "host");
       assert(sc.port_, (size_t)80, "port");
       assert(sc.vec_server_names_.size(), (size_t)1, "size of server_name");
       assert(sc.vec_server_names_[0], std::string("localhost"), "server_name");
@@ -59,7 +59,7 @@ int main(int ac, char **av) {
     {
       ServerConfig sc = config.vec_server_config_[1];
       assert(sc.vec_location_config_.size(), (size_t)2, "size of location");
-      assert(sc.host_, std::string(""), "host");
+      assert(sc.host_, inet_addr("0.0.0.0"), "host");
       assert(sc.port_, (size_t)88, "port");
       assert(sc.vec_server_names_.size(), (size_t)1, "size of server_name");
       assert(sc.vec_server_names_[0], std::string("localhost"), "server_name");
@@ -97,7 +97,7 @@ int main(int ac, char **av) {
     {
       ServerConfig sc = config.vec_server_config_[2];
       assert(sc.vec_location_config_.size(), (size_t)0, "size of location");
-      assert(sc.host_, std::string(""), "host");
+      assert(sc.host_, inet_addr("0.0.0.0"), "host");
       assert(sc.port_, (size_t)80, "port");
       assert(sc.vec_server_names_.size(), (size_t)0, "size of server_name");
       assert(sc.default_location_config_.client_max_body_size_, (size_t)1024, "client_max_body_size");

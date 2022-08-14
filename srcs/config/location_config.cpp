@@ -42,7 +42,7 @@ void LocationConfig::ParseErrorPagePath(
 
   if (list.size() < 2 || list.size() % 2 != 1) {
     ParserUtils::MakeUnexpected(
-        "invalid number of args in \"error_page_path\" directive",
+        "invalid number of args in \"error_page\" directive",
         list[0].first);
   }
   ++it;
@@ -50,7 +50,7 @@ void LocationConfig::ParseErrorPagePath(
     ParserUtils::AtoSizeT(it->second.c_str(), list, i);
     if (i > 505 || i < 100) {
       ParserUtils::MakeUnexpected(
-          "invalid http status specified in \"error_page_path\" directive",
+          "invalid http status specified in \"error_page\" directive",
           list[0].first);
     }
     elem.first = i;
