@@ -38,30 +38,17 @@ void ServerConfig::ParseListen(
   }
   std::string set_value = list[1].second;
   delim_pos = set_value.find(':');
-  // make error message again(number => port)
   if (delim_pos == std::string::npos) {
     if (set_value.find('.') == std::string::npos &&
         std::isdigit(set_value[0])) {
-      try {
-        ParserUtils::AtoSizeT(set_value.c_str(), list, port_);
-      } catch (const WebservException &e) {
-        ParserUtils::MakeUnexpected(
-            "invalid port specified in \"" + list[0].second + "\" directive",
-            list[1].first);
-      }
+        ParserUtils::AtoSizeT(set_value.c_str(), list, port_, "port");
     } else {
       host_ = hostToIp(set_value, list[1].first);
     }
   } else {
     host_ = hostToIp(set_value.substr(0, delim_pos), list[1].first);
-    try {
       ParserUtils::AtoSizeT(set_value.substr(delim_pos + 1).c_str(), list,
-                            port_);
-    } catch (const WebservException &e) {
-      ParserUtils::MakeUnexpected(
-          "invalid port specified in \"" + list[0].second + "\" directive",
-          list[1].first);
-    }
+                            port_, "port");
   }
   if (port_ == 0 || port_ > port_max) {
     ParserUtils::MakeUnexpected(

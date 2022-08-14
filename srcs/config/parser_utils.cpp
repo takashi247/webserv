@@ -66,7 +66,7 @@ void ParserUtils::ParseVector(
 
 void ParserUtils::AtoSizeT(
     const char *s, const std::vector<std::pair<int, std::string> > &list,
-    size_t &num) {
+    size_t &num, std::string type) {
   size_t i = 0;
   num = 0;
   static const size_t size_max_mod_10 = SIZE_MAX % 10;
@@ -74,21 +74,21 @@ void ParserUtils::AtoSizeT(
 
   if (!s[i]) {
       MakeUnexpected(
-          "invalid number specified in \"" + list[0].second + "\" directive",
+          "invalid " + type + " specified in \"" + list[0].second + "\" directive",
           list[0].first);
   }
   while (isdigit(s[i])) {
     if (num > size_max_div_10 ||
         (num == size_max_div_10 && (size_t)(s[i] - '0') > size_max_mod_10))
       MakeUnexpected(
-          "invalid number specified in \"" + list[0].second + "\" directive",
+          "invalid " + type + " specified in \"" + list[0].second + "\" directive",
           list[1].first);
     num = num * 10 + (s[i] - '0');
     i++;
   }
   if (s[i]) {
     MakeUnexpected(
-        "invalid number specified in \"" + list[0].second + "\" directive",
+        "invalid " + type + " specified in \"" + list[0].second + "\" directive",
         list[1].first);
   }
 }

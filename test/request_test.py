@@ -87,7 +87,7 @@ class TestRequest(unittest.TestCase):
         got = self.send_get_request("http://localhost:8081/autoindex/inner")
         self.assertEqual(got.status_code, HTTPStatus.MOVED_PERMANENTLY)
         self.assertEqual(got.headers["Location"],
-                         "http://localhost:8081/autoindex/")
+                         "http://localhost:8081/autoindex/inner/")
 
     def test_autoindex_and_index(self):
         got = self.send_get_request("http://localhost:8081/")
@@ -224,6 +224,13 @@ class TestRequest(unittest.TestCase):
         self.assertEqual(got.status_code, HTTPStatus.FOUND)
         self.assertEqual(got.headers["Location"],
                          "http://localhost:8082//nosuchfile")
+
+    def test_rewrite_6(self):
+        got = self.send_get_request(
+            "http://localhost:8083/rewrite3/")
+        self.assertEqual(got.status_code, HTTPStatus.FOUND)
+        self.assertEqual(got.headers["Location"],
+                         "http://localhost:8083/rewrite4/")
 
     def test_error_page(self):
         got = self.send_get_request("http://localhost:8080/nosuchfile")

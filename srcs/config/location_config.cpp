@@ -47,7 +47,7 @@ void LocationConfig::ParseErrorPagePath(
   }
   ++it;
   while (it != list.end()) {
-    ParserUtils::AtoSizeT(it->second.c_str(), list, i);
+    ParserUtils::AtoSizeT(it->second.c_str(), list, i, "http status");
     if (i > 505 || i < 100) {
       ParserUtils::MakeUnexpected(
           "invalid http status specified in \"error_page\" directive",

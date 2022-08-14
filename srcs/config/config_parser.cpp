@@ -136,7 +136,6 @@ void ConfigParser::SplitIntoList(
   }
 }
 
-
 void ConfigParser::ParseServerConfig(
     std::vector<ServerConfig> &vec_server_config) {
   ServerConfig sc;
