@@ -1,32 +1,42 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" href="style.css">
-    <title>webserv レビュー用ページ</title>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" href="style.css">
+	<title>webserv レビュー用ページ</title>
 </head>
+
 <body>
 	<style>
-	table td {
-		background-color: #ecebeb; /*背景色*/
-	}
-	table tr:nth-child(odd) td {
-		background-color: #ffffff; /*背景色*/
-	}
-	td  {
-		min-width:  10em;
-	}
+		table td {
+			background-color: #ecebeb;
+			/*背景色*/
+		}
+
+		table tr:nth-child(odd) td {
+			background-color: #ffffff;
+			/*背景色*/
+		}
+
+		td {
+			min-width: 10em;
+		}
 	</style>
-    <header>
-    <h1 class="headline">
-		webserv review page
-    </h1>
-	Member: fyuta, skohraku, tnishina
+	<header>
+		<h1 class="headline">
+			webserv review page
+		</h1>
+		Member: fyuta, skohraku, tnishina
 	</header>
 
 	<h2>Configuration</h2>
 	<table>
-		<tr><th>テスト項目</th><th>サーバー起動</th><th>確認方法</th></tr>
+		<tr>
+			<th>テスト項目</th>
+			<th>サーバー起動</th>
+			<th>確認方法</th>
+		</tr>
 		<tr>
 			<td>異なるポートを持つ複数のサーバー</td>
 			<td>% ./webserv confs/multiple_servers_different_port.conf</td>
@@ -40,20 +50,22 @@
 				% curl --resolve hoge.com:8080:127.0.0.1 http://hoge.com:8080/</td>
 		</tr>
 		<tr>
-			<td>デフォルトのエラーページ表示 → 404</td>
+			<td>エラーページのカスタマイズ → 404</td>
 			<td>% ./webserv confs/error_page.conf</td>
-			<td><a href="http://localhost:8080/hoge.html">http://localhost:8080/hoge.html</a></td>
+			<td><a href="http://localhost:8080/not_exist.html">http://localhost:8080/not_exist.html</a></td>
 		</tr>
 		<tr>
 			<td>ボディサイズの制限 → 413</td>
 			<td>% ./webserv confs/upload_with_limit.conf</td>
-			<td>% curl -X POST -H "Content-Type: plain/text" --data "BODY IS HERE write something shorter or longer than body limit"  http://localhost:8080</td>
+			<td>% curl -X POST -H "Content-Type: plain/text" --data "BODY IS HERE write something shorter or longer than body
+				limit" http://localhost:8080</td>
 		</tr>
 		<tr>
 			<td>異なるディレクトリへのルートを設定</td>
 			<td>% ./webserv confs/route.conf</td>
 			<td><a href="http://localhost:8080/">http://localhost:8080/</a><br>
-				<a href="http://localhost:8080/dir_on/">http://localhost:8080/dir_on/</a></td>
+				<a href="http://localhost:8080/dir_on/">http://localhost:8080/dir_on/</a>
+			</td>
 		</tr>
 		<tr>
 			<td>ディレクトリを指定したときに検索するデフォルトのファイルを設定</td>
@@ -71,7 +83,11 @@
 
 	<h2>Basic Checks</h2>
 	<table>
-		<tr><th>テスト項目</th><th>サーバー起動</th><th>確認方法</th></tr>
+		<tr>
+			<th>テスト項目</th>
+			<th>サーバー起動</th>
+			<th>確認方法</th>
+		</tr>
 		<tr>
 			<td>GETリクエスト → 200</td>
 			<td>% ./webserv confs/test.conf</td>
@@ -85,19 +101,21 @@
 		<tr>
 			<td>POSTリクエスト(chunked) → 200</td>
 			<td>% ./webserv confs/cgi_test.conf</td>
-			<td>% curl -v -X POST -H "Transfer-Encoding: chunked" localhost:8080/post_test.cgi -d "photo=hello&email_address=world"<br>
-			curl -v --trace-ascii - -X POST -H "Transfer-Encoding: chunked" localhost:8080/post_test.cgi -d "photo=hello&email_address=world"
+			<td>% curl -v -X POST -H "Transfer-Encoding: chunked" localhost:8080/post_test.cgi -d
+				"photo=hello&email_address=world"<br>
+				curl -v --trace-ascii - -X POST -H "Transfer-Encoding: chunked" localhost:8080/post_test.cgi -d
+				"photo=hello&email_address=world"
 			</td>
 		</tr>
 		<tr>
 			<td>DELETEリクエスト → 204</td>
 			<td>% ./webserv confs/test.conf</td>
-			<td>% curl -v -X DELETE  http://localhost:8080/hoge.html</td>
+			<td>% curl -v -X DELETE http://localhost:8080/hoge.html</td>
 		</tr>
 		<tr>
 			<td>UNKNOWNリクエスト → 501</td>
 			<td>% ./webserv confs/test.conf</td>
-			<td>% curl -v -X UNKNOWN  http://localhost:8080/</td>
+			<td>% curl -v -X UNKNOWN http://localhost:8080/</td>
 		</tr>
 		<tr>
 			<td>サーバーへのアップロードしてそれを取得</td>
@@ -113,7 +131,11 @@
 
 	<h2>Status Code</h2>
 	<table>
-		<tr><th>テスト項目</th><th>サーバー起動</th><th>確認方法</th></tr>
+		<tr>
+			<th>テスト項目</th>
+			<th>サーバー起動</th>
+			<th>確認方法</th>
+		</tr>
 		<tr>
 			<td>301 Moved Permanently</td>
 			<td>% ./webserv confs/test.conf</td>
@@ -164,11 +186,15 @@
 
 	<h2>Check with a browser</h2>
 	<table>
-		<tr><th>テスト項目</th><th>ショートカット</th><th>確認方法</th></tr>
+		<tr>
+			<th>テスト項目</th>
+			<th>ショートカット</th>
+			<th>確認方法</th>
+		</tr>
 		<tr>
 			<td>リクエストヘッダとレスポンスヘッダを見る</td>
 			<td>ディベロッパーツールを開く<br>Mac -> Command + Option + I<br>
-			Windows -> Ctrl + Shift + I</td>
+				Windows -> Ctrl + Shift + I</td>
 			<td>ネットワーク→名前欄に表示されるlocalhostをクリック</td>
 		</tr>
 	</table>
@@ -176,7 +202,11 @@
 
 	<h2>Siege & stress test</h2>
 	<table>
-		<tr><th>テスト項目</th><th>サーバー起動</th><th>別ターミナル操作</th></tr>
+		<tr>
+			<th>テスト項目</th>
+			<th>サーバー起動</th>
+			<th>別ターミナル操作</th>
+		</tr>
 		<tr>
 			<td>ひとりのユーザがインターバルを置かずに<br>1024回リクエストを送る</td>
 			<td>% ./webserv confs/test.conf</td>
@@ -192,13 +222,19 @@
 
 	<h2>Bonus Part CGI</h2>
 	<table>
-		<tr><th>テスト項目</th><th>サーバー起動</th><th>確認方法</th></tr>
+		<tr>
+			<th>テスト項目</th>
+			<th>サーバー起動</th>
+			<th>確認方法</th>
+		</tr>
 		<tr>
 			<td>複数のCGIシステムがある</td>
 			<td>% ./webserv confs/upload_test.conf</td>
-			<td><a href="http://localhost:8080/index-upload-python.html">http://localhost:8080/index-upload-python.html</a></td>
+			<td><a href="http://localhost:8080/index-upload-python.html">http://localhost:8080/index-upload-python.html</a>
+			</td>
 		</tr>
 	</table>
 
 </body>
+
 </html>
