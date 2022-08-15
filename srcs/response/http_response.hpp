@@ -74,7 +74,7 @@ class HttpResponse {
   static const std::string kConnectionKeepAlive;
   static const std::string kConnectionClose;
   static const std::map< std::string, std::string > kMimeTypeMap;
-  static const unsigned int kCgiTimeout = 60;
+  static const unsigned int kCgiTimeout = 30;
 
   // Constructor and assignment operators
   HttpResponse();
