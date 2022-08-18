@@ -236,8 +236,12 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     ChangeStatus(ClientSocket::WAIT_CLOSE);
   }
   if (status_ == ClientSocket::WAIT_CLOSE) {
-    std::cout << "Disconnect descriptor:" << fd_ << ".\n";
-    close(fd_);
+    if (0 == close(fd_)) {
+      std::cout << "Disconnect descriptor:" << fd_ << ".\n";
+    } else {
+      std::cerr << COLOR_RED "[system error] " COLOR_OFF << "close error"
+                << std::endl;
+    }
     return 1;
   }
   return 0;
