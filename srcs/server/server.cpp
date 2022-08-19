@@ -129,7 +129,9 @@ void Server::Run() {
     std::exit(EXIT_FAILURE);
   }
 #endif
-  signal(SIGPIPE, SIG_IGN);
+  if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+    std::exit(EXIT_FAILURE);
+  }
 
   /***
    * サーバーソケットを生成
