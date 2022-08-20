@@ -7,7 +7,6 @@
 #include <iostream>
 
 #include "http_request_parser.hpp"
-#include "http_response.hpp"
 #include "receive_body.hpp"
 
 #define COLOR_RED "\033[31m"
@@ -136,7 +135,11 @@ int ClientSocket::ReceiveBody() {
     if (res < 0)
       return 1;
     else if (res == 0) {
+#ifdef ALL_FDS_PASS_SELECT
+      ChangeStatus(ClientSocket::INIT_RESPONSE);
+#else
       ChangeStatus(ClientSocket::CREATE_RESPONSE);
+#endif
     }
   } else if (request_.is_chunked_) {
     int res =
@@ -146,14 +149,32 @@ int ClientSocket::ReceiveBody() {
     else if (res == 0) {  //読み込み完了
       request_.header_fields_["content-length"] =
           SizeToStr(request_.body_.size());
+#ifdef ALL_FDS_PASS_SELECT
+      ChangeStatus(ClientSocket::INIT_RESPONSE);
+#else
       ChangeStatus(ClientSocket::CREATE_RESPONSE);
+#endif
     }
   }
   return 0;
 }
 
+#ifdef ALL_FDS_PASS_SELECT
+int ClientSocket::EventHandler(t_fd_acceptable &ad, Config &config)
+#else
 int ClientSocket::EventHandler(bool is_readable, bool is_writable,
-                               Config &config) {
+                               Config &config)
+#endif
+{
+#ifdef ALL_FDS_PASS_SELECT
+  if (status_ == ClientSocket::WAIT_HEADER && ac.client_read) {
+    if (ReceiveHeader()) {
+      ChangeStatus(ClientSocket::WAIT_CLOSE);
+    }
+    ac.client_read = false;
+    ac.client_write = false;
+  }
+#else
   if (status_ == ClientSocket::WAIT_HEADER) {
     if (is_readable && ReceiveHeader()) {
       ChangeStatus(ClientSocket::WAIT_CLOSE);
@@ -161,6 +182,7 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     is_readable = false;
     is_writable = false;
   }
+#endif
   if (status_ == ClientSocket::PARSE_HEADER) {
     HttpRequestParser::ParseHeader(recv_str_, &request_);
     // std::cout << "***** receive message *****\n";
@@ -174,7 +196,11 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
         if (res == -1)
           ChangeStatus(ClientSocket::WAIT_CLOSE);
         else if (res == 0)
+#ifdef ALL_FDS_PASS_SELECT
+          ChangeStatus(ClientSocket::INIT_RESPONSE);
+#else
           ChangeStatus(ClientSocket::CREATE_RESPONSE);
+#endif
         else
           ChangeStatus(ClientSocket::WAIT_BODY);
       } else if (request_.is_chunked_) {
@@ -185,16 +211,38 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
         else if (parse_res == 0) {
           request_.header_fields_["content-length"] =
               SizeToStr(request_.body_.size());
+#ifdef ALL_FDS_PASS_SELECT
+          ChangeStatus(ClientSocket::INIT_RESPONSE);
+#else
           ChangeStatus(ClientSocket::CREATE_RESPONSE);
+#endif
         } else
           ChangeStatus(ClientSocket::WAIT_BODY);
       } else {
+#ifdef ALL_FDS_PASS_SELECT
+        ChangeStatus(ClientSocket::INIT_RESPONSE);
+#else
         ChangeStatus(ClientSocket::CREATE_RESPONSE);
+#endif
       }
     } else {
+#ifdef ALL_FDS_PASS_SELECT
+      ChangeStatus(ClientSocket::INIT_RESPONSE);
+#else
       ChangeStatus(ClientSocket::CREATE_RESPONSE);
+#endif
     }
   }
+
+#ifdef ALL_FDS_PASS_SELECT
+  if (status_ == ClientSocket::WAIT_BODY && ac.client_read) {
+    if (ReceiveBody()) {
+      ChangeStatus(ClientSocket::WAIT_CLOSE);
+    }
+    ac.client_read = false;
+    ac.client_write = false;
+  }
+#else
   if (status_ == ClientSocket::WAIT_BODY) {
     if (is_readable && ReceiveBody()) {
       ChangeStatus(ClientSocket::WAIT_CLOSE);
@@ -202,6 +250,25 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     is_readable = false;
     is_writable = false;
   }
+#endif
+
+#ifdef ALL_FDS_PASS_SELECT
+  if (status_ == ClientSocket::INIT_RESPONSE) {
+    const ServerConfig *sc = config.SelectServerConfig(
+        parent_->host_, parent_->port_, request_.host_name_);
+    response_.Init(&request_, sc, info_);
+    ChangeStatus(ClientSocket::CREATE_RESPONSE);
+  }
+  if (status_ == ClientSocket::CREATE_RESPONSE) {
+    if (response_.Create(ac.response_read, ac.cgi_read, ac.cgi_write)) {
+      server_response_ = response_.GetResponse();
+      if (response_.GetConnection() == "close") {
+        request_.is_bad_request_ = true;
+      }
+      remain_size_ = server_response_.length();
+      ChangeStatus(ClientSocket::WAIT_SEND);
+    }
+#else
   if (status_ == ClientSocket::CREATE_RESPONSE) {
     const ServerConfig *sc = config.SelectServerConfig(
         parent_->host_, parent_->port_, request_.host_name_);
@@ -212,9 +279,15 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     }
     remain_size_ = server_response_.length();
     ChangeStatus(ClientSocket::WAIT_SEND);
+#endif
   }
+#ifdef ALL_FDS_PASS_SELECT
+  if (status_ == ClientSocket::WAIT_SEND && ac.client_write) {
+    {
+#else
   if (status_ == ClientSocket::WAIT_SEND) {
     if (is_writable) {
+#endif
       ssize_t start_pos = server_response_.length() - remain_size_;
       ssize_t send_size =
           SendMessage(fd_, server_response_.c_str() + start_pos, remain_size_);

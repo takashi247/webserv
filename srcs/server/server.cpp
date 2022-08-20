@@ -89,6 +89,17 @@ int Server::SetStartFds(fd_set &r_fds, fd_set &w_fds) {
     FD_SET(cur_fd, &r_fds);
     FD_SET(cur_fd, &w_fds);
     width = (width < cur_fd) ? cur_fd : width;
+#ifdef ALL_FDS_PASS_SELECT
+    cur_fd = cit->GetResponseReadFd();
+    if (-1 != cur_fd) FD_SET(cur_fd, &r_fds);
+    width = (width < cur_fd) ? cur_fd : width;
+    cur_fd = cit->GetCgiReadFd();
+    if (-1 != cur_fd) FD_SET(cur_fd, &r_fds);
+    width = (width < cur_fd) ? cur_fd : width;
+    cur_fd = cit->GetCgiWriteFd();
+    if (-1 != cur_fd) FD_SET(cur_fd, &w_fds);
+    width = (width < cur_fd) ? cur_fd : width;
+#endif
   }
   return width;
 }
@@ -165,6 +176,21 @@ void Server::Run() {
      */
     std::vector< ClientSocket >::iterator it = clients_.begin();
     while (it != clients_.end()) {
+#ifdef ALL_FDS_PASS_SELECT
+      t_fd_acceptable accept;
+      accept.client_read = FD_ISSET(it->GetFd(), &r_fds);
+      accept.client_write = FD_ISSET(it->GetFd(), &w_fds);
+      accept.response_read = FD_ISSET(it->GetResponseReadFd(), &r_fds);
+      accept.cgi_read = FD_ISSET(it->GetCgiReadFd(), &r_fds);
+      accept.cgi_write = FD_ISSET(it->GetCgiWriteFd(), &w_fds);
+
+      if (it->EventHandler(accept, config_)) {
+        it = clients_.erase(it);
+      } else {
+        ++it;
+      }
+      usleep(500);
+#else
       if (it->EventHandler(FD_ISSET(it->GetFd(), &r_fds),
                            FD_ISSET(it->GetFd(), &w_fds), config_)) {
         it = clients_.erase(it);
@@ -172,6 +198,7 @@ void Server::Run() {
         ++it;
       }
       usleep(500);
+#endif
     }
 #ifdef LEAKS
     if (b_exit) break;
