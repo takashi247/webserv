@@ -158,6 +158,8 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     if (is_readable && ReceiveHeader()) {
       ChangeStatus(ClientSocket::WAIT_CLOSE);
     }
+    is_readable = false;
+    is_writable = false;
   }
   if (status_ == ClientSocket::PARSE_HEADER) {
     HttpRequestParser::ParseHeader(recv_str_, &request_);
@@ -197,6 +199,8 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     if (is_readable && ReceiveBody()) {
       ChangeStatus(ClientSocket::WAIT_CLOSE);
     }
+    is_readable = false;
+    is_writable = false;
   }
   if (status_ == ClientSocket::CREATE_RESPONSE) {
     const ServerConfig *sc = config.SelectServerConfig(
@@ -236,8 +240,12 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
     ChangeStatus(ClientSocket::WAIT_CLOSE);
   }
   if (status_ == ClientSocket::WAIT_CLOSE) {
-    std::cout << "Disconnect descriptor:" << fd_ << ".\n";
-    close(fd_);
+    if (0 == close(fd_)) {
+      std::cout << "Disconnect descriptor:" << fd_ << ".\n";
+    } else {
+      std::cerr << COLOR_RED "[system error] " COLOR_OFF << "close error"
+                << std::endl;
+    }
     return 1;
   }
   return 0;
