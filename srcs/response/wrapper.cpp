@@ -6,6 +6,12 @@ int Wrapper::Pipe(int fildes[2]) {
   return res;
 }
 
+int Wrapper::Open(std::string path, int flags) {
+  int res = open(path.c_str(), flags);
+  if (res == -1) PrintError("open");
+  return res;
+}
+
 int Wrapper::Close(int fildes) {
   int res = close(fildes);
   if (res == -1) PrintError("close");
@@ -48,6 +54,10 @@ pid_t Wrapper::Waitpid(pid_t pid, int *stat_loc, int options) {
   return res;
 }
 
-void Wrapper::PrintError(std::string func_name) {
+void Wrapper::PrintError(const std::string &func_name) {
+#ifdef LOG
   std::cerr << "Error: " << func_name << " failed" << std::endl;
+#else
+  (void)func_name;
+#endif
 }

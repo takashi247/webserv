@@ -37,7 +37,11 @@ RM			:= rm -rf
 
 DEBUG		:= -g -fsanitize=address
 
-LEAKS   := -D LEAKS=1
+LEAKS		:= -D LEAKS=1
+
+FDS			:= -D ALL_FDS_PASS_SELECT=1
+
+LOG			:= -D LOG=1
 
 all:		$(NAME)
 
@@ -63,6 +67,12 @@ debug:		re
 
 leaks:		CXXFLAGS += $(LEAKS)
 leaks:		re
+
+fds:			CXXFLAGS += $(FDS)
+fds:			re
+
+log:			CXXFLAGS += $(LOG)
+log:			re
 
 -include $(DEPS)
 

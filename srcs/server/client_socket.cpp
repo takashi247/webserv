@@ -95,6 +95,9 @@ void ClientSocket::Init() {
   time(&last_access_);
   parsed_pos_ = 0;
   remain_size_ = 0;
+#ifdef ALL_FDS_PASS_SELECT
+  response_.Reset();
+#endif
 }
 
 /*
@@ -160,7 +163,7 @@ int ClientSocket::ReceiveBody() {
 }
 
 #ifdef ALL_FDS_PASS_SELECT
-int ClientSocket::EventHandler(t_fd_acceptable &ad, Config &config)
+int ClientSocket::EventHandler(t_fd_acceptable &ac, Config &config)
 #else
 int ClientSocket::EventHandler(bool is_readable, bool is_writable,
                                Config &config)
@@ -256,7 +259,7 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
   if (status_ == ClientSocket::INIT_RESPONSE) {
     const ServerConfig *sc = config.SelectServerConfig(
         parent_->host_, parent_->port_, request_.host_name_);
-    response_.Init(&request_, sc, info_);
+    response_.Init(&request_, sc, &info_);
     ChangeStatus(ClientSocket::CREATE_RESPONSE);
   }
   if (status_ == ClientSocket::CREATE_RESPONSE) {
