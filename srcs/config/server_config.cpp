@@ -39,10 +39,10 @@ void ServerConfig::ParseListen(
   std::string set_value = list[1].second;
   delim_pos = set_value.find(':');
   if (delim_pos == std::string::npos) {
-    if (set_value.find('.') == std::string::npos &&
-        std::isdigit(set_value[0])) {
-        ParserUtils::AtoSizeT(set_value.c_str(), list, port_, "port");
-    } else {
+    try {
+      ParserUtils::AtoSizeT(set_value.c_str(), list, port_, "port");
+    } catch (const WebservException &e) {
+      port_ = 80;
       host_ = hostToIp(set_value, list[1].first);
     }
   } else {
