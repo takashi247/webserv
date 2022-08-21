@@ -9,9 +9,6 @@
 class ServerConfig;
 class Config;
 
-// #define ALL_FDS_PASS_SELECT
-
-#ifdef ALL_FDS_PASS_SELECT
 typedef struct s_fd_acceptable {
   bool client_read;
   bool client_write;
@@ -19,7 +16,6 @@ typedef struct s_fd_acceptable {
   bool cgi_read;
   bool cgi_write;
 } t_fd_acceptable;
-#endif
 
 class ClientSocket {
  private:
@@ -27,9 +23,7 @@ class ClientSocket {
     WAIT_HEADER = 0,
     PARSE_HEADER,
     WAIT_BODY,
-#ifdef ALL_FDS_PASS_SELECT
     INIT_RESPONSE,
-#endif
     CREATE_RESPONSE,
     WAIT_SEND,
     WAIT_CLOSE
@@ -40,9 +34,7 @@ class ClientSocket {
   int fd_;
   const ServerSocket *parent_;
   t_client_info info_;
-#ifdef ALL_FDS_PASS_SELECT
   HttpResponse response_;
-#endif
 
   std::string recv_str_;
   HttpRequest request_;
@@ -65,17 +57,11 @@ class ClientSocket {
  public:
   void Init();
   int GetFd() { return fd_; }
-#ifdef ALL_FDS_PASS_SELECT
   int GetResponseReadFd() { return response_.GetResponseReadFd(); }
   int GetCgiReadFd() { return response_.GetCgiReadFd(); }
   int GetCgiWriteFd() { return response_.GetCgiWriteFd(); }
-#endif
 
-#ifdef ALL_FDS_PASS_SELECT
   int EventHandler(t_fd_acceptable &ac, Config &config);
-#else
-  int EventHandler(bool is_readable, bool is_writable, Config &config);
-#endif
 };
 
 #endif
