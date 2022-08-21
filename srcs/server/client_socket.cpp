@@ -95,9 +95,6 @@ void ClientSocket::Init() {
   time(&last_access_);
   parsed_pos_ = 0;
   remain_size_ = 0;
-#ifdef ALL_FDS_PASS_SELECT
-  response_.Reset();
-#endif
 }
 
 /*
@@ -299,6 +296,9 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
       } else {
         remain_size_ -= send_size;
         if (remain_size_ == 0) {  // 送り切ったら切断・もしくは初期化
+#ifdef ALL_FDS_PASS_SELECT
+          response_.Reset();
+#endif
           if (request_.is_bad_request_) {
             ChangeStatus(ClientSocket::WAIT_CLOSE);
           } else
