@@ -177,10 +177,15 @@ void Server::Run() {
       t_fd_acceptable accept;
       accept.client_read = FD_ISSET(it->GetFd(), &r_fds);
       accept.client_write = FD_ISSET(it->GetFd(), &w_fds);
-      accept.response_read = FD_ISSET(it->GetResponseReadFd(), &r_fds);
-      accept.cgi_read = FD_ISSET(it->GetCgiReadFd(), &r_fds);
-      accept.cgi_write = FD_ISSET(it->GetCgiWriteFd(), &w_fds);
-
+      accept.response_read = (it->GetResponseReadFd() != -1)
+                                 ? FD_ISSET(it->GetResponseReadFd(), &r_fds)
+                                 : false;
+      accept.cgi_read = (it->GetCgiReadFd() != -1)
+                            ? FD_ISSET(it->GetCgiReadFd(), &r_fds)
+                            : false;
+      accept.cgi_write = (it->GetCgiWriteFd() != -1)
+                             ? FD_ISSET(it->GetCgiWriteFd(), &w_fds)
+                             : false;
       if (it->EventHandler(accept, config_)) {
         it = clients_.erase(it);
       } else {
