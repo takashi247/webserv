@@ -147,6 +147,7 @@ class HttpResponse {
   void WriteRequestBody();
   void ReadCgiOutput();
   ssize_t ReadFdIntoBody(int fd);
+  int CloseNResetFd(int fd);
 
   // Helper functions
   std::string ShortenRequestBody(const std::string &);
@@ -209,7 +210,6 @@ class HttpResponse {
   bool is_local_redirection_;
   std::string requested_file_path_;
   const LocationConfig *location_config_;
-  // std::ifstream requested_file_;
   std::string path_info_;
   std::string path_translated_;
   std::string server_header_;

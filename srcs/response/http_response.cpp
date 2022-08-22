@@ -485,12 +485,11 @@ void HttpResponse::CreateResponseBody() {
   ssize_t read_size = kReadBufferSize;
   read_size = ReadFdIntoBody(fd_response_read_);
   if (read_size == -1) {
-    Wrapper::Close(fd_response_read_);
+    CloseNResetFd(fd_response_read_);
     Make500Response();
   } else if (read_size == 0) {
     body_len_ = body_.size();
-    Wrapper::Close(fd_response_read_);
-    fd_response_read_ = kFdNotSet;
+    CloseNResetFd(fd_response_read_);
     response_status_ = kCreateResponseHeader;
   }
 }
@@ -634,8 +633,7 @@ std::string HttpResponse::CreateFileList(
 }
 
 void HttpResponse::CreateAutoindexPage() {
-  Wrapper::Close(fd_response_read_);
-  fd_response_read_ = kFdNotSet;
+  CloseNResetFd(fd_response_read_);
   body_ =
       "<html>\n"
       "<head><title>Index of ";
@@ -1006,16 +1004,16 @@ void HttpResponse::PrepareCgiResponse() {
     return Make500Response();
   }
   if (Wrapper::Pipe(pipe_parent2child_) < 0) {
-    Wrapper::Close(pipe_child2parent_[kReadFd]);
-    Wrapper::Close(pipe_child2parent_[kWriteFd]);
+    CloseNResetFd(pipe_child2parent_[kReadFd]);
+    CloseNResetFd(pipe_child2parent_[kWriteFd]);
     DeleteCgiEnviron(cgi_environ);
     return Make500Response();
   }
   if ((cgi_pid_ = Wrapper::Fork()) < 0) {
-    Wrapper::Close(pipe_child2parent_[kReadFd]);
-    Wrapper::Close(pipe_child2parent_[kWriteFd]);
-    Wrapper::Close(pipe_parent2child_[kReadFd]);
-    Wrapper::Close(pipe_parent2child_[kWriteFd]);
+    CloseNResetFd(pipe_child2parent_[kReadFd]);
+    CloseNResetFd(pipe_child2parent_[kWriteFd]);
+    CloseNResetFd(pipe_parent2child_[kReadFd]);
+    CloseNResetFd(pipe_parent2child_[kWriteFd]);
     DeleteCgiEnviron(cgi_environ);
     return Make500Response();
   }
@@ -1023,17 +1021,17 @@ void HttpResponse::PrepareCgiResponse() {
     alarm(kCgiTimeout);
     if (Wrapper::Dup2(pipe_parent2child_[kReadFd], STDIN_FILENO) == -1 ||
         Wrapper::Dup2(pipe_child2parent_[kWriteFd], STDOUT_FILENO) == -1 ||
-        Wrapper::Close(pipe_parent2child_[kWriteFd]) == -1 ||
-        Wrapper::Close(pipe_child2parent_[kReadFd]) == -1 ||
+        CloseNResetFd(pipe_parent2child_[kWriteFd]) == -1 ||
+        CloseNResetFd(pipe_child2parent_[kReadFd]) == -1 ||
         Wrapper::Execve(argv[0], argv, cgi_environ) == -1) {
-      Wrapper::Close(pipe_parent2child_[kReadFd]);
-      Wrapper::Close(pipe_child2parent_[kWriteFd]);
+      CloseNResetFd(pipe_parent2child_[kReadFd]);
+      CloseNResetFd(pipe_child2parent_[kWriteFd]);
       DeleteCgiEnviron(cgi_environ);
       exit(EXIT_FAILURE);
     }
   } else {
     DeleteCgiEnviron(cgi_environ);
-    if (Wrapper::Close(pipe_child2parent_[kWriteFd]) == -1) {
+    if (CloseNResetFd(pipe_child2parent_[kWriteFd]) == -1) {
       return Make500Response();
     }
     fd_cgi_read_ = pipe_child2parent_[kReadFd];
@@ -1046,15 +1044,15 @@ void HttpResponse::WriteRequestBody() {
   int wstatus;
 
   if (SendRequestBody(pipe_parent2child_[kWriteFd], *http_request_) == 0) {
-    Wrapper::Close(pipe_parent2child_[kReadFd]);
-    Wrapper::Close(pipe_parent2child_[kWriteFd]);
-    Wrapper::Close(pipe_child2parent_[kReadFd]);
+    CloseNResetFd(pipe_parent2child_[kReadFd]);
+    CloseNResetFd(pipe_parent2child_[kWriteFd]);
+    CloseNResetFd(pipe_child2parent_[kReadFd]);
     return Make500Response();
   }
   if (WIFSIGNALED(wstatus) && WTERMSIG(wstatus) == SIGALRM) {
-    Wrapper::Close(pipe_parent2child_[kReadFd]);
-    Wrapper::Close(pipe_parent2child_[kWriteFd]);
-    Wrapper::Close(pipe_child2parent_[kReadFd]);
+    CloseNResetFd(pipe_parent2child_[kReadFd]);
+    CloseNResetFd(pipe_parent2child_[kWriteFd]);
+    CloseNResetFd(pipe_child2parent_[kReadFd]);
     return Make504Response();
   }
   response_status_ = kReadCgiOutput;
@@ -1093,9 +1091,9 @@ void HttpResponse::ReadCgiOutput() {
     cgi_status_ = kCloseConnection;
   }
   if (cgi_status_ == kCloseConnection) {
-    if (Wrapper::Close(pipe_parent2child_[kReadFd]) == -1 ||
-        Wrapper::Close(pipe_parent2child_[kWriteFd]) == -1 ||
-        Wrapper::Close(pipe_child2parent_[kReadFd]) == -1) {
+    if (CloseNResetFd(pipe_parent2child_[kReadFd]) == -1 ||
+        CloseNResetFd(pipe_parent2child_[kWriteFd]) == -1 ||
+        CloseNResetFd(pipe_child2parent_[kReadFd]) == -1) {
       return Make500Response();
     }
     if (status_code_ != kStatusCodeOK || is_local_redirection_) {
@@ -1232,6 +1230,12 @@ int HttpResponse::Create(bool is_readable, bool is_cgi_readable,
     ReadCgiOutput();
   }
   return response_status_ == kResponseIsReady ? 1 : 0;
+}
+
+int HttpResponse::CloseNResetFd(int fd) {
+  int res = Wrapper::Close(fd);
+  fd = kFdNotSet;
+  return res;
 }
 
 void HttpResponse::PrintErrorMessage(const std::string &msg) const {
