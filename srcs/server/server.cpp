@@ -191,7 +191,6 @@ void Server::Run() {
       } else {
         ++it;
       }
-      // usleep(500);
     }
 #ifdef LEAKS
     if (b_exit) break;

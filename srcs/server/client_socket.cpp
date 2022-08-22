@@ -235,6 +235,7 @@ int ClientSocket::EventHandler(t_fd_acceptable &ac, Config &config) {
             Init();
         }
       }
+      usleep(500);
     }
   }
   // timeout
