@@ -29,10 +29,6 @@ class HttpResponse {
   // Constructor
   HttpResponse();
 
-  // HttpResponse(const HttpRequest &http_request,
-  //              const ServerConfig &server_config,
-  //              const t_client_info &client_info);
-
   // Destructor
   virtual ~HttpResponse();
 
@@ -119,7 +115,6 @@ class HttpResponse {
   bool IsDigitSafe(char ch);
   void SetContentType();
   bool IsCgiFileExtension(const std::string &file_type) const;
-  // void MakeCgiResponse();
   void CreateCgiHeader();
   void ValidatePath();
   void CreateAutoindexPage();

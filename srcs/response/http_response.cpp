@@ -1047,12 +1047,16 @@ void HttpResponse::WriteRequestBody() {
     CloseNResetFd(pipe_parent2child_[kReadFd]);
     CloseNResetFd(pipe_parent2child_[kWriteFd]);
     CloseNResetFd(pipe_child2parent_[kReadFd]);
+    fd_cgi_read_ = kFdNotSet;
+    fd_cgi_write_ = kFdNotSet;
     return Make500Response();
   }
   if (WIFSIGNALED(wstatus) && WTERMSIG(wstatus) == SIGALRM) {
     CloseNResetFd(pipe_parent2child_[kReadFd]);
     CloseNResetFd(pipe_parent2child_[kWriteFd]);
     CloseNResetFd(pipe_child2parent_[kReadFd]);
+    fd_cgi_read_ = kFdNotSet;
+    fd_cgi_write_ = kFdNotSet;
     return Make504Response();
   }
   response_status_ = kReadCgiOutput;
@@ -1091,6 +1095,8 @@ void HttpResponse::ReadCgiOutput() {
     cgi_status_ = kCloseConnection;
   }
   if (cgi_status_ == kCloseConnection) {
+    fd_cgi_read_ = kFdNotSet;
+    fd_cgi_write_ = kFdNotSet;
     if (CloseNResetFd(pipe_parent2child_[kReadFd]) == -1 ||
         CloseNResetFd(pipe_parent2child_[kWriteFd]) == -1 ||
         CloseNResetFd(pipe_child2parent_[kReadFd]) == -1) {
