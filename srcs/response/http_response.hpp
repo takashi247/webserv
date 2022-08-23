@@ -147,7 +147,7 @@ class HttpResponse {
   void WriteRequestBody();
   void ReadCgiOutput();
   ssize_t ReadFdIntoBody(int fd);
-  int CloseNResetFd(int fd);
+  int CloseNResetFd(int &fd);
 
   // Helper functions
   std::string ShortenRequestBody(const std::string &);

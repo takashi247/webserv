@@ -216,6 +216,7 @@ int ClientSocket::EventHandler(t_fd_acceptable &ac, Config &config) {
       }
       remain_size_ = server_response_.length();
       ChangeStatus(ClientSocket::WAIT_SEND);
+      ac.client_write = false;
     }
   }
   if (status_ == ClientSocket::WAIT_SEND && ac.client_write) {

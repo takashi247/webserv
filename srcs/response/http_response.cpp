@@ -1232,7 +1232,7 @@ int HttpResponse::Create(bool is_readable, bool is_cgi_readable,
   return response_status_ == kResponseIsReady ? 1 : 0;
 }
 
-int HttpResponse::CloseNResetFd(int fd) {
+int HttpResponse::CloseNResetFd(int &fd) {
   int res = Wrapper::Close(fd);
   fd = kFdNotSet;
   return res;
