@@ -71,22 +71,6 @@ ClientSocket::ClientSocket(int fd, const ServerSocket *parent,
             << ") port:" << info_.port_ << " descriptor:" << fd << ".\n";
 }
 
-ClientSocket::ClientSocket(const ClientSocket &other) { *this = other; }
-
-ClientSocket &ClientSocket::operator=(const ClientSocket &other) {
-  status_ = other.status_;
-  fd_ = other.fd_;
-  parent_ = other.parent_;
-  info_ = other.info_;
-  recv_str_ = other.recv_str_;
-  request_ = other.request_;
-  server_response_ = other.server_response_;
-  last_access_ = other.last_access_;
-  parsed_pos_ = other.parsed_pos_;
-  remain_size_ = other.remain_size_;
-  return *this;
-}
-
 void ClientSocket::Init() {
   ChangeStatus(WAIT_HEADER);
   recv_str_.clear();

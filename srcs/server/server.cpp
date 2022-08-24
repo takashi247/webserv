@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "client_socket.hpp"
 #include "webserv_exception.hpp"
 
 Server::Server() : config_("filename") {
@@ -83,23 +84,23 @@ int Server::SetStartFds(fd_set &r_fds, fd_set &w_fds) {
     FD_SET(cur_fd, &r_fds);
     width = (width < cur_fd) ? cur_fd : width;
   }
-  std::vector< ClientSocket >::iterator cit;
+  std::vector< ClientSocket * >::iterator cit;
   for (cit = clients_.begin(); cit < clients_.end(); ++cit) {
-    cur_fd = cit->GetFd();
+    cur_fd = (*cit)->GetFd();
     FD_SET(cur_fd, &r_fds);
-    if (cit->IsWaitSend()) FD_SET(cur_fd, &w_fds);
+    if ((*cit)->IsWaitSend()) FD_SET(cur_fd, &w_fds);
     width = (width < cur_fd) ? cur_fd : width;
 
-    cur_fd = cit->GetResponseReadFd();
+    cur_fd = (*cit)->GetResponseReadFd();
     if (-1 != cur_fd) FD_SET(cur_fd, &r_fds);
     width = (width < cur_fd) ? cur_fd : width;
 
-    cur_fd = cit->GetCgiReadFd();
+    cur_fd = (*cit)->GetCgiReadFd();
     if (-1 != cur_fd) FD_SET(cur_fd, &r_fds);
     width = (width < cur_fd) ? cur_fd : width;
 
-    if (cit->IsCgiWriable()) {
-      cur_fd = cit->GetCgiWriteFd();
+    if ((*cit)->IsCgiWriable()) {
+      cur_fd = (*cit)->GetCgiWriteFd();
       if (-1 != cur_fd) FD_SET(cur_fd, &w_fds);
     }
     width = (width < cur_fd) ? cur_fd : width;
@@ -115,8 +116,7 @@ int Server::AcceptNewClient(const fd_set &fds) {
     if (FD_ISSET(it->GetListenFd(), &fds)) {
       int connfd = accept(it->GetListenFd(), (struct sockaddr *)&sin, &len);
       if (clients_.size() < kMaxSessionNum) {
-        clients_.push_back(ClientSocket(connfd, &(*it), sin));
-        clients_.back().Init();
+        clients_.push_back(new ClientSocket(connfd, &(*it), sin));
       } else {
         close(connfd);
         std::cout << "over max connection." << std::endl;
@@ -177,21 +177,22 @@ void Server::Run() {
     /***
      *	受信処理（接続済みソケット宛にメッセージ受信）
      */
-    std::vector< ClientSocket >::iterator it = clients_.begin();
+    std::vector< ClientSocket * >::iterator it = clients_.begin();
     while (it != clients_.end()) {
       t_fd_acceptable accept;
-      accept.client_read = FD_ISSET(it->GetFd(), &r_fds);
-      accept.client_write = FD_ISSET(it->GetFd(), &w_fds);
-      accept.response_read = (it->GetResponseReadFd() != -1)
-                                 ? FD_ISSET(it->GetResponseReadFd(), &r_fds)
+      accept.client_read = FD_ISSET((*it)->GetFd(), &r_fds);
+      accept.client_write = FD_ISSET((*it)->GetFd(), &w_fds);
+      accept.response_read = ((*it)->GetResponseReadFd() != -1)
+                                 ? FD_ISSET((*it)->GetResponseReadFd(), &r_fds)
                                  : false;
-      accept.cgi_read = (it->GetCgiReadFd() != -1)
-                            ? FD_ISSET(it->GetCgiReadFd(), &r_fds)
+      accept.cgi_read = ((*it)->GetCgiReadFd() != -1)
+                            ? FD_ISSET((*it)->GetCgiReadFd(), &r_fds)
                             : false;
-      accept.cgi_write = (it->GetCgiWriteFd() != -1)
-                             ? FD_ISSET(it->GetCgiWriteFd(), &w_fds)
+      accept.cgi_write = ((*it)->GetCgiWriteFd() != -1)
+                             ? FD_ISSET((*it)->GetCgiWriteFd(), &w_fds)
                              : false;
-      if (it->EventHandler(accept, config_)) {
+      if ((*it)->EventHandler(accept, config_)) {
+        delete (*it);
         it = clients_.erase(it);
       } else {
         ++it;
@@ -202,9 +203,9 @@ void Server::Run() {
 #endif
   }
 
-  std::vector< ClientSocket >::iterator cit;
+  std::vector< ClientSocket * >::iterator cit;
   for (cit = clients_.begin(); cit != clients_.end(); ++cit) {
-    close(cit->GetFd());
+    close((*cit)->GetFd());
   }
   std::vector< ServerSocket >::iterator sit;
   for (sit = sockets_.begin(); sit != sockets_.end(); ++sit) {

@@ -45,11 +45,12 @@ class ClientSocket {
 
  public:
   ClientSocket(int fd, const ServerSocket *parent, struct sockaddr_in &sin);
-  ClientSocket(const ClientSocket &other);
   ~ClientSocket() {}
-  ClientSocket &operator=(const ClientSocket &other);
 
  private:
+  ClientSocket(const ClientSocket &other);
+  ClientSocket &operator=(const ClientSocket &other);
+
   void ChangeStatus(t_status st) { status_ = st; }
   int ReceiveHeader();
   int ReceiveBody();
