@@ -1036,7 +1036,7 @@ void HttpResponse::PrepareCgiResponse() {
     }
     fd_cgi_read_ = pipe_child2parent_[kReadFd];
     fd_cgi_write_ = pipe_parent2child_[kWriteFd];
-    response_status_ = kWriteRequestBody;
+    response_status_ = kWriteCgiInput;
   }
 }
 
@@ -1216,6 +1216,10 @@ int HttpResponse::GetCgiReadFd() const { return fd_cgi_read_; }
 
 int HttpResponse::GetCgiWriteFd() const { return fd_cgi_write_; }
 
+bool HttpResponse::IsWritingCgiInput() const {
+  return response_status_ == kWriteCgiInput;
+}
+
 int HttpResponse::Create(bool is_readable, bool is_cgi_readable,
                          bool is_cgi_writable) {
   if (is_readable == false && is_cgi_readable == false &&
@@ -1230,7 +1234,7 @@ int HttpResponse::Create(bool is_readable, bool is_cgi_readable,
     }
   } else if (is_readable == true && response_status_ == kCreateResponseBody) {
     MakeResponse();
-  } else if (is_cgi_writable == true && response_status_ == kWriteRequestBody) {
+  } else if (is_cgi_writable == true && response_status_ == kWriteCgiInput) {
     WriteRequestBody();
   } else if (is_cgi_readable == true && response_status_ == kReadCgiOutput) {
     ReadCgiOutput();

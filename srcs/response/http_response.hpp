@@ -43,6 +43,7 @@ class HttpResponse {
   int GetResponseReadFd() const;
   int GetCgiReadFd() const;
   int GetCgiWriteFd() const;
+  bool IsWritingCgiInput() const;
 
  private:
   // Static constants
@@ -169,7 +170,7 @@ class HttpResponse {
     kOpenFile,
     kCreateResponseBody,
     kCreateResponseHeader,
-    kWriteRequestBody,
+    kWriteCgiInput,
     kReadCgiOutput,
     kResponseIsReady
   } t_response_status;
