@@ -60,6 +60,8 @@ class ClientSocket {
   int GetResponseReadFd() { return response_.GetResponseReadFd(); }
   int GetCgiReadFd() { return response_.GetCgiReadFd(); }
   int GetCgiWriteFd() { return response_.GetCgiWriteFd(); }
+  bool IsWaitSend() { return (status_ == WAIT_SEND); }
+  bool IsCgiWriable() { return response_.IsWritingCgiInput(); }
 
   int EventHandler(t_fd_acceptable &ac, Config &config);
 };

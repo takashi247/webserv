@@ -87,16 +87,21 @@ int Server::SetStartFds(fd_set &r_fds, fd_set &w_fds) {
   for (cit = clients_.begin(); cit < clients_.end(); ++cit) {
     cur_fd = cit->GetFd();
     FD_SET(cur_fd, &r_fds);
-    FD_SET(cur_fd, &w_fds);
+    if (cit->IsWaitSend()) FD_SET(cur_fd, &w_fds);
     width = (width < cur_fd) ? cur_fd : width;
+
     cur_fd = cit->GetResponseReadFd();
     if (-1 != cur_fd) FD_SET(cur_fd, &r_fds);
     width = (width < cur_fd) ? cur_fd : width;
+
     cur_fd = cit->GetCgiReadFd();
     if (-1 != cur_fd) FD_SET(cur_fd, &r_fds);
     width = (width < cur_fd) ? cur_fd : width;
-    cur_fd = cit->GetCgiWriteFd();
-    if (-1 != cur_fd) FD_SET(cur_fd, &w_fds);
+
+    if (cit->IsCgiWriable()) {
+      cur_fd = cit->GetCgiWriteFd();
+      if (-1 != cur_fd) FD_SET(cur_fd, &w_fds);
+    }
     width = (width < cur_fd) ? cur_fd : width;
   }
   return width;
