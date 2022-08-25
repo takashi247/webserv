@@ -1051,7 +1051,8 @@ void HttpResponse::WriteRequestBody() {
     fd_cgi_write_ = kFdNotSet;
     return Make500Response();
   }
-  if (WIFSIGNALED(wstatus) && WTERMSIG(wstatus) == SIGALRM) {
+  if (Wrapper::Waitpid(cgi_pid_, &wstatus, 0) == -1 ||
+      (WIFSIGNALED(wstatus) && WTERMSIG(wstatus) == SIGALRM)) {
     CloseNResetFd(pipe_parent2child_[kReadFd]);
     CloseNResetFd(pipe_parent2child_[kWriteFd]);
     CloseNResetFd(pipe_child2parent_[kReadFd]);
