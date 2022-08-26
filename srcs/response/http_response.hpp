@@ -2,6 +2,7 @@
 #define HTTP_RESPONSE_HPP_
 
 #include <dirent.h>    // for opendir, readdir, closedir
+#include <fcntl.h>     // for open
 #include <stdlib.h>    // for free
 #include <string.h>    // for strdup
 #include <sys/stat.h>  // for stat
@@ -26,9 +27,7 @@
 class HttpResponse {
  public:
   // Constructor
-  HttpResponse(const HttpRequest &http_request,
-               const ServerConfig &server_config,
-               const t_client_info &client_info);
+  HttpResponse();
 
   // Destructor
   virtual ~HttpResponse();
@@ -37,6 +36,14 @@ class HttpResponse {
   std::string GetResponse() const;
   std::string GetConnection() const;
   static std::map< std::string, std::string > CreateMimeTypeMap();
+  void Init(HttpRequest *http_request, const ServerConfig *server_config,
+            t_client_info *client_info);
+  int Create(bool is_readable, bool is_cgi_readable, bool is_cgi_writable);
+  void Reset();
+  int GetResponseReadFd() const;
+  int GetCgiReadFd() const;
+  int GetCgiWriteFd() const;
+  bool IsWritingCgiInput() const;
 
  private:
   // Static constants
@@ -53,10 +60,13 @@ class HttpResponse {
   static const int kStatusCodeMethodNotImplemented = 501;
   static const int kStatusCodeGatewayTimeout = 504;
   static const int kStatusCodeVersionNotSupported = 505;
-  static const int kCgiBufferSize = 500;
+  static const int kReadBufferSize = 500;
   static const int kAsciiCodeForEOF = 26;
   static const size_t kLenOfStatusCode = 3;
   static const size_t kLenOfDateBuffer = 100;
+  static const int kFdNotSet = -1;
+  static const int kReadFd = 0;
+  static const int kWriteFd = 1;
   static const std::string kServerVersion;
   static const std::string kStatusDescOK;
   static const std::string kStatusDescNoContent;
@@ -77,7 +87,6 @@ class HttpResponse {
   static const unsigned int kCgiTimeout = 30;
 
   // Constructor and assignment operators
-  HttpResponse();
   HttpResponse(const HttpResponse &other);
   HttpResponse &operator=(const HttpResponse &other);
 
@@ -94,7 +103,8 @@ class HttpResponse {
   void DeleteRequestedFile();
   void MakeErrorBody();
   void CreateDefaultErrorPage();
-  void CreateCustomizedErrorPage(const std::string &error_page_path);
+  int OpenCustomizedErrorPage(const std::string &error_page_path);
+  void CreateResponseBody();
   void PrintErrorMessage(const std::string &msg) const;
   void SetCurrentTime();
   void SetLastModifiedTime(const std::string &path);
@@ -106,7 +116,6 @@ class HttpResponse {
   bool IsDigitSafe(char ch);
   void SetContentType();
   bool IsCgiFileExtension(const std::string &file_type) const;
-  void MakeCgiResponse();
   void CreateCgiHeader();
   void ValidatePath();
   void CreateAutoindexPage();
@@ -129,6 +138,12 @@ class HttpResponse {
   bool IsRequestConnectionClose() const;
   int SendRequestBody(int fd, const HttpRequest &http_request) const;
   bool IsImplementedMethod() const;
+  bool IsCgiRequest() const;
+  void PrepareCgiResponse();
+  void WriteRequestBody();
+  void ReadCgiOutput();
+  ssize_t ReadFdIntoBody(int fd);
+  int CloseNResetFd(int &fd);
 
   // Helper functions
   std::string ShortenRequestBody(const std::string &);
@@ -150,6 +165,16 @@ class HttpResponse {
   }
 
   // Data members
+  typedef enum e_response_status {
+    kInitResponse = 0,
+    kOpenFile,
+    kCreateResponseBody,
+    kCreateResponseHeader,
+    kWriteCgiInput,
+    kReadCgiOutput,
+    kResponseIsReady
+  } t_response_status;
+
   typedef enum e_cgi_status {
     kReadHeader = 0,
     kParseHeader,
@@ -157,11 +182,16 @@ class HttpResponse {
     kCloseConnection
   } t_cgi_status;
 
-  const HttpRequest &http_request_;
-  const ServerConfig &server_config_;
-  const t_client_info &client_info_;
+  HttpRequest *http_request_;
+  const ServerConfig *server_config_;
+  t_client_info *client_info_;
   int status_code_;
   std::string status_desc_;
+  t_response_status response_status_;
+  t_cgi_status cgi_status_;
+  int fd_response_read_;
+  int fd_cgi_read_;
+  int fd_cgi_write_;
   bool is_bad_request_;
   bool is_supported_version_;
   bool is_file_exists_;
@@ -172,12 +202,10 @@ class HttpResponse {
   bool is_temporarily_redirected_;
   std::string content_type_;
   std::string original_uri_;
-  t_cgi_status cgi_status_;
   bool has_content_length_header_;
   bool is_local_redirection_;
   std::string requested_file_path_;
   const LocationConfig *location_config_;
-  std::ifstream requested_file_;
   std::string path_info_;
   std::string path_translated_;
   std::string server_header_;
@@ -191,6 +219,9 @@ class HttpResponse {
   std::string last_modified_;
   std::string file_type_;
   std::string connection_;
+  int pipe_child2parent_[2];
+  int pipe_parent2child_[2];
+  pid_t cgi_pid_;
 };
 
 #endif  // HTTP_RESPONSE_HPP_

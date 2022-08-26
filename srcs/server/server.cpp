@@ -7,10 +7,12 @@
 #include <string>
 #include <vector>
 
+#include "client_socket.hpp"
 #include "webserv_exception.hpp"
+#include "wrapper.hpp"
 
 Server::Server() : config_("filename") {
-  std::cout << "[Debug] Server Construct!" << std::endl;
+  Wrapper::PrintMsg("[Debug] Server Construct!");
   config_.vec_server_config_.clear();
   {
     LocationConfig lc;
@@ -42,7 +44,7 @@ Server::Server(const char *conf) try : config_(conf) {
   sockets_.clear();
   clients_.clear();
 } catch (const WebservException &e) {
-  std::cerr << e.what() << std::endl;
+  Wrapper::PrintMsg(e.what());
   std::exit(1);
 }
 
@@ -64,10 +66,12 @@ void Server::CreateServerSockets() {
     try {
       sockets_.back().Init();
     } catch (const WebservException &e) {
-      std::cerr << e.what() << std::endl;
+      Wrapper::PrintMsg(e.what());
       std::exit(EXIT_FAILURE);
     }
+#ifdef LOG
     std::cout << "Monitor port:" << it->port_ << ".\n";
+#endif
   }
 }
 
@@ -83,11 +87,25 @@ int Server::SetStartFds(fd_set &r_fds, fd_set &w_fds) {
     FD_SET(cur_fd, &r_fds);
     width = (width < cur_fd) ? cur_fd : width;
   }
-  std::vector< ClientSocket >::iterator cit;
+  std::vector< ClientSocket * >::iterator cit;
   for (cit = clients_.begin(); cit < clients_.end(); ++cit) {
-    cur_fd = cit->GetFd();
+    cur_fd = (*cit)->GetFd();
     FD_SET(cur_fd, &r_fds);
-    FD_SET(cur_fd, &w_fds);
+    if ((*cit)->IsWaitSend()) FD_SET(cur_fd, &w_fds);
+    width = (width < cur_fd) ? cur_fd : width;
+
+    cur_fd = (*cit)->GetResponseReadFd();
+    if (-1 != cur_fd) FD_SET(cur_fd, &r_fds);
+    width = (width < cur_fd) ? cur_fd : width;
+
+    cur_fd = (*cit)->GetCgiReadFd();
+    if (-1 != cur_fd) FD_SET(cur_fd, &r_fds);
+    width = (width < cur_fd) ? cur_fd : width;
+
+    if ((*cit)->IsCgiWriable()) {
+      cur_fd = (*cit)->GetCgiWriteFd();
+      if (-1 != cur_fd) FD_SET(cur_fd, &w_fds);
+    }
     width = (width < cur_fd) ? cur_fd : width;
   }
   return width;
@@ -101,11 +119,10 @@ int Server::AcceptNewClient(const fd_set &fds) {
     if (FD_ISSET(it->GetListenFd(), &fds)) {
       int connfd = accept(it->GetListenFd(), (struct sockaddr *)&sin, &len);
       if (clients_.size() < kMaxSessionNum) {
-        clients_.push_back(ClientSocket(connfd, &(*it), sin));
-        clients_.back().Init();
+        clients_.push_back(new ClientSocket(connfd, &(*it), sin));
       } else {
-        close(connfd);
-        std::cout << "over max connection." << std::endl;
+        Wrapper::Close(connfd);
+        Wrapper::PrintMsg("over max connection.");
       }
     }
   }
@@ -150,7 +167,7 @@ void Server::Run() {
     waitval.tv_sec = 2; /* 待ち時間に 2.500 秒を指定 */
     waitval.tv_usec = 500;
     if (select(width + 1, &r_fds, &w_fds, NULL, &waitval) == -1) {
-      std::cout << "select() failed." << std::endl;
+      Wrapper::PrintMsg("select() failed.");
       break;
     }
 
@@ -163,24 +180,35 @@ void Server::Run() {
     /***
      *	受信処理（接続済みソケット宛にメッセージ受信）
      */
-    std::vector< ClientSocket >::iterator it = clients_.begin();
+    std::vector< ClientSocket * >::iterator it = clients_.begin();
     while (it != clients_.end()) {
-      if (it->EventHandler(FD_ISSET(it->GetFd(), &r_fds),
-                           FD_ISSET(it->GetFd(), &w_fds), config_)) {
+      t_fd_acceptable accept;
+      accept.client_read = FD_ISSET((*it)->GetFd(), &r_fds);
+      accept.client_write = FD_ISSET((*it)->GetFd(), &w_fds);
+      accept.response_read = ((*it)->GetResponseReadFd() != -1)
+                                 ? FD_ISSET((*it)->GetResponseReadFd(), &r_fds)
+                                 : false;
+      accept.cgi_read = ((*it)->GetCgiReadFd() != -1)
+                            ? FD_ISSET((*it)->GetCgiReadFd(), &r_fds)
+                            : false;
+      accept.cgi_write = ((*it)->GetCgiWriteFd() != -1)
+                             ? FD_ISSET((*it)->GetCgiWriteFd(), &w_fds)
+                             : false;
+      if ((*it)->EventHandler(accept, config_)) {
+        delete (*it);
         it = clients_.erase(it);
       } else {
         ++it;
       }
-      usleep(500);
     }
 #ifdef LEAKS
     if (b_exit) break;
 #endif
   }
 
-  std::vector< ClientSocket >::iterator cit;
+  std::vector< ClientSocket * >::iterator cit;
   for (cit = clients_.begin(); cit != clients_.end(); ++cit) {
-    close(cit->GetFd());
+    close((*cit)->GetFd());
   }
   std::vector< ServerSocket >::iterator sit;
   for (sit = sockets_.begin(); sit != sockets_.end(); ++sit) {

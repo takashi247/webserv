@@ -18,7 +18,7 @@ class ServerSocket {
  public:
   ServerSocket(int port, in_addr_t host);
   ServerSocket(const ServerSocket &other);
-  ~ServerSocket() { close(listenfd_); }
+  ~ServerSocket();
   ServerSocket &operator=(const ServerSocket &other);
 
  private:

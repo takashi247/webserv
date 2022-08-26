@@ -8,19 +8,26 @@
 #include <cstring>   //memset
 #include <iostream>  //cout
 
+#include "wrapper.hpp"
+
 void SetNonBlocking(int fd) {
   if (-1 == fcntl(fd, F_SETFL, O_NONBLOCK)) {
-    std::cout << "Failure to set NonBlocking" << std::endl;
+    Wrapper::PrintMsg("Failure to set NonBlocking");
   }
 }
 
 ServerSocket::ServerSocket(int port, in_addr_t host)
-    : port_(port), host_(host) {}
+    : listenfd_(-1), port_(port), host_(host) {}
+
 ServerSocket::ServerSocket(const ServerSocket &other) { *this = other; }
 
+ServerSocket::~ServerSocket() { Wrapper::Close(GetListenFd()); }
+
 ServerSocket &ServerSocket::operator=(const ServerSocket &other) {
+  listenfd_ = other.listenfd_;
   port_ = other.port_;
   host_ = other.host_;
+  serv_addr_ = other.serv_addr_;
   return *this;
 }
 

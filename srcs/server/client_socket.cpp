@@ -7,11 +7,8 @@
 #include <iostream>
 
 #include "http_request_parser.hpp"
-#include "http_response.hpp"
 #include "receive_body.hpp"
-
-#define COLOR_RED "\033[31m"
-#define COLOR_OFF "\033[m"
+#include "wrapper.hpp"
 
 static const int kReadBufferSize = 1024;
 static const int kSeparatorSize = 4;
@@ -27,31 +24,14 @@ static std::string SizeToStr(size_t size) {
  * other: 読み込み済み文字数
  */
 static ssize_t ReceiveMessage(int fd, std::string &recv_str) {
-  ssize_t read_size = 0;
   char buf[kReadBufferSize + 1];
   memset(buf, 0, sizeof(buf));
-  read_size = recv(fd, buf, kReadBufferSize, 0);
+  ssize_t read_size = Wrapper::Recv(fd, buf, kReadBufferSize);
   if (0 < read_size) {
     std::string buf_string(buf, read_size);
     recv_str.append(buf_string);
-  } else if (read_size < 0) {
-    std::cerr << COLOR_RED "[system error] " COLOR_OFF << "recv error"
-              << std::endl;
   }
   return read_size;
-}
-
-/*
- * -1: 送信エラー
- * other: 送信済み文字数
- */
-static ssize_t SendMessage(int fd, const char *str, size_t len) {
-  ssize_t send_size = send(fd, str, len, 0);
-  if (0 >= send_size) {
-    std::cerr << COLOR_RED "[system error] " COLOR_OFF << "send error"
-              << std::endl;
-  }
-  return send_size;
 }
 
 ClientSocket::ClientSocket(int fd, const ServerSocket *parent,
@@ -61,31 +41,17 @@ ClientSocket::ClientSocket(int fd, const ServerSocket *parent,
   struct hostent *peer_host;
   if (!(peer_host = gethostbyaddr((char *)&sin.sin_addr.s_addr,
                                   sizeof(sin.sin_addr), AF_INET))) {
-    std::cout << "peer_host is null" << std::endl;
+    Wrapper::PrintMsg("peer_host is null");
     return;
   }
   info_.hostname_.assign(peer_host->h_name);
   info_.ipaddr_.assign(inet_ntoa(sin.sin_addr));
   info_.port_ = ntohs(sin.sin_port);
   Init();
+#ifdef LOG
   std::cout << "Connection to " << info_.hostname_ << "(" << info_.ipaddr_
             << ") port:" << info_.port_ << " descriptor:" << fd << ".\n";
-}
-
-ClientSocket::ClientSocket(const ClientSocket &other) { *this = other; }
-
-ClientSocket &ClientSocket::operator=(const ClientSocket &other) {
-  status_ = other.status_;
-  fd_ = other.fd_;
-  parent_ = other.parent_;
-  info_ = other.info_;
-  recv_str_ = other.recv_str_;
-  request_ = other.request_;
-  server_response_ = other.server_response_;
-  last_access_ = other.last_access_;
-  parsed_pos_ = other.parsed_pos_;
-  remain_size_ = other.remain_size_;
-  return *this;
+#endif
 }
 
 void ClientSocket::Init() {
@@ -136,7 +102,7 @@ int ClientSocket::ReceiveBody() {
     if (res < 0)
       return 1;
     else if (res == 0) {
-      ChangeStatus(ClientSocket::CREATE_RESPONSE);
+      ChangeStatus(ClientSocket::INIT_RESPONSE);
     }
   } else if (request_.is_chunked_) {
     int res =
@@ -146,20 +112,19 @@ int ClientSocket::ReceiveBody() {
     else if (res == 0) {  //読み込み完了
       request_.header_fields_["content-length"] =
           SizeToStr(request_.body_.size());
-      ChangeStatus(ClientSocket::CREATE_RESPONSE);
+      ChangeStatus(ClientSocket::INIT_RESPONSE);
     }
   }
   return 0;
 }
 
-int ClientSocket::EventHandler(bool is_readable, bool is_writable,
-                               Config &config) {
-  if (status_ == ClientSocket::WAIT_HEADER) {
-    if (is_readable && ReceiveHeader()) {
+int ClientSocket::EventHandler(t_fd_acceptable &ac, Config &config) {
+  if (status_ == ClientSocket::WAIT_HEADER && ac.client_read) {
+    if (ReceiveHeader()) {
       ChangeStatus(ClientSocket::WAIT_CLOSE);
     }
-    is_readable = false;
-    is_writable = false;
+    ac.client_read = false;
+    ac.client_write = false;
   }
   if (status_ == ClientSocket::PARSE_HEADER) {
     HttpRequestParser::ParseHeader(recv_str_, &request_);
@@ -174,7 +139,7 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
         if (res == -1)
           ChangeStatus(ClientSocket::WAIT_CLOSE);
         else if (res == 0)
-          ChangeStatus(ClientSocket::CREATE_RESPONSE);
+          ChangeStatus(ClientSocket::INIT_RESPONSE);
         else
           ChangeStatus(ClientSocket::WAIT_BODY);
       } else if (request_.is_chunked_) {
@@ -185,66 +150,77 @@ int ClientSocket::EventHandler(bool is_readable, bool is_writable,
         else if (parse_res == 0) {
           request_.header_fields_["content-length"] =
               SizeToStr(request_.body_.size());
-          ChangeStatus(ClientSocket::CREATE_RESPONSE);
+          ChangeStatus(ClientSocket::INIT_RESPONSE);
         } else
           ChangeStatus(ClientSocket::WAIT_BODY);
       } else {
-        ChangeStatus(ClientSocket::CREATE_RESPONSE);
+        ChangeStatus(ClientSocket::INIT_RESPONSE);
       }
     } else {
-      ChangeStatus(ClientSocket::CREATE_RESPONSE);
+      ChangeStatus(ClientSocket::INIT_RESPONSE);
     }
   }
-  if (status_ == ClientSocket::WAIT_BODY) {
-    if (is_readable && ReceiveBody()) {
+
+  if (status_ == ClientSocket::WAIT_BODY && ac.client_read) {
+    if (ReceiveBody()) {
       ChangeStatus(ClientSocket::WAIT_CLOSE);
     }
-    is_readable = false;
-    is_writable = false;
+    ac.client_read = false;
+    ac.client_write = false;
   }
-  if (status_ == ClientSocket::CREATE_RESPONSE) {
+
+  if (status_ == ClientSocket::INIT_RESPONSE) {
     const ServerConfig *sc = config.SelectServerConfig(
         parent_->host_, parent_->port_, request_.host_name_);
-    HttpResponse response(request_, *sc, info_);
-    server_response_ = response.GetResponse();
-    if (response.GetConnection() == "close") {
-      request_.is_bad_request_ = true;
-    }
-    remain_size_ = server_response_.length();
-    ChangeStatus(ClientSocket::WAIT_SEND);
+    response_.Init(&request_, sc, &info_);
+    ChangeStatus(ClientSocket::CREATE_RESPONSE);
   }
-  if (status_ == ClientSocket::WAIT_SEND) {
-    if (is_writable) {
+  if (status_ == ClientSocket::CREATE_RESPONSE) {
+    if (response_.Create(ac.response_read, ac.cgi_read, ac.cgi_write)) {
+      server_response_ = response_.GetResponse();
+      if (response_.GetConnection() == "close") {
+        request_.is_bad_request_ = true;
+      }
+      remain_size_ = server_response_.length();
+      ChangeStatus(ClientSocket::WAIT_SEND);
+      ac.client_write = false;
+    }
+  }
+  if (status_ == ClientSocket::WAIT_SEND && ac.client_write) {
+    {
       ssize_t start_pos = server_response_.length() - remain_size_;
-      ssize_t send_size =
-          SendMessage(fd_, server_response_.c_str() + start_pos, remain_size_);
+      ssize_t send_size = Wrapper::Send(
+          fd_, server_response_.c_str() + start_pos, remain_size_);
       if (0 >= send_size) {
         ChangeStatus(ClientSocket::WAIT_CLOSE);
       } else {
         remain_size_ -= send_size;
         if (remain_size_ == 0) {  // 送り切ったら切断・もしくは初期化
+          response_.Reset();
           if (request_.is_bad_request_) {
             ChangeStatus(ClientSocket::WAIT_CLOSE);
           } else
             Init();
         }
       }
+      usleep(5000);
     }
   }
   // timeout
   if (time(NULL) - kDisconnectSec > last_access_) {
+#ifdef LOG
     std::cout << "No access from " << info_.hostname_ << "(" << info_.ipaddr_
               << ") port:" << info_.port_ << " descriptor:" << fd_
               << " for more than " << kDisconnectSec
               << " second, so it disconnects.\n";
+#endif
     ChangeStatus(ClientSocket::WAIT_CLOSE);
   }
   if (status_ == ClientSocket::WAIT_CLOSE) {
-    if (0 == close(fd_)) {
+    if (0 == Wrapper::Close(fd_)) {
+#ifdef LOG
       std::cout << "Disconnect descriptor:" << fd_ << ".\n";
-    } else {
-      std::cerr << COLOR_RED "[system error] " COLOR_OFF << "close error"
-                << std::endl;
+#endif
     }
     return 1;
   }

@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "wrapper.hpp"
+
 static const int kCRLFSize = 2;
 
 static size_t SizeMin(size_t a, size_t b) {
@@ -28,7 +30,7 @@ static int GetChunkSize(std::string::const_iterator *it) {
     ++cur;
   }
   if (*cur != '\r' || *(cur + 1) != '\n') {
-    std::cout << "Unexpected Separator" << std::endl;
+    Wrapper::PrintMsg("Unexpected Separator");
     return -1;
   }
   *it = cur + kCRLFSize;
@@ -44,7 +46,7 @@ int ParseNormalBody(size_t &remain_size, std::string &in, size_t &pos,
                     std::string &out) {
   size_t read_size = in.size() - pos;
   if (remain_size < read_size) {
-    std::cout << "Read Error over Content-Length\n";
+    Wrapper::PrintMsg("Read Error over Content-Length");
     return -1;
   }
   out.append(in, pos, read_size);

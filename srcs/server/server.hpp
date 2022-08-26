@@ -3,9 +3,10 @@
 
 #include <vector>
 
-#include "client_socket.hpp"
 #include "config.hpp"
 #include "server_socket.hpp"
+
+class ClientSocket;
 
 class Server {
  private:
@@ -13,7 +14,7 @@ class Server {
 
   Config config_;
   std::vector< ServerSocket > sockets_;
-  std::vector< ClientSocket > clients_;
+  std::vector< ClientSocket * > clients_;
 
   void CreateServerSockets();
   int SetStartFds(fd_set &r_fds, fd_set &w_fds);

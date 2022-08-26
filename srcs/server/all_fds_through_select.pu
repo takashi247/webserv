@@ -1,0 +1,159 @@
+@startuml
+
+participant System
+participant Server
+participant ClientSocket
+participant Response
+
+
+note over Server: 新たにクライアント接続
+Server -> ClientSocket: ClientSocket()
+activate ClientSocket
+ClientSocket -> Response: Response(client_info)
+note right: client_infoはコンストラクタで渡しておく。
+deactivate ClientSocket
+
+note over Server: リクエスト読み込み完了してレスポンスの作成を開始
+group while 1 [main loop]
+	note over Server: Setup for select
+	Server -> Server: SetStartFds()
+	activate Server
+	Server -> ClientSocket: GetFd()
+	ClientSocket -> Server: return 5(クライアントソケットのfd)
+	Server -> Response: int GetResponseReadFd()
+	Response --> Server: return -1
+	note right: If no valid file is opened
+	Server -> Response: int GetReponseWriteFd()
+	Response --> Server: return -1
+	note right: If a valid file is opened
+	deactivate Server
+
+	note over Server: Select Sequence
+	System <- Server: select
+	group while(it != clients_.end()) [all clients]
+		Server -> ClientSocket: EventHandler(false, true, false, false)
+		note right: EventHandlerの引数に、\nソケットの読み込み・書き込み・レスポンスfd読み込み・書き込み\nを渡す。
+		activate ClientSocket
+		note over ClientSocket: INIT_RESPONSE
+		ClientSocket -> Response: void Init(request,sc)
+		note right: Init引数に、今までコンストラクタで渡していた、\nrequest, ServerConfig を渡す
+		note over ClientSocket: CREATE_RESPONSE
+		ClientSocket -> Response: int Create(false,false)
+		note right: Createの引数に、レスポンスfd読み込み・\n書き込みフラグを渡す
+		System <- Response: open()
+		System --> Response: return 8
+		note right: get fd=8 for read
+		Response --> ClientSocket: return 0
+		note right: If not completed
+		Server <-- ClientSocket: return 0
+		deactivate ClientSocket
+	end
+end
+
+note over Server: 読み込み完了したら閉じて、書き込みファイル開く
+group while 1 [main loop]
+	Server -> Server: SetStartFds()
+	activate Server
+	Server -> ClientSocket: GetFd()
+	ClientSocket -> Server: return 5
+	Server -> Response: int GetResponseReadFd()
+	Response --> Server: **return 8**
+	note right: file for read is opened
+	Server -> Response: int GetReponseWriteFd()
+	Response --> Server: return -1
+	note right: If a valid file is opened
+	deactivate Server
+
+	System <- Server: select
+	group while(it != clients_.end()) [all clients]
+		Server -> ClientSocket: EventHandler(false, true, true, false)
+		activate ClientSocket
+		note over ClientSocket: CREATE_RESPONSE
+		ClientSocket -> Response: int Create(true, false)
+		System <- Response: read(8)
+		System <- Response: close(8)
+		System <- Response: open()
+		System --> Response: return 9
+		note right: get fd=9 for write
+		Response --> ClientSocket: return 0
+		note right: If not completed
+		Server <-- ClientSocket: return 0
+		deactivate ClientSocket
+	end
+end
+
+note over Server: 書き込み完了したら、ファイルを閉じる
+group while 1 [main loop]
+	Server -> Server: SetStartFds()
+	activate Server
+	Server -> ClientSocket: GetFd()
+	ClientSocket -> Server: return 5
+	Server -> Response: int GetResponseReadFd()
+	Response --> Server: return -1
+	note right: If no valid file is opened
+	Server -> Response: int GetReponseWriteFd()
+	Response --> Server: **return 9**
+	note right: file for write is opened
+	deactivate Server
+
+	System <- Server: select
+	group while(it != clients_.end()) [all clients]
+		Server -> ClientSocket: EventHandler(false, true, false, true)
+		activate ClientSocket
+		note over ClientSocket: CREATE_RESPONSE
+		ClientSocket -> Response: int Create(false, true)
+		Response -> Response: create response
+		Response --> ClientSocket: return 0
+		note right: If not completed
+		Server <-- ClientSocket: return 0
+		deactivate ClientSocket
+	end
+end
+
+note over Server: レスポンスの作成が完了
+group while 1 [main loop]
+	Server -> Server: SetStartFds()
+	activate Server
+	Server -> ClientSocket: GetFd()
+	ClientSocket -> Server: return 5
+	Server -> Response: int GetResponseReadFd()
+	Response --> Server: return -1
+	note right: If no valid file is opened
+	Server -> Response: int GetReponseWriteFd()
+	Response --> Server: return -1
+	note right: If no valid file is opened
+	deactivate Server
+
+	System <- Server: select
+	group while(it != clients_.end()) [all clients]
+		Server -> ClientSocket: EventHandler(false, true, false, false)
+		activate ClientSocket
+		note over ClientSocket: CREATE_RESPONSE
+		ClientSocket -> Response: int Create(false, false)
+		Response -> Response: create response
+		Response --> ClientSocket: **return 1**
+		note over ClientSocket: WAIT_SEND
+		note right: If a response is completed\n&&\nnot use fds
+		Server <-- ClientSocket: return 0
+		deactivate ClientSocket
+	end
+end
+
+note over Server: レスポンス送信
+group while 1 [main loop]
+	Server -> Server: SetStartFds()
+	System <- Server: select
+	group while(it != clients_.end()) [all clients]
+		Server -> ClientSocket: EventHandler()
+		activate ClientSocket
+		note over ClientSocket: WAIT_SEND
+		System <- ClientSocket: send()
+		ClientSocket -> ClientSocket: Init()
+		note over ClientSocket: WAIT_HEADER
+		Server <-- ClientSocket: return 0
+		deactivate ClientSocket
+	end
+end
+
+
+@enduml
