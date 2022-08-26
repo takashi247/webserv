@@ -17,7 +17,7 @@ SRCS	:= main.cpp \
 		server/http_request_parser.cpp \
 		server/receive_body.cpp \
 		response/http_response.cpp \
-		response/wrapper.cpp \
+		utility/wrapper.cpp \
 		config/config_parser.cpp \
 		config/config.cpp \
 		config/location_config.cpp \
@@ -31,7 +31,7 @@ DEPS		:= $(OBJS:.o=.d)
 
 SRCS		:= $(addprefix $(SRCSDIR), $(SRCS))
 
-INCLUDE		:= -I$(SRCSDIR)config/ -I$(SRCSDIR)response/ -I$(SRCSDIR)server/ -I$(SRCSDIR)exception/
+INCLUDE		:= -I$(SRCSDIR)config/ -I$(SRCSDIR)response/ -I$(SRCSDIR)server/ -I$(SRCSDIR)exception/ -I$(SRCSDIR)utility/
 
 RM			:= rm -rf
 
