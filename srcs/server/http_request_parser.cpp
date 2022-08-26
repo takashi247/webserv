@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include "wrapper.hpp"
+
 static bool IsToken(const char c) {
   if ('0' <= c && c <= '9') return true;
   if ('A' <= c && c <= 'Z') return true;
@@ -102,12 +104,12 @@ int HttpRequestParser::GetHeaderFields(
     // ' ' か '\t'じゃない文字まで戻る
     std::string value = recv_msg.substr(start, cur - start);
     if (!IsValidFieldContent(value)) {
-      std::cout << "is not valid field content\n";
+      Wrapper::PrintMsg("is not valid field content");
       return 0;
     }
     while (recv_msg[cur] == ' ' || recv_msg[cur] == '\t') cur++;
     if (recv_msg.find("\r\n", cur) != cur) {
-      std::cout << "unexpected header field\n";
+      Wrapper::PrintMsg("unexpected header field");
       return 0;
     }
     fields->insert(std::make_pair(key, value));

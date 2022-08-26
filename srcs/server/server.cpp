@@ -9,9 +9,10 @@
 
 #include "client_socket.hpp"
 #include "webserv_exception.hpp"
+#include "wrapper.hpp"
 
 Server::Server() : config_("filename") {
-  std::cout << "[Debug] Server Construct!" << std::endl;
+  Wrapper::PrintMsg("[Debug] Server Construct!");
   config_.vec_server_config_.clear();
   {
     LocationConfig lc;
@@ -43,7 +44,7 @@ Server::Server(const char *conf) try : config_(conf) {
   sockets_.clear();
   clients_.clear();
 } catch (const WebservException &e) {
-  std::cerr << e.what() << std::endl;
+  Wrapper::PrintMsg(e.what());
   std::exit(1);
 }
 
@@ -65,10 +66,12 @@ void Server::CreateServerSockets() {
     try {
       sockets_.back().Init();
     } catch (const WebservException &e) {
-      std::cerr << e.what() << std::endl;
+      Wrapper::PrintMsg(e.what());
       std::exit(EXIT_FAILURE);
     }
+#ifdef LOG
     std::cout << "Monitor port:" << it->port_ << ".\n";
+#endif
   }
 }
 
@@ -118,8 +121,8 @@ int Server::AcceptNewClient(const fd_set &fds) {
       if (clients_.size() < kMaxSessionNum) {
         clients_.push_back(new ClientSocket(connfd, &(*it), sin));
       } else {
-        close(connfd);
-        std::cout << "over max connection." << std::endl;
+        Wrapper::Close(connfd);
+        Wrapper::PrintMsg("over max connection.");
       }
     }
   }
@@ -164,7 +167,7 @@ void Server::Run() {
     waitval.tv_sec = 2; /* 待ち時間に 2.500 秒を指定 */
     waitval.tv_usec = 500;
     if (select(width + 1, &r_fds, &w_fds, NULL, &waitval) == -1) {
-      std::cout << "select() failed." << std::endl;
+      Wrapper::PrintMsg("select() failed.");
       break;
     }
 

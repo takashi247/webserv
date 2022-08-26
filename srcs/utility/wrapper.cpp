@@ -1,5 +1,7 @@
 #include "wrapper.hpp"
 
+#include <sys/socket.h>
+
 int Wrapper::Pipe(int fildes[2]) {
   int res = pipe(fildes);
   if (res < 0) PrintError("pipe");
@@ -30,6 +32,18 @@ ssize_t Wrapper::Read(int fildes, void *buf, size_t nbyte) {
   return res;
 }
 
+ssize_t Wrapper::Send(int sockfd, const void *buf, size_t len) {
+  ssize_t res = send(sockfd, buf, len, 0);
+  if (res <= 0) PrintError("send");
+  return res;
+}
+
+ssize_t Wrapper::Recv(int sockfd, void *buf, size_t len) {
+  ssize_t res = recv(sockfd, buf, len, 0);
+  if (res <= 0) PrintError("recv");
+  return res;
+}
+
 pid_t Wrapper::Fork(void) {
   pid_t pid = fork();
   if (pid < 0) PrintError("fork");
@@ -52,6 +66,14 @@ pid_t Wrapper::Waitpid(pid_t pid, int *stat_loc, int options) {
   pid_t res = waitpid(pid, stat_loc, options);
   if (res == -1) PrintError("waitpid");
   return res;
+}
+
+void Wrapper::PrintMsg(const std::string &msg) {
+#ifdef LOG
+  std::cout << msg << std::endl;
+#else
+  (void)msg;
+#endif
 }
 
 void Wrapper::PrintError(const std::string &func_name) {

@@ -8,9 +8,11 @@
 #include <cstring>   //memset
 #include <iostream>  //cout
 
+#include "wrapper.hpp"
+
 void SetNonBlocking(int fd) {
   if (-1 == fcntl(fd, F_SETFL, O_NONBLOCK)) {
-    std::cout << "Failure to set NonBlocking" << std::endl;
+    Wrapper::PrintMsg("Failure to set NonBlocking");
   }
 }
 
